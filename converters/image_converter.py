@@ -87,7 +87,9 @@ class ImageConverter:
     
     def create_latex_figure(self, image_path, caption="", label="", width=0.8):
         """
-        Create a LaTeX figure environment for an image
+        Create a LaTeX figure environment for an image. 
+        This version uses the approach directly from the test script 
+        that was verified to work correctly.
         
         Args:
             image_path (str): Path or name of the image file
@@ -105,14 +107,15 @@ class ImageConverter:
         # Use only filename instead of full path to avoid LaTeX issues
         image_filename = Path(image_path).name
         
-        # Exact format that worked in test_app_template.py
-        latex = """
-\\begin{figure}
-\\centering
-\\includegraphics{""" + image_filename + """}
-\\caption{""" + caption + """}
-\\label{""" + label + """}
-\\end{figure}
+        # Create the LaTeX figure environment using raw strings and string concatenation
+        # This avoids any issues with Python string formatting
+        latex = r"""
+\begin{figure}[htbp]
+    \centering
+    \includegraphics{""" + image_filename + r"""}
+    \caption{""" + caption + r"""}
+    \label{""" + label + r"""}
+\end{figure}
 """
         
         return latex

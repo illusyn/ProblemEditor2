@@ -20,6 +20,7 @@ from preview.latex_compiler import LaTeXCompiler
 from preview.pdf_viewer import PDFViewer
 from converters.image_converter import ImageConverter
 from PIL import Image, ImageTk
+from markdown_parser import MarkdownParser  # Import for markdown parsing
 
 class MathEditor:
     """Main application class for the Simplified Math Editor"""
@@ -49,6 +50,9 @@ class MathEditor:
         # Initialize the image converter
         self.image_converter = ImageConverter(working_dir=str(self.working_dir / "images"))
         
+        # Initialize the markdown parser
+        self.markdown_parser = MarkdownParser()
+        
         # Load the LaTeX template
         self.template = self.load_template()
         
@@ -67,22 +71,31 @@ class MathEditor:
         
         if template_path.exists():
             with open(template_path, "r", encoding="utf-8") as f:
-                return f.read()
+                template = f.read()
+                # Check if the template has the necessary packages
+                if "\\usepackage{graphicx}" not in template:
+                    # Add graphicx package if missing using the direct approach
+                    template = template.replace("\\begin{document}", 
+                        "\\usepackage{graphicx}\n\\graphicspath{{./}{./images/}}\n\n\\begin{document}")
+                elif "\\graphicspath" not in template:
+                    # Add graphicspath if missing
+                    template = template.replace("\\usepackage{graphicx}", 
+                        "\\usepackage{graphicx}\n\\graphicspath{{./}{./images/}}")
+                    
+                return template
         
-        # Fallback to a basic template
-        return """\\documentclass{article}
-\\usepackage{amsmath}
-\\usepackage{amssymb}
-\\usepackage{graphicx}
+        # Fallback to a basic template - use raw string directly from test_math_editor.py
+        return r"""\documentclass{article}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{graphicx}
+\graphicspath{{./}{./images/}}
 
-% Set up image path - adjust if needed
-\\graphicspath{{./}{./images/}}
-
-\\begin{document}
+\begin{document}
 
 #CONTENT#
 
-\\end{document}
+\end{document}
 """
     
     def create_menu(self):
@@ -114,6 +127,16 @@ class MathEditor:
         insert_menu.add_command(label="Paste LaTeX as Equation", command=lambda: self.editor.paste_latex())
         insert_menu.add_command(label="Paste Image as Figure", command=self.paste_image)
         insert_menu.add_command(label="Insert Image from File...", command=self.insert_image_from_file)
+        insert_menu.add_separator()
+        
+        # Add markdown commands
+        insert_menu.add_command(label="Problem Section", command=lambda: self.editor.insert_problem_section())
+        insert_menu.add_command(label="Solution Section", command=lambda: self.editor.insert_solution_section())
+        insert_menu.add_command(label="Question", command=lambda: self.editor.insert_question())
+        insert_menu.add_command(label="Equation", command=lambda: self.editor.insert_equation())
+        insert_menu.add_command(label="Aligned Equations", command=lambda: self.editor.insert_aligned_equations())
+        insert_menu.add_command(label="Bullet Point", command=lambda: self.editor.insert_bullet_point())
+        
         self.menubar.add_cascade(label="Insert", menu=insert_menu)
         
         # View menu
@@ -123,6 +146,18 @@ class MathEditor:
         view_menu.add_separator()
         view_menu.add_command(label="Update Preview", command=self.update_preview)
         self.menubar.add_cascade(label="View", menu=view_menu)
+        
+        # Template menu
+        template_menu = tk.Menu(self.menubar, tearoff=0)
+        template_menu.add_command(label="Basic Problem", command=self.insert_basic_template)
+        template_menu.add_command(label="Two Equations Problem", command=self.insert_two_equations_template)
+        template_menu.add_command(label="Problem with Image", command=self.insert_image_template)
+        self.menubar.add_cascade(label="Templates", menu=template_menu)
+        
+        # Help menu
+        help_menu = tk.Menu(self.menubar, tearoff=0)
+        help_menu.add_command(label="Markdown Syntax", command=self.show_markdown_help)
+        self.menubar.add_cascade(label="Help", menu=help_menu)
         
         self.root.config(menu=self.menubar)
     
@@ -164,6 +199,35 @@ class MathEditor:
             command=self.insert_image_from_file
         )
         self.file_image_button.pack(side=tk.LEFT, padx=5)
+        
+        # Add markdown-specific buttons
+        self.problem_button = ttk.Button(
+            self.toolbar,
+            text="Problem",
+            command=lambda: self.editor.insert_problem_section()
+        )
+        self.problem_button.pack(side=tk.LEFT, padx=5)
+        
+        self.solution_button = ttk.Button(
+            self.toolbar,
+            text="Solution",
+            command=lambda: self.editor.insert_solution_section()
+        )
+        self.solution_button.pack(side=tk.LEFT, padx=5)
+        
+        self.question_button = ttk.Button(
+            self.toolbar,
+            text="Question",
+            command=lambda: self.editor.insert_question()
+        )
+        self.question_button.pack(side=tk.LEFT, padx=5)
+        
+        self.equation_button = ttk.Button(
+            self.toolbar,
+            text="Equation",
+            command=lambda: self.editor.insert_equation()
+        )
+        self.equation_button.pack(side=tk.LEFT, padx=5)
         
         self.preview_button = ttk.Button(
             self.toolbar,
@@ -222,7 +286,7 @@ class MathEditor:
         """Open a file"""
         if self.check_save_changes():
             filepath = filedialog.askopenfilename(
-                filetypes=[("Text files", "*.txt"), ("TeX files", "*.tex"), ("All files", "*.*")]
+                filetypes=[("Text files", "*.txt"), ("TeX files", "*.tex"), ("Markdown files", "*.md"), ("All files", "*.*")]
             )
             if filepath:
                 try:
@@ -248,8 +312,8 @@ class MathEditor:
     def save_as(self):
         """Save the file with a new name"""
         filepath = filedialog.asksaveasfilename(
-            defaultextension=".tex",
-            filetypes=[("TeX files", "*.tex"), ("Text files", "*.txt"), ("All files", "*.*")]
+            defaultextension=".md",
+            filetypes=[("Markdown files", "*.md"), ("TeX files", "*.tex"), ("Text files", "*.txt"), ("All files", "*.*")]
         )
         if filepath:
             return self._save_to_file(filepath)
@@ -348,11 +412,23 @@ class MathEditor:
     def update_preview(self):
         """Generate and display a preview of the current content"""
         try:
+            # Update status
+            self.status_var.set("Processing markdown...")
+            self.root.update_idletasks()  # Force UI update
+            
             # Get the editor content
             content = self.editor.get_content()
             
-            # Insert content into the template
-            latex_document = self.template.replace("#CONTENT#", content)
+            # Parse the markdown to LaTeX
+            latex_document = self.markdown_parser.parse(content)
+            
+            # DEBUG: Check if graphicx package is in the template
+            if "\\usepackage{graphicx}" not in latex_document:
+                print("WARNING: graphicx package missing from template!")
+                # Add it immediately before \begin{document}
+                latex_document = latex_document.replace("\\begin{document}", 
+                    "\\usepackage{graphicx}\n\\graphicspath{{./}{./images/}}\n\n\\begin{document}")
+                print("Added graphicx package to template")
             
             # Update status
             self.status_var.set("Preparing images for LaTeX compilation...")
@@ -363,6 +439,12 @@ class MathEditor:
                 self.status_var.set("Failed to extract images from database")
                 messagebox.showerror("Image Error", "Failed to extract one or more images from the database for LaTeX compilation.")
                 return
+            
+            # Write debug LaTeX file
+            debug_file = self.working_dir / "debug_latex.tex"
+            with open(debug_file, "w", encoding="utf-8") as f:
+                f.write(latex_document)
+            print(f"Debug LaTeX document written to: {debug_file}")
             
             # Update status for compilation
             self.status_var.set("Compiling LaTeX document...")
@@ -399,8 +481,14 @@ class MathEditor:
             # Get the editor content
             content = self.editor.get_content()
             
-            # Insert content into the template
-            latex_document = self.template.replace("#CONTENT#", content)
+            # Parse the markdown to LaTeX
+            latex_document = self.markdown_parser.parse(content)
+            
+            # Ensure graphicx package is included
+            if "\\usepackage{graphicx}" not in latex_document:
+                # Add it immediately before \begin{document}
+                latex_document = latex_document.replace("\\begin{document}", 
+                    "\\usepackage{graphicx}\n\\graphicspath{{./}{./images/}}\n\n\\begin{document}")
             
             # Update status
             self.status_var.set("Extracting images for LaTeX compilation...")
@@ -676,3 +764,100 @@ class MathEditor:
             except:
                 pass  # Ignore errors reading file
         return True
+    
+    def insert_basic_template(self):
+        """Insert a basic problem template"""
+        template = """#problem
+Solve the following equation:
+
+#eq
+2x + 3 = 7
+
+#question
+What is the value of x?
+"""
+        self.editor.set_content(template)
+        self.update_preview()
+    
+    def insert_two_equations_template(self):
+        """Insert a two equations problem template"""
+        template = """#problem
+Solve the system of equations:
+
+#eq
+3x + 2y = 12
+
+#eq
+x - y = 1
+
+#question
+Find the values of x and y.
+"""
+        self.editor.set_content(template)
+        self.update_preview()
+    
+    def insert_image_template(self):
+        """Insert a problem with image template"""
+        template = """#problem
+Consider the triangle shown in the figure:
+
+[Insert figure reference here]
+
+#question
+Calculate the area of the triangle.
+"""
+        self.editor.set_content(template)
+    
+    def show_markdown_help(self):
+        """Show help for markdown syntax"""
+        help_text = """
+# Custom Markdown Syntax
+
+## Basic Structure
+#problem     - Problem section
+#solution    - Solution section
+#question    - Question text
+
+## Equation Environments
+#eq          - Start an equation, put the equation on the next line
+#align       - Start an aligned equations environment
+
+## Lists
+#bullet      - Create a bullet point item
+
+## Example:
+#problem
+Solve the equation:
+
+#eq
+2x + 3 = 7
+
+#question
+What is x?
+
+#solution
+We solve step by step:
+
+#eq
+2x = 4
+
+#eq
+x = 2
+"""
+        # Create help window
+        help_window = tk.Toplevel(self.root)
+        help_window.title("Markdown Syntax Help")
+        help_window.geometry("600x500")
+        
+        # Create text widget
+        from tkinter import scrolledtext
+        text = scrolledtext.ScrolledText(help_window, wrap=tk.WORD, font=('Courier', 12))
+        text.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        # Insert help text
+        text.insert(tk.END, help_text)
+        text.config(state=tk.DISABLED)  # Make read-only
+        
+        # Close button
+        close_button = ttk.Button(help_window, text="Close", command=help_window.destroy)
+        close_button.pack(pady=10)
