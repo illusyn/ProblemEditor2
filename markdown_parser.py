@@ -79,9 +79,29 @@ class MarkdownParser:
         
         i = 0
         in_itemize = False  # Track if we're inside an itemize environment
+        in_figure = False   # Track if we're inside a figure environment
         
         while i < len(lines):
             line = lines[i].strip()
+            
+            # Special handling for figure environments
+            if line.startswith('\\begin{figure'):
+                # Start collecting the figure environment
+                in_figure = True
+                processed_lines.append(line)
+                i += 1
+                continue
+            
+            if in_figure:
+                # If we're in a figure environment, add the line unchanged
+                processed_lines.append(lines[i])  # Use original line with whitespace
+                
+                # Check if this line ends the figure environment
+                if '\\end{figure}' in line:
+                    in_figure = False
+                
+                i += 1
+                continue
             
             # Handle math expressions with \[ \]
             if line.startswith('\\['):
@@ -171,9 +191,9 @@ class MarkdownParser:
                     eq_content = lines[i].strip()
                 
                 # Use display math mode for the equation
-                processed_lines.append("\\begin{equation}")
+                processed_lines.append("\\begin{equation*}")  # Added * for unnumbered equation
                 processed_lines.append(eq_content)
-                processed_lines.append("\\end{equation}")
+                processed_lines.append("\\end{equation*}")
                 
                 i += 1
                 
@@ -189,9 +209,9 @@ class MarkdownParser:
                     i += 1
                 
                 # Use aligned environment
-                processed_lines.append("\\begin{align}")
+                processed_lines.append("\\begin{align*}")  # Added * for unnumbered equations
                 processed_lines.append(" \\\\ ".join(align_content))
-                processed_lines.append("\\end{align}")
+                processed_lines.append("\\end{align*}")
                 
             # Regular text
             else:

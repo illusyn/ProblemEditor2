@@ -602,7 +602,7 @@ class MathEditor:
         # Create a dialog
         dialog = tk.Toplevel(self.root)
         dialog.title("Image Details")
-        dialog.geometry("400x300")
+        dialog.geometry("400x500")
         dialog.transient(self.root)
         dialog.grab_set()
         
@@ -639,7 +639,7 @@ class MathEditor:
         success, image = self.image_converter.image_db.get_image(image_info["filename"])
         if success:
             # Resize image for preview
-            max_size = (300, 200)
+            max_size = (350, 300)
             image.thumbnail(max_size)
             photo = ImageTk.PhotoImage(image)
             
