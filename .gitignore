@@ -1,0 +1,9 @@
+# Python bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+/latex_debug_test
+l/atex_test_output
+/test_app_template
+/test_single_image
