@@ -21,6 +21,7 @@ from preview.pdf_viewer import PDFViewer
 from converters.image_converter import ImageConverter
 from PIL import Image, ImageTk
 from markdown_parser import MarkdownParser  # Import for markdown parsing
+from db_interface import DatabaseInterface
 
 class MathEditor:
     """Main application class for the Simplified Math Editor"""
@@ -35,7 +36,7 @@ class MathEditor:
         self.root = root
         self.root.title("Simplified Math Editor")
         self.root.geometry("1200x800")
-        
+                
         # Initialize working directory
         self.working_dir = Path(tempfile.gettempdir()) / "simplified_math_editor"
         self.working_dir.mkdir(parents=True, exist_ok=True)
@@ -50,6 +51,9 @@ class MathEditor:
         # Initialize the image converter
         self.image_converter = ImageConverter(working_dir=str(self.working_dir / "images"))
         
+        # Initialize the database interface (will set up menu later)
+        self.db_interface = DatabaseInterface(self)
+        
         # Initialize the markdown parser
         self.markdown_parser = MarkdownParser()
         
@@ -59,6 +63,9 @@ class MathEditor:
         # Set up the UI components
         self.create_menu()
         self.create_layout()
+        
+        # Set up database menu
+        self.db_interface.setup_menu()
         
         # Initialize current file path
         self.current_file = None

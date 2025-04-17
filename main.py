@@ -8,17 +8,9 @@ This module sets up the main application window with support for custom markdown
 import tkinter as tk
 from math_editor import MathEditor
 
-# Import the markdown parser directly - this was missing or incorrectly imported
-try:
-    from markdown_parser import MarkdownParser
-except ImportError:
-    print("Warning: MarkdownParser not found. Make sure markdown_parser.py is in the correct location.")
-    # Create a stub class as a fallback
-    class MarkdownParser:
-        def __init__(self):
-            pass
-        def parse(self, text):
-            return text
+# Import the database module and interface
+from math_db import MathProblemDB
+from db_interface import DatabaseInterface
 
 def main():
     """Application entry point"""
