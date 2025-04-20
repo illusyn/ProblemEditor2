@@ -775,6 +775,15 @@ class MathEditor:
             if not image_info:
                 return  # User cancelled
             
+            # Check if document is empty or lacks structure
+            content = self.editor.get_content().strip()
+            needs_structure = not content or not any(tag in content for tag in ["#problem", "#question", "#solution"])
+            
+            # If document needs structure, add a minimal structure before the figure
+            if needs_structure:
+                # Add a problem section before the image
+                self.editor.editor.insert(tk.INSERT, "#problem\n\n")
+            
             # Create LaTeX figure code
             latex_figure = self.image_converter.create_latex_figure(
                 image_path=image_info["filename"],  # Use just the filename
@@ -906,6 +915,15 @@ class MathEditor:
             image_info = self.get_image_details(result)
             if not image_info:
                 return  # User cancelled
+            
+            # Check if document is empty or lacks structure
+            content = self.editor.get_content().strip()
+            needs_structure = not content or not any(tag in content for tag in ["#problem", "#question", "#solution"])
+            
+            # If document needs structure, add a minimal structure before the figure
+            if needs_structure:
+                # Add a problem section before the image
+                self.editor.editor.insert(tk.INSERT, "#problem\n\n")
             
             # Create LaTeX figure code
             latex_figure = self.image_converter.create_latex_figure(
