@@ -107,6 +107,10 @@ class EditorComponent:
         self.editor.bind("<Control-s>", lambda e: self.insert_solution_section())
         self.editor.bind("<Control-q>", lambda e: self.insert_question())
         self.editor.bind("<Control-e>", lambda e: self.insert_equation())
+        
+        # Font size shortcuts
+        self.editor.bind("<Control-plus>", lambda e: self.increase_font_size())
+        self.editor.bind("<Control-minus>", lambda e: self.decrease_font_size())
     
     def show_context_menu(self, event):
         """Show the context menu at the current mouse position"""
@@ -290,6 +294,13 @@ class EditorComponent:
         self.font_size += 2
         self.editor_font = ('Courier', self.font_size)
         self.editor.configure(font=self.editor_font)
+        
+        # Update tag configurations for styled text
+        self.editor.tag_configure("command", font=(self.editor_font[0], self.font_size, "bold"))
+        self.editor.tag_configure("section", font=(self.editor_font[0], self.font_size, "bold"))
+        
+        # Reapply syntax highlighting to update styled text
+        self.highlight_syntax()
     
     def decrease_font_size(self):
         """Decrease the editor font size"""
@@ -297,3 +308,10 @@ class EditorComponent:
             self.font_size -= 2
             self.editor_font = ('Courier', self.font_size)
             self.editor.configure(font=self.editor_font)
+            
+            # Update tag configurations for styled text
+            self.editor.tag_configure("command", font=(self.editor_font[0], self.font_size, "bold"))
+            self.editor.tag_configure("section", font=(self.editor_font[0], self.font_size, "bold"))
+            
+            # Reapply syntax highlighting to update styled text
+            self.highlight_syntax()

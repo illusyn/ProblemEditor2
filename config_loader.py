@@ -33,7 +33,7 @@ class ConfigLoader:
                             "default": "Problem"
                         }
                     },
-                    "latex_template": "\\section*{#title#}"
+                    "latex_template": "#CONTENT#"  
                 },
                 "solution": {
                     "description": "Solution section",

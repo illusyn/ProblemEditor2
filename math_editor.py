@@ -243,6 +243,23 @@ class MathEditor:
         )
         self.preview_button.pack(side=tk.LEFT, padx=5)
         
+        # Add font size buttons to toolbar
+        self.font_increase_button = ttk.Button(
+            self.toolbar,
+            text="A+",
+            width=3,
+            command=lambda: self.editor.increase_font_size()
+        )
+        self.font_increase_button.pack(side=tk.LEFT, padx=5)
+        
+        self.font_decrease_button = ttk.Button(
+            self.toolbar,
+            text="A-",
+            width=3,
+            command=lambda: self.editor.decrease_font_size()
+        )
+        self.font_decrease_button.pack(side=tk.LEFT, padx=5)
+        
         # Create paned window for editor and preview
         self.paned_window = ttk.PanedWindow(self.main_frame, orient=tk.HORIZONTAL)
         self.paned_window.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
