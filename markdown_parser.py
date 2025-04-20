@@ -1,26 +1,30 @@
 """
-Custom markdown parser for the Simplified Math Editor.
-
-This module provides functionality to convert custom markdown to LaTeX,
-supporting special commands for math problem structure.
+Custom markdown parser for the Math Problem Editor with dynamic templates.
 """
 
 import re
+from config_loader import ConfigLoader
 
 class MarkdownParser:
-    """Converts custom markdown to LaTeX with special handling for math problems"""
+    """Converts custom parameterized markdown to LaTeX"""
     
-    def __init__(self):
-        """Initialize the markdown parser"""
-        # Define custom commands mapping
-        self.custom_commands = {
-            "#problem": "\\section*{#TEXT#}",
-            "#solution": "\\section*{Solution}",
-            "#question": "#TEXT#",
-            "#eq": "$#TEXT#$",  # Changed to inline math mode for simpler equations
-            "#align": "\\begin{align}\n#TEXT#\n\\end{align}",
-            "#bullet": "\\item #TEXT#"
-        }
+    def __init__(self, config_file=None):
+        """
+        Initialize the markdown parser
+        
+        Args:
+            config_file (str, optional): Path to the configuration file
+        """
+        # Initialize the configuration loader
+        try:
+            self.config = ConfigLoader(config_file)
+        except Exception as e:
+            print(f"Warning: Failed to load config file: {str(e)}")
+            print("Using default configuration")
+            self.config = ConfigLoader()
+        
+        # Document content collected before parsing
+        self.document_content = ""
         
         # LaTeX special characters that need to be escaped
         self.latex_special_chars = {
@@ -63,6 +67,423 @@ class MarkdownParser:
             
         return result
     
+    def parse_parameters(self, param_text):
+        """
+        Parse parameter string into a dictionary of parameters
+        
+        Args:
+            param_text (str): Parameter string in format "param1:value1, param2:value2"
+            
+        Returns:
+            dict: Dictionary of parameter name-value pairs
+        """
+        params = {}
+        
+        if not param_text:
+            return params
+        
+        # Remove outer braces if present
+        param_text = param_text.strip()
+        if param_text.startswith('{') and param_text.endswith('}'):
+            param_text = param_text[1:-1]
+        
+        # Split by commas, but respect quoted strings
+        param_parts = []
+        in_quotes = False
+        in_array = False
+        current_part = ""
+        
+        for char in param_text:
+            if char == '"' or char == "'":
+                in_quotes = not in_quotes
+                current_part += char
+            elif char == '[' and not in_quotes:
+                in_array = True
+                current_part += char
+            elif char == ']' and not in_quotes:
+                in_array = False
+                current_part += char
+            elif char == ',' and not in_quotes and not in_array:
+                param_parts.append(current_part.strip())
+                current_part = ""
+            else:
+                current_part += char
+        
+        if current_part:
+            param_parts.append(current_part.strip())
+        
+        # Parse each parameter
+        for part in param_parts:
+            if ':' in part:
+                key, value = part.split(':', 1)
+                key = key.strip()
+                value = value.strip()
+                
+                # Handle array values [item1, item2, ...]
+                if value.startswith('[') and value.endswith(']'):
+                    array_items = self.parse_array(value[1:-1])
+                    params[key] = array_items
+                    continue
+                
+                # Remove quotes if present
+                if (value.startswith('"') and value.endswith('"')) or \
+                   (value.startswith("'") and value.endswith("'")):
+                    value = value[1:-1]
+                
+                # Convert to appropriate type
+                if value.lower() == 'true':
+                    value = True
+                elif value.lower() == 'false':
+                    value = False
+                elif value.isdigit():
+                    value = int(value)
+                elif value.replace('.', '', 1).isdigit() and value.count('.') <= 1:
+                    value = float(value)
+                
+                params[key] = value
+        
+        return params
+    
+    def parse_array(self, array_text):
+        """
+        Parse array parameter
+        
+        Args:
+            array_text (str): Text inside square brackets
+            
+        Returns:
+            list: List of values
+        """
+        items = []
+        
+        # Split by commas, respecting quotes
+        in_quotes = False
+        current_item = ""
+        
+        for char in array_text:
+            if char == '"' or char == "'":
+                in_quotes = not in_quotes
+                current_item += char
+            elif char == ',' and not in_quotes:
+                items.append(current_item.strip())
+                current_item = ""
+            else:
+                current_item += char
+        
+        if current_item:
+            items.append(current_item.strip())
+        
+        # Process each item to remove quotes and convert types
+        processed_items = []
+        for item in items:
+            item = item.strip()
+            if (item.startswith('"') and item.endswith('"')) or \
+               (item.startswith("'") and item.endswith("'")):
+                item = item[1:-1]
+            
+            # Convert to appropriate type
+            if item.lower() == 'true':
+                item = True
+            elif item.lower() == 'false':
+                item = False
+            elif item.isdigit():
+                item = int(item)
+            elif item.replace('.', '', 1).isdigit() and item.count('.') <= 1:
+                item = float(item)
+                
+            processed_items.append(item)
+        
+        return processed_items
+    
+    def apply_template(self, template, params, content=None):
+        """
+        Apply parameters to a LaTeX template with conditional sections
+        
+        Args:
+            template (str): LaTeX template with placeholders
+            params (dict): Parameters to apply
+            content (str, optional): Content to insert in #CONTENT# placeholder
+            
+        Returns:
+            str: Processed LaTeX content
+        """
+        result = template
+        
+        # Simple If-Else conditionals
+        # Format: #IF condition# content #ELSE# content #ENDIF#
+        
+        # Process equality conditionals
+        pattern = r'#IF\s+([^=<>!]+)=([^#]+)#(.*?)(?:#ELSE#(.*?))?#ENDIF#'
+        
+        def replace_conditional(match):
+            param_name = match.group(1).strip()
+            param_value = match.group(2).strip()
+            if_content = match.group(3)
+            else_content = match.group(4) or ''
+            
+            # Convert param_value to appropriate type for comparison
+            if param_value.lower() == 'true':
+                param_value = True
+            elif param_value.lower() == 'false':
+                param_value = False
+            elif param_value.isdigit():
+                param_value = int(param_value)
+            elif param_value.replace('.', '', 1).isdigit() and param_value.count('.') <= 1:
+                param_value = float(param_value)
+            
+            # Check if parameter matches the condition
+            if param_name in params and params[param_name] == param_value:
+                return if_content
+            else:
+                return else_content
+        
+        # Replace conditionals
+        result = re.sub(pattern, replace_conditional, result, flags=re.DOTALL)
+        
+        # Process comparison conditionals
+        comp_pattern = r'#IF\s+([^<>=!]+)([<>=!]+)([^#]+)#(.*?)(?:#ELSE#(.*?))?#ENDIF#'
+        
+        def replace_comparison(match):
+            param_name = match.group(1).strip()
+            operator = match.group(2).strip()
+            param_value = match.group(3).strip()
+            if_content = match.group(4)
+            else_content = match.group(5) or ''
+            
+            # Convert param_value to appropriate type for comparison
+            if param_value.lower() == 'true':
+                param_value = True
+            elif param_value.lower() == 'false':
+                param_value = False
+            elif param_value.isdigit():
+                param_value = int(param_value)
+            elif param_value.replace('.', '', 1).isdigit() and param_value.count('.') <= 1:
+                param_value = float(param_value)
+            
+            # Check if parameter isn't present
+            if param_name not in params:
+                return else_content
+            
+            # Get parameter value
+            actual_value = params[param_name]
+            
+            # Compare based on operator
+            if operator == '>' and actual_value > param_value:
+                return if_content
+            elif operator == '>=' and actual_value >= param_value:
+                return if_content
+            elif operator == '<' and actual_value < param_value:
+                return if_content
+            elif operator == '<=' and actual_value <= param_value:
+                return if_content
+            elif operator == '==' and actual_value == param_value:
+                return if_content
+            elif operator == '!=' and actual_value != param_value:
+                return if_content
+            else:
+                return else_content
+        
+        # Replace comparison conditionals
+        result = re.sub(comp_pattern, replace_comparison, result, flags=re.DOTALL)
+        
+        # Replace parameter placeholders (case-insensitive)
+        for param_name, param_value in params.items():
+            # Convert param_value to string if it's not already
+            if not isinstance(param_value, str):
+                param_value = str(param_value)
+                
+            # Replace both #param# and #PARAM# patterns
+            placeholder_lower = f'#{param_name.lower()}#'
+            placeholder_upper = f'#{param_name.upper()}#'
+            result = result.replace(placeholder_lower, param_value)
+            result = result.replace(placeholder_upper, param_value)
+        
+        # Replace content placeholder
+        if content is not None:
+            result = result.replace('#CONTENT#', content)
+        
+        return result
+    
+    def handle_config_command(self, command_params, content_lines):
+        """
+        Handle the #config command to set document-level configuration
+        
+        Args:
+            command_params (dict): Parameters from the config command
+            content_lines (list): Content lines after the command
+            
+        Returns:
+            str: Empty string (config command doesn't produce output)
+        """
+        # Process configuration content
+        config_content = "\n".join(content_lines)
+        
+        try:
+            # Try to parse as JSON if there's content
+            if config_content.strip():
+                # Replace escaped backslashes in the JSON string
+                config_content = config_content.replace("\\\\", "\\")
+                import json
+                doc_config = json.loads(config_content)
+                self.config.set_document_config(doc_config)
+            elif command_params:
+                # If parameters are provided, convert them to a document config
+                doc_config = {"commands": {}}
+                
+                for param_name, param_value in command_params.items():
+                    if "." in param_name:
+                        # Parameter format: command.parameter.option
+                        parts = param_name.split(".")
+                        
+                        if len(parts) >= 2:
+                            cmd_name = parts[0]
+                            
+                            # Ensure command exists
+                            if cmd_name not in doc_config["commands"]:
+                                doc_config["commands"][cmd_name] = {
+                                    "parameters": {}
+                                }
+                                
+                            if len(parts) == 2:
+                                # It's a command property like command.template
+                                prop_name = parts[1]
+                                if prop_name == "template":
+                                    doc_config["commands"][cmd_name]["latex_template"] = param_value
+                                else:
+                                    doc_config["commands"][cmd_name][prop_name] = param_value
+                            elif len(parts) >= 3:
+                                # It's a parameter property like command.param.default
+                                param_name = parts[1]
+                                
+                                # Ensure parameter exists
+                                if "parameters" not in doc_config["commands"][cmd_name]:
+                                    doc_config["commands"][cmd_name]["parameters"] = {}
+                                    
+                                if param_name not in doc_config["commands"][cmd_name]["parameters"]:
+                                    doc_config["commands"][cmd_name]["parameters"][param_name] = {}
+                                
+                                # Set parameter property
+                                prop_name = parts[2]
+                                doc_config["commands"][cmd_name]["parameters"][param_name][prop_name] = param_value
+                
+                self.config.set_document_config(doc_config)
+                
+        except Exception as e:
+            print(f"Error processing config command: {str(e)}")
+            
+        # No output from config command
+        return ""
+    
+    def parse_command(self, markdown_text):
+        """
+        Parse a single command line and its content
+        
+        Args:
+            markdown_text (str): Markdown command with optional parameters and content
+            
+        Returns:
+            str: Processed LaTeX content
+        """
+        lines = markdown_text.strip().split('\n')
+        
+        # Parse the command line
+        if not lines or not lines[0].startswith('#'):
+            return markdown_text
+        
+        command_line = lines[0]
+        content_lines = lines[1:] if len(lines) > 1 else []
+        
+        # Extract command name and parameters
+        command_pattern = r'^#(\w+)(?:\{([^}]*)\})?$'
+        match = re.match(command_pattern, command_line)
+        
+        if not match:
+            return markdown_text
+        
+        command_name = match.group(1)
+        param_text = match.group(2) or ""
+        
+        # Parse parameters
+        params = self.parse_parameters(param_text)
+        
+        # Special handling for config command
+        if command_name == "config":
+            return self.handle_config_command(params, content_lines)
+        
+        # Get command configuration
+        cmd_config = self.config.get_command_config(command_name)
+        if not cmd_config:
+            return markdown_text
+        
+        # Apply default parameters
+        if "parameters" in cmd_config:
+            for param_name, param_config in cmd_config["parameters"].items():
+                if param_name not in params and "default" in param_config:
+                    params[param_name] = param_config["default"]
+        
+        # Get content
+        content = "\n".join(content_lines)
+        
+        # Special handling for equations
+        if command_name == "eq" and content:
+            # Remove trailing empty lines which can cause issues
+            content = content.rstrip()
+            
+            # Check if there's a trailing "#eq" to terminate the environment
+            if content.endswith("#eq"):
+                # Remove the terminating tag
+                content = content[:-3].rstrip()
+        
+        # Get LaTeX template
+        template = cmd_config.get("latex_template", "")
+        
+        # Apply template
+        result = self.apply_template(template, params, content)
+        
+        return result
+    
+    def preprocess_document(self, markdown_text):
+        """
+        Preprocess document to extract document-level configurations
+        
+        Args:
+            markdown_text (str): Full markdown document
+            
+        Returns:
+            str: Markdown with configuration blocks removed
+        """
+        lines = markdown_text.strip().split('\n')
+        processed_lines = []
+        i = 0
+        
+        # First pass: find and process config commands
+        while i < len(lines):
+            line = lines[i].strip()
+            
+            # Check if this is a config command
+            if line.startswith('#config'):
+                # Extract the command line
+                command_line = line
+                command_content = []
+                i += 1
+                
+                # Collect content until next command or end of input
+                while i < len(lines) and not lines[i].strip().startswith('#'):
+                    command_content.append(lines[i])
+                    i += 1
+                
+                # Process the command
+                command_text = '\n'.join([command_line] + command_content)
+                self.parse_command(command_text)
+                
+                # Don't add these to the final document
+            else:
+                # Keep other content
+                processed_lines.append(line)
+                i += 1
+        
+        return '\n'.join(processed_lines)
+    
     def parse(self, markdown_text):
         """
         Convert markdown to LaTeX
@@ -73,156 +494,60 @@ class MarkdownParser:
         Returns:
             str: Converted LaTeX document
         """
+        # Store original document content
+        self.document_content = markdown_text
+        
+        # Preprocess to extract and process configuration blocks
+        markdown_text = self.preprocess_document(markdown_text)
+        
         # Process the content line by line
         lines = markdown_text.strip().split('\n')
         processed_lines = []
         
         i = 0
-        in_itemize = False  # Track if we're inside an itemize environment
-        in_figure = False   # Track if we're inside a figure environment
-        
         while i < len(lines):
             line = lines[i].strip()
             
-            # Special handling for figure environments
-            if line.startswith('\\begin{figure'):
-                # Start collecting the figure environment
-                in_figure = True
-                processed_lines.append(line)
+            # Check if this is a command line
+            if line.startswith('#'):
+                # Find the end of the command content
+                command_name = re.match(r'^#(\w+)', line)
+                if command_name is None:
+                    # Not a valid command, treat as regular text
+                    processed_lines.append(self.escape_latex(lines[i]))
+                    i += 1
+                    continue
+                    
+                command_name = command_name.group(1)
+                command_content = [line]
                 i += 1
-                continue
-            
-            if in_figure:
-                # If we're in a figure environment, add the line unchanged
-                processed_lines.append(lines[i])  # Use original line with whitespace
                 
-                # Check if this line ends the figure environment
-                if '\\end{figure}' in line:
-                    in_figure = False
-                
-                i += 1
-                continue
-            
-            # Handle math expressions with \[ \]
-            if line.startswith('\\['):
-                # Collect all lines until closing \]
-                math_content = [line]
-                i += 1
-                while i < len(lines) and '\\]' not in lines[i]:
-                    math_content.append(lines[i])
+                # Collect content until next command or end of input
+                command_ended = False
+                while i < len(lines) and not command_ended:
+                    current_line = lines[i].strip()
+                    # Check if this is a standalone #eq that terminates the equation
+                    if current_line == f"#{command_name}" and command_name == "eq":
+                        # This is a terminator for the current command
+                        command_ended = True
+                    # Check if this is a new command
+                    elif current_line.startswith('#'):
+                        # New command found, don't include it
+                        break
+                    else:
+                        # Add this line to the current command's content
+                        command_content.append(lines[i])
                     i += 1
                 
-                # Add the closing line if found
-                if i < len(lines):
-                    math_content.append(lines[i])
-                    i += 1
-                
-                # Add the math block directly (no escaping needed)
-                processed_lines.extend(math_content)
-                continue
-                
-            # Detect existing math delimiters
-            if line.startswith('$') and line.endswith('$'):
-                processed_lines.append(line)
-                i += 1
-                continue
-            
-            # Problem section
-            if line.startswith("#problem"):
-                # Extract problem title if present
-                problem_title = line[len("#problem"):].strip()
-                if problem_title:
-                    # Escape special characters in the title
-                    problem_title = self.escape_latex(problem_title)
-                    processed_lines.append("\\section*{" + problem_title + "}")
-                else:
-                    processed_lines.append("\\section*{}")
-                i += 1
-                
-            # Solution section
-            elif line == "#solution":
-                processed_lines.append("\\section*{Solution}")
-                i += 1
-                
-            # Bullet points
-            elif line.startswith("#bullet"):
-                # Extract the bullet content
-                bullet_content = line[len("#bullet"):].strip()
-                
-                # Escape special characters in the bullet content
-                bullet_content = self.escape_latex(bullet_content)
-                
-                # Start itemize environment if we're not already in one
-                if not in_itemize:
-                    processed_lines.append("\\begin{itemize}")
-                    in_itemize = True
-                
-                # Add the bullet item
-                processed_lines.append("\\item " + bullet_content)
-                
-                # Check if next line is also a bullet
-                next_is_bullet = i+1 < len(lines) and lines[i+1].strip().startswith("#bullet")
-                
-                # End itemize environment if next line is not a bullet
-                if not next_is_bullet and in_itemize:
-                    processed_lines.append("\\end{itemize}")
-                    in_itemize = False
-                
-                i += 1
-                
-            # Question with no prefix
-            elif line == "#question":
-                i += 1  # Move to the line with the question content
-                if i < len(lines):
-                    question_text = lines[i].strip()
-                    # Escape special characters in the question text
-                    question_text = self.escape_latex(question_text)
-                    processed_lines.append(question_text)
-                i += 1
-                
-            # Equation - FIXED HANDLING
-            elif line.startswith("#eq"):
-                # Extract equation content from either this line or the next
-                eq_content = line[len("#eq"):].strip()
-                
-                # If no content on this line, get from next line
-                if not eq_content and i + 1 < len(lines):
-                    i += 1
-                    eq_content = lines[i].strip()
-                
-                # Use display math mode for the equation
-                processed_lines.append("\\begin{equation*}")  # Added * for unnumbered equation
-                processed_lines.append(eq_content)
-                processed_lines.append("\\end{equation*}")
-                
-                i += 1
-                
-            # Aligned equations environment
-            elif line == "#align":
-                i += 1  # Move to the first line of aligned equations
-                align_content = []
-                
-                # Collect all lines until next command or end
-                while i < len(lines) and not lines[i].strip().startswith('#'):
-                    if lines[i].strip():  # Only add non-empty lines
-                        align_content.append(lines[i].strip())
-                    i += 1
-                
-                # Use aligned environment
-                processed_lines.append("\\begin{align*}")  # Added * for unnumbered equations
-                processed_lines.append(" \\\\ ".join(align_content))
-                processed_lines.append("\\end{align*}")
-                
-            # Regular text
+                # Parse the command and its content
+                command_text = '\n'.join(command_content)
+                processed_command = self.parse_command(command_text)
+                processed_lines.append(processed_command)
             else:
-                # Escape special characters in regular text
+                # Regular text - escape LaTeX special characters
                 escaped_line = self.escape_latex(line)
                 processed_lines.append(escaped_line)
                 i += 1
-        
-        # If we're still in an itemize environment at the end, close it
-        if in_itemize:
-            processed_lines.append("\\end{itemize}")
         
         # Join the processed lines
         content = '\n'.join(processed_lines)
@@ -243,19 +568,17 @@ class MarkdownParser:
             str: Complete LaTeX document
         """
         # Create a LaTeX document with necessary packages for math and images
-        # Using raw string to avoid any issues with string formatting
         template = r"""\documentclass{article}
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{graphicx}
 \graphicspath{{./}{./images/}}
 \usepackage{geometry}
+\usepackage{xcolor}
+\usepackage{mdframed}
 
 % Set margins
 \geometry{margin=1in}
-
-% Define custom commands for problem formatting
-\newcommand{\problem}[1]{\section*{#1}}
 
 \begin{document}
 
