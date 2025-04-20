@@ -69,6 +69,9 @@ class MathEditor:
         
         # Initialize current file path
         self.current_file = None
+        
+        # Set up preview context menu
+        self.setup_preview_context_menu()
     
     def load_template(self):
         """Load the default LaTeX template"""
@@ -292,6 +295,170 @@ class MathEditor:
         # Set initial paned window position (after a delay)
         self.root.after(100, self.set_initial_pane_position)
     
+    def setup_preview_context_menu(self):
+        """Set up context menu for the preview panel"""
+        self.preview_context_menu = tk.Menu(self.root, tearoff=0)
+        self.preview_context_menu.add_command(label="Adjust Image Size", command=self.adjust_image_size)
+        
+        # Bind right-click to show context menu to multiple components in the preview
+        # This ensures we catch the right-click regardless of where it happens in the preview
+        self.pdf_viewer.frame.bind("<Button-3>", self.show_preview_context_menu)
+        self.pdf_viewer.canvas.bind("<Button-3>", self.show_preview_context_menu)
+        self.pdf_viewer.pdf_frame.bind("<Button-3>", self.show_preview_context_menu)
+        
+        # Bind to canvas_frame too as it contains the scrollable view
+        self.pdf_viewer.canvas_frame.bind("<Button-3>", self.show_preview_context_menu)
+        
+        # Also bind to any existing children
+        for child in self.pdf_viewer.pdf_frame.winfo_children():
+            child.bind("<Button-3>", self.show_preview_context_menu)
+    
+    def show_preview_context_menu(self, event):
+        """Show the context menu at the current mouse position"""
+        try:
+            self.preview_context_menu.tk_popup(event.x_root, event.y_root)
+        finally:
+            self.preview_context_menu.grab_release()
+
+    def adjust_image_size(self):
+        """Show dialog to adjust the size of the image in the document"""
+        # Check if there's an image in the document
+        content = self.editor.get_content()
+        
+        # More robust pattern to match includegraphics command with optional width parameter
+        image_pattern = r'\\includegraphics(?:\[.*?width=(.*?)\\textwidth.*?\]|\[\])?\{([^{}]+)\}'
+        match = re.search(image_pattern, content)
+        
+        if not match:
+            # Try alternate pattern without the width parameter extraction
+            image_pattern = r'\\includegraphics(?:\[.*?\])?\{([^{}]+)\}'
+            match = re.search(image_pattern, content)
+            if match:
+                # Found image without width parameter
+                filename = match.group(1)
+                current_width = 0.8  # Default width
+            else:
+                messagebox.showinfo("No Image Found", "No image was found in the document.")
+                return
+        else:
+            # Extract current width and filename
+            current_width_str = match.group(1) if match.group(1) else "0.8"
+            try:
+                current_width = float(current_width_str)
+            except ValueError:
+                current_width = 0.8
+            
+            filename = match.group(2)
+        
+        # Log current state for debugging
+        print(f"Image found: {filename}")
+        print(f"Current width: {current_width}")
+        
+        # Create a dialog for size adjustment
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Adjust Image Size")
+        dialog.geometry("400x300")
+        dialog.transient(self.root)
+        dialog.grab_set()
+        
+        # Create variables
+        width_var = tk.DoubleVar(value=current_width)
+        
+        # Create widgets
+        frame = ttk.Frame(dialog, padding=10)
+        frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Width
+        ttk.Label(frame, text=f"Image: {filename}").pack(anchor=tk.W, padx=5, pady=5)
+        ttk.Label(frame, text="Width (0.1-1.0 × text width):").pack(anchor=tk.W, padx=5, pady=5)
+        width_scale = ttk.Scale(frame, from_=0.1, to=1.0, variable=width_var, orient=tk.HORIZONTAL)
+        width_scale.pack(fill=tk.X, padx=5, pady=5)
+        
+        # Create a label to show the current value
+        value_label = ttk.Label(frame, text=f"Current width: {current_width:.2f} × text width")
+        value_label.pack(anchor=tk.E, padx=5)
+        
+        # Update the label when the scale changes
+        def update_value_label(event=None):
+            value_label.config(text=f"Current width: {width_var.get():.2f} × text width")
+        
+        width_scale.bind("<Motion>", update_value_label)
+        width_scale.bind("<ButtonRelease-1>", update_value_label)
+        
+        # Preview image (if available)
+        try:
+            success, image = self.image_converter.image_db.get_image(filename)
+            if success:
+                # Resize image for preview
+                max_size = (350, 200)
+                image.thumbnail(max_size)
+                photo = ImageTk.PhotoImage(image)
+                
+                # Store reference to prevent garbage collection
+                dialog.photo = photo
+                
+                # Display image
+                image_label = ttk.Label(frame, image=photo)
+                image_label.pack(padx=5, pady=10)
+        except Exception as e:
+            print(f"Error loading image preview: {str(e)}")
+        
+        def on_ok():
+            # Update the image size in the document
+            new_width = width_var.get()
+            
+            print(f"New width: {new_width}")
+            
+            # Find the original includegraphics tag
+            original_pattern = r'\\includegraphics(?:\[.*?\])?\{' + re.escape(filename) + r'\}'
+            match = re.search(original_pattern, content)
+            
+            if not match:
+                print("Could not find the image tag in the document")
+                messagebox.showerror("Error", "Could not locate the image in the document for updating.")
+                dialog.destroy()
+                return
+            
+            # Get the exact original tag
+            original_tag = match.group(0)
+            print(f"Original tag: {original_tag}")
+            
+            # Create new tag - use string concatenation to avoid regex interpretation issues
+            new_image_tag = "\\includegraphics[width=" + str(new_width) + "\\textwidth]{" + filename + "}"
+            print(f"New image tag: {new_image_tag}")
+            
+            # Use simple string replacement instead of regex replacement
+            new_content = content.replace(original_tag, new_image_tag)
+            
+            # Check if replacement worked
+            if new_content == content:
+                print("Warning: Content was not modified by string replacement")
+                messagebox.showerror("Error", "Failed to update the image size.")
+                dialog.destroy()
+                return
+            
+            # Update editor content
+            self.editor.set_content(new_content)
+            
+            # Update preview
+            self.update_preview()
+            
+            dialog.destroy()
+            self.status_var.set(f"Image size updated to {new_width:.2f}×textwidth")
+        
+        def on_cancel():
+            dialog.destroy()
+        
+        # Buttons
+        button_frame = ttk.Frame(frame)
+        button_frame.pack(fill=tk.X, pady=10)
+        
+        ok_button = ttk.Button(button_frame, text="Apply", command=on_ok)
+        ok_button.pack(side=tk.RIGHT, padx=5)
+        
+        cancel_button = ttk.Button(button_frame, text="Cancel", command=on_cancel)
+        cancel_button.pack(side=tk.RIGHT, padx=5)
+    
     def set_initial_pane_position(self):
         """Set the initial position of the paned window divider"""
         width = self.root.winfo_width()
@@ -481,6 +648,10 @@ class MathEditor:
                 # Display the PDF
                 if self.pdf_viewer.display_pdf(result):
                     self.status_var.set("Preview updated successfully")
+                    
+                    # Rebind the right-click event to any new elements in the preview
+                    for child in self.pdf_viewer.pdf_frame.winfo_children():
+                        child.bind("<Button-3>", self.show_preview_context_menu)
                 else:
                     self.status_var.set("Error displaying PDF")
             else:
