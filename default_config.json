@@ -1,0 +1,178 @@
+{
+    "commands": {
+      "problem": {
+        "description": "Problem section",
+        "parameters": {
+          "title": {
+            "description": "Problem title",
+            "type": "string",
+            "default": "Problem"
+          },
+          "points": {
+            "description": "Points assigned to the problem",
+            "type": "number",
+            "default": 0
+          },
+          "difficulty": {
+            "description": "Problem difficulty",
+            "type": "string",
+            "default": "medium",
+            "options": ["easy", "medium", "hard"]
+          }
+        },
+        "latex_template": "\\section*{#title##IF points>0# (#points# points)#ENDIF#}"
+      },
+      "solution": {
+        "description": "Solution section",
+        "parameters": {
+          "title": {
+            "description": "Solution title",
+            "type": "string",
+            "default": "Solution"
+          },
+          "hidden": {
+            "description": "Whether the solution should be hidden",
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "latex_template": "\\section*{#title#}\n#CONTENT#"
+      },
+      "question": {
+        "description": "Question text",
+        "parameters": {},
+        "latex_template": "#CONTENT#"
+      },
+      "eq": {
+        "description": "Mathematical equation",
+        "parameters": {
+          "align": {
+            "description": "Text alignment",
+            "type": "string",
+            "default": "left",
+            "options": ["left", "center", "right"]
+          },
+          "numbering": {
+            "description": "Whether equation is numbered",
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "latex_template": "#IF numbering=True#\\begin{equation}#ELSE#\\begin{equation*}#ENDIF#\n#IF align=center#\\centering#ENDIF##IF align=right#\\raggedleft#ENDIF#\n#CONTENT#\n#IF numbering=True#\\end{equation}#ELSE#\\end{equation*}#ENDIF#"
+      },
+      "align": {
+        "description": "Aligned equations environment",
+        "parameters": {
+          "numbering": {
+            "description": "Whether equations should be numbered",
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "latex_template": "#IF numbering=True#\\begin{align}#ELSE#\\begin{align*}#ENDIF#\n#CONTENT#\n#IF numbering=True#\\end{align}#ELSE#\\end{align*}#ENDIF#"
+      },
+      "image": {
+        "description": "Image insertion",
+        "parameters": {
+          "file": {
+            "description": "Image filename",
+            "type": "string",
+            "required": true
+          },
+          "width": {
+            "description": "Image width as fraction of text width",
+            "type": "number",
+            "default": 0.8,
+            "min": 0.1,
+            "max": 1.0
+          },
+          "caption": {
+            "description": "Image caption",
+            "type": "string",
+            "default": ""
+          },
+          "label": {
+            "description": "Reference label",
+            "type": "string",
+            "default": ""
+          }
+        },
+        "latex_template": "\\begin{figure}[htbp]\n\\centering\n\\includegraphics[width=#width#\\textwidth]{#file#}\n#IF caption!=\"\"#\\caption{#caption#}#ENDIF#\n#IF label!=\"\"#\\label{#label#}#ENDIF#\n\\end{figure}"
+      },
+      "text": {
+        "description": "Formatted text",
+        "parameters": {
+          "style": {
+            "description": "Text style",
+            "type": "string",
+            "default": "normal",
+            "options": ["normal", "bold", "italic", "underline"]
+          },
+          "color": {
+            "description": "Text color",
+            "type": "string",
+            "default": "black"
+          },
+          "size": {
+            "description": "Text size",
+            "type": "string",
+            "default": "normalsize",
+            "options": ["tiny", "scriptsize", "footnotesize", "small", "normalsize", "large", "Large", "LARGE", "huge", "Huge"]
+          }
+        },
+        "latex_template": "{#IF style=bold#\\textbf{#ELSEIF style=italic#\\textit{#ELSEIF style=underline#\\underline{#ENDIF##IF color!=\"black\"#\\textcolor{#color#}{#ENDIF##IF size!=\"normalsize\"#\\#size#{#ENDIF##CONTENT##IF size!=\"normalsize\"#}#ENDIF##IF color!=\"black\"#}#ENDIF##IF style!=\"normal\"#}#ENDIF#}"
+      },
+      "bullet": {
+        "description": "Bullet point item",
+        "parameters": {},
+        "latex_template": "\\begin{itemize}\n\\item #CONTENT#\n\\end{itemize}"
+      },
+      "enum": {
+        "description": "Enumerated item",
+        "parameters": {},
+        "latex_template": "\\begin{enumerate}\n\\item #CONTENT#\n\\end{enumerate}"
+      },
+      "box": {
+        "description": "Boxed content",
+        "parameters": {
+          "title": {
+            "description": "Box title",
+            "type": "string",
+            "default": ""
+          },
+          "color": {
+            "description": "Box background color",
+            "type": "string",
+            "default": "gray!10"
+          }
+        },
+        "latex_template": "\\begin{mdframed}[backgroundcolor=#color##IF title!=\"\"#, frametitle=#title##ENDIF#]\n#CONTENT#\n\\end{mdframed}"
+      },
+      "table": {
+        "description": "Simple table",
+        "parameters": {
+          "columns": {
+            "description": "Column alignment",
+            "type": "string",
+            "default": "lll"
+          },
+          "caption": {
+            "description": "Table caption",
+            "type": "string",
+            "default": ""
+          },
+          "label": {
+            "description": "Reference label",
+            "type": "string",
+            "default": ""
+          }
+        },
+        "latex_template": "\\begin{table}[htbp]\n\\centering\n\\begin{tabular}{#columns#}\n#CONTENT#\n\\end{tabular}\n#IF caption!=\"\"#\\caption{#caption#}#ENDIF#\n#IF label!=\"\"#\\label{#label#}#ENDIF#\n\\end{table}"
+      },
+      "config": {
+        "description": "Document-level configuration",
+        "parameters": {},
+        "latex_template": ""
+      }
+    }
+  }
