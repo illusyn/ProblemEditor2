@@ -110,13 +110,13 @@ class ImageConverter:
         # Create the LaTeX figure environment using raw strings and string concatenation
         # This avoids any issues with Python string formatting
         latex = r"""
-\begin{figure}[htbp]
-    \centering
-    \includegraphics{""" + image_filename + r"""}
-    \caption{""" + caption + r"""}
-    \label{""" + label + r"""}
-\end{figure}
-"""
+    \begin{figure}[htbp]
+        \centering
+        \includegraphics[width=""" + str(width) + r"""\textwidth]{""" + image_filename + r"""}
+        \caption{""" + caption + r"""}
+        \label{""" + label + r"""}
+    \end{figure}
+    """
         
         return latex
     
