@@ -120,17 +120,18 @@ class ImageConverter:
         
         return latex
     
-    def process_image(self, image_data, filename=None):
+    def process_image(self, image_data, filename=None, max_width=600, max_height=800):
         """
-        Process an image and store it in the database
+        Process an image and store it in the database, resizing if necessary
         
         Args:
             image_data: PIL Image object or path to image file
             filename (str, optional): Desired filename (without extension)
+            max_width (int): Maximum width for the image
+            max_height (int): Maximum height for the image
             
         Returns:
             tuple: (success, image_info or error_message)
-                   image_info is a dict with keys: path, filename, width, height
         """
         try:
             # Generate a unique filename if none provided
@@ -146,8 +147,29 @@ class ImageConverter:
             else:
                 image = image_data
             
-            # Get image dimensions
-            width, height = image.size
+            # Get original image dimensions
+            orig_width, orig_height = image.size
+            
+            # Calculate if resizing is needed while preserving aspect ratio
+            if orig_width > max_width or orig_height > max_height:
+                # Calculate scaling factors
+                width_ratio = max_width / orig_width
+                height_ratio = max_height / orig_height
+                
+                # Use the smaller ratio to ensure both dimensions fit within limits
+                scale_factor = min(width_ratio, height_ratio)
+                
+                # Calculate new dimensions
+                new_width = int(orig_width * scale_factor)
+                new_height = int(orig_height * scale_factor)
+                
+                # Resize the image
+                image = image.resize((new_width, new_height), Image.LANCZOS)
+                
+                # Get new dimensions after resize
+                width, height = image.size
+            else:
+                width, height = orig_width, orig_height
             
             # Store in database only, not as file
             image_name = f"{filename}.png"
@@ -164,7 +186,10 @@ class ImageConverter:
                 "path": str(virtual_path),  # Virtual path for reference only
                 "filename": image_name,
                 "width": width,
-                "height": height
+                "height": height,
+                "original_width": orig_width,
+                "original_height": orig_height,
+                "was_resized": (orig_width != width or orig_height != height)
             }
             
             # Add to document images
