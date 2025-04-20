@@ -3,7 +3,48 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# Project-specific directories
 /latex_debug_test
-l/atex_test_output
+/latex_test_output
 /test_app_template
 /test_single_image
+/junkdir/
+/exports/
+
+# LaTeX temporary files - excluded at root level
+/*.aux
+/*.log
+/*.out
+/*.toc
+/*.synctex.gz
+/*.fls
+/*.fdb_latexmk
+/*.pdf
+/*.tex
+
+# Editor directories and files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS specific files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Virtual environments
+venv/
+env/
+.venv/
+.env/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
