@@ -8,12 +8,13 @@ from config_loader import ConfigLoader
 class MarkdownParser:
     """Converts custom parameterized markdown to LaTeX"""
     
-    def __init__(self, config_file=None):
+    def __init__(self, config_file=None, config_manager=None):
         """
         Initialize the markdown parser
         
         Args:
             config_file (str, optional): Path to the configuration file
+            config_manager: Configuration manager instance for accessing app settings
         """
         # Initialize the configuration loader
         try:
@@ -22,6 +23,9 @@ class MarkdownParser:
             print(f"Warning: Failed to load config file: {str(e)}")
             print("Using default configuration")
             self.config = ConfigLoader()
+        
+        # Store config manager for accessing app settings
+        self.config_manager = config_manager
         
         # Document content collected before parsing
         self.document_content = ""
@@ -567,6 +571,54 @@ class MarkdownParser:
         Returns:
             str: Complete LaTeX document
         """
+        # Get font size from configuration if available
+        font_size = 11  # Default font size
+        if self.config_manager:
+            font_size = self.config_manager.get_value("preview", "font_size", 11)
+        
+        # Get font family from configuration
+        font_family = "Computer Modern"  # Default LaTeX font
+        if self.config_manager:
+            font_family = self.config_manager.get_value("preview", "font_family", "Computer Modern")
+        
+        # Map font size to standard LaTeX font size commands
+        font_size_cmd = ""
+        if font_size <= 8:
+            font_size_cmd = "\\small"
+        elif font_size <= 10:
+            font_size_cmd = "\\normalsize"
+        elif font_size <= 12:
+            font_size_cmd = "\\large"
+        elif font_size <= 14:
+            font_size_cmd = "\\Large"
+        elif font_size <= 17:
+            font_size_cmd = "\\LARGE"
+        elif font_size <= 20:
+            font_size_cmd = "\\huge"
+        else:
+            font_size_cmd = "\\Huge"
+        
+        # Font package and command based on selected font
+        font_packages = ""
+        font_command = ""
+        
+        if font_family == "Times New Roman":
+            font_packages = "\\usepackage{times}"
+            font_command = "\\rmfamily"
+        elif font_family == "Helvetica":
+            font_packages = "\\usepackage{helvet}\n\\renewcommand{\\familydefault}{\\sfdefault}"
+            font_command = ""
+        elif font_family == "Courier":
+            font_packages = "\\usepackage{courier}"
+            font_command = "\\ttfamily"
+        elif font_family == "Palatino":
+            font_packages = "\\usepackage{palatino}"
+            font_command = ""
+        elif font_family == "Bookman":
+            font_packages = "\\usepackage{bookman}"
+            font_command = ""
+        # Computer Modern is the default, no packages needed
+        
         # Create a LaTeX document with necessary packages for math and images
         template = r"""\documentclass{article}
 \usepackage{amsmath}
@@ -576,11 +628,14 @@ class MarkdownParser:
 \usepackage{geometry}
 \usepackage{xcolor}
 \usepackage{mdframed}
+""" + font_packages + r"""
 
 % Set margins
 \geometry{margin=1in}
 
 \begin{document}
+
+""" + font_size_cmd + font_command + r"""
 
 """ + content + r"""
 

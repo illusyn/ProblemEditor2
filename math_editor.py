@@ -72,8 +72,8 @@ class MathEditor:
         # Initialize the database interface (will set up menu later)
         self.db_interface = DatabaseInterface(self)
         
-        # Initialize the markdown parser
-        self.markdown_parser = MarkdownParser()
+        # Initialize the markdown parser with the config manager
+        self.markdown_parser = MarkdownParser(config_manager=self.config_manager)
         
         # Load the LaTeX template
         self.template = self.load_template()
@@ -361,6 +361,18 @@ class MathEditor:
         self.editor.font_size = font_size
         self.editor.editor_font = ('Courier', font_size)
         self.editor.editor.configure(font=self.editor.editor_font)
+        
+        # Update tag configurations for styled text
+        self.editor.editor.tag_configure("command", font=(self.editor.editor_font[0], font_size, "bold"))
+        self.editor.editor.tag_configure("section", font=(self.editor.editor_font[0], font_size, "bold"))
+        
+        # Reapply syntax highlighting to update styled text
+        self.editor.highlight_syntax()
+        
+        # If preview font settings were changed, refresh the preview
+        if "preview" in new_config and ("font_size" in new_config["preview"] or "font_family" in new_config["preview"]):
+            # Update preview with new font settings
+            self.update_preview()
         
         # Update status
         self.status_var.set("Preferences updated")

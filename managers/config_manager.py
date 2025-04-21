@@ -37,6 +37,10 @@ class ConfigManager:
             },
             "editor": {
                 "font_size": 12
+            },
+            "preview": {
+                "font_size": 11,
+                "font_family": "Computer Modern"
             }
         }
         

@@ -35,7 +35,7 @@ class PreferencesDialog:
         # Create the dialog window
         self.dialog = tk.Toplevel(self.parent)
         self.dialog.title("Preferences")
-        self.dialog.geometry("500x400")
+        self.dialog.geometry("500x500")
         self.dialog.transient(self.parent)
         self.dialog.grab_set()
         
@@ -105,7 +105,7 @@ class PreferencesDialog:
         notebook.add(editor_frame, text="Editor Settings")
         
         # Default font size
-        ttk.Label(editor_frame, text="Default Font Size:").grid(
+        ttk.Label(editor_frame, text="Editor Font Size:").grid(
             row=0, column=0, sticky=tk.W, padx=5, pady=5)
         
         font_size = self.config.get("editor", {}).get("font_size", 12)
@@ -113,6 +113,64 @@ class PreferencesDialog:
         
         font_entry = ttk.Entry(editor_frame, textvariable=self.font_size_var, width=5)
         font_entry.grid(row=0, column=1, sticky=tk.W, padx=5, pady=5)
+        
+        # Add a slider for visual adjustment
+        font_slider = ttk.Scale(
+            editor_frame, 
+            from_=8, 
+            to=36, 
+            orient=tk.HORIZONTAL, 
+            variable=self.font_size_var, 
+            length=300
+        )
+        font_slider.grid(row=1, column=0, columnspan=2, sticky=tk.W+tk.E, padx=5, pady=5)
+        
+        # Preview settings tab
+        preview_frame = ttk.Frame(notebook, padding=10)
+        notebook.add(preview_frame, text="Preview Settings")
+        
+        # Preview font size
+        ttk.Label(preview_frame, text="Preview Font Size:").grid(
+            row=0, column=0, sticky=tk.W, padx=5, pady=5)
+        
+        preview_font_size = self.config.get("preview", {}).get("font_size", 11)
+        self.preview_font_size_var = tk.IntVar(value=preview_font_size)
+        
+        preview_font_entry = ttk.Entry(preview_frame, textvariable=self.preview_font_size_var, width=5)
+        preview_font_entry.grid(row=0, column=1, sticky=tk.W, padx=5, pady=5)
+        
+        # Add a slider for visual adjustment
+        preview_font_slider = ttk.Scale(
+            preview_frame, 
+            from_=8, 
+            to=24, 
+            orient=tk.HORIZONTAL, 
+            variable=self.preview_font_size_var, 
+            length=300
+        )
+        preview_font_slider.grid(row=1, column=0, columnspan=2, sticky=tk.W+tk.E, padx=5, pady=5)
+        
+        # Preview font family
+        ttk.Label(preview_frame, text="Preview Font Family:").grid(
+            row=3, column=0, sticky=tk.W, padx=5, pady=5)
+        
+        preview_font_family = self.config.get("preview", {}).get("font_family", "Computer Modern")
+        self.preview_font_family_var = tk.StringVar(value=preview_font_family)
+        
+        font_options = ttk.Combobox(
+            preview_frame, 
+            textvariable=self.preview_font_family_var,
+            values=["Computer Modern", "Times New Roman", "Helvetica", "Courier", "Palatino", "Bookman"],
+            state="readonly",
+            width=20
+        )
+        font_options.grid(row=3, column=1, sticky=tk.W, padx=5, pady=5)
+        
+        # Add explanation for preview font size and family
+        ttk.Label(preview_frame, text="Note: These settings control the appearance of text in the LaTeX preview.\n"
+                                    "Different fonts may display mathematical content differently.\n"
+                                    "Computer Modern is the standard LaTeX font.").grid(
+            row=4, column=0, columnspan=2, sticky=tk.W, padx=5, pady=10)
         
         # Buttons frame
         button_frame = ttk.Frame(main_frame)
@@ -176,13 +234,21 @@ class PreferencesDialog:
         try:
             # Validate inputs
             try:
+                # Validate image height
                 height = self.height_var.get()
                 if height < 50 or height > 5000:
                     raise ValueError("Height must be between 50 and 5000 pixels")
                 
+                # Validate editor font size
                 font_size = self.font_size_var.get()
                 if font_size < 8 or font_size > 36:
-                    raise ValueError("Font size must be between 8 and 36")
+                    raise ValueError("Editor font size must be between 8 and 36")
+                
+                # Validate preview font size
+                preview_font_size = self.preview_font_size_var.get()
+                if preview_font_size < 8 or preview_font_size > 24:
+                    raise ValueError("Preview font size must be between 8 and 24")
+                
             except tk.TclError:
                 messagebox.showerror("Invalid Input", "Please enter valid numeric values")
                 return
@@ -193,6 +259,9 @@ class PreferencesDialog:
             
             if "editor" not in self.config:
                 self.config["editor"] = {}
+                
+            if "preview" not in self.config:
+                self.config["preview"] = {}
             
             # Update image settings
             self.config["image"]["default_max_height"] = height
@@ -200,6 +269,10 @@ class PreferencesDialog:
             
             # Update editor settings
             self.config["editor"]["font_size"] = font_size
+            
+            # Update preview settings
+            self.config["preview"]["font_size"] = preview_font_size
+            self.config["preview"]["font_family"] = self.preview_font_family_var.get()
             
             # Call the save callback if provided
             if self.on_save:
@@ -220,3 +293,7 @@ class PreferencesDialog:
             
             # Reset editor settings
             self.font_size_var.set(12)
+            
+            # Reset preview settings
+            self.preview_font_size_var.set(11)
+            self.preview_font_family_var.set("Computer Modern")

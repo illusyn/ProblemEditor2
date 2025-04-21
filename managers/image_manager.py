@@ -191,7 +191,7 @@ class ImageManager:
         # Create a dialog
         dialog = tk.Toplevel(self.app.root)
         dialog.title("Image Details")
-        dialog.geometry("400x500")
+        dialog.geometry("400x700")
         dialog.transient(self.app.root)
         dialog.grab_set()
         
@@ -316,7 +316,7 @@ class ImageManager:
         # Create a dialog for size adjustment
         dialog = tk.Toplevel(self.app.root)
         dialog.title("Adjust Image Size")
-        dialog.geometry("400x300")
+        dialog.geometry("400x700")
         dialog.transient(self.app.root)
         dialog.grab_set()
         
