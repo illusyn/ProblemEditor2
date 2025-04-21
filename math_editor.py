@@ -6,22 +6,22 @@ all components and handles the user interface.
 """
 
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk, filedialog, messagebox, simpledialog
 import os
 from pathlib import Path
 import tempfile
+import base64
+import io
+import shutil
 import re
 
 from editor import EditorComponent
 from preview.latex_compiler import LaTeXCompiler
 from preview.pdf_viewer import PDFViewer
-from PIL import Image, ImageGrab
-from markdown_parser import MarkdownParser
+from converters.image_converter import ImageConverter
+from PIL import Image, ImageTk
+from markdown_parser import MarkdownParser  # Import for markdown parsing
 from db_interface import DatabaseInterface
-
-# Import refactored components
-from managers.image_manager import ImageManager
-from ui.dialogs.image_dialog import ImageDetailsDialog, ImageSizeAdjustDialog
 
 class MathEditor:
     """Main application class for the Simplified Math Editor"""
@@ -48,8 +48,8 @@ class MathEditor:
         # Initialize the LaTeX compiler
         self.latex_compiler = LaTeXCompiler(working_dir=str(self.working_dir))
         
-        # Initialize the image manager
-        self.image_manager = ImageManager(working_dir=str(self.working_dir / "images"))
+        # Initialize the image converter
+        self.image_converter = ImageConverter(working_dir=str(self.working_dir / "images"))
         
         # Initialize the database interface (will set up menu later)
         self.db_interface = DatabaseInterface(self)
@@ -163,6 +163,11 @@ class MathEditor:
         template_menu.add_command(label="Two Equations Problem", command=self.insert_two_equations_template)
         template_menu.add_command(label="Problem with Image", command=self.insert_image_template)
         self.menubar.add_cascade(label="Templates", menu=template_menu)
+        
+        # Image menu
+        image_menu = tk.Menu(self.menubar, tearoff=0)
+        image_menu.add_command(label="Adjust Image Size...", command=self.adjust_image_size)
+        self.menubar.add_cascade(label="Image", menu=image_menu)
         
         # Help menu
         help_menu = tk.Menu(self.menubar, tearoff=0)
@@ -319,55 +324,6 @@ class MathEditor:
             self.preview_context_menu.tk_popup(event.x_root, event.y_root)
         finally:
             self.preview_context_menu.grab_release()
-
-    def adjust_image_size(self):
-        """Show dialog to adjust the size of the image in the document"""
-        # Check if there's an image in the document
-        content = self.editor.get_content()
-        
-        # Print debug information about content
-        print(f"Content length: {len(content)}")
-        
-        # More robust pattern to match includegraphics command with optional width parameter
-        image_pattern = r'\\includegraphics(?:\[.*?width=(.*?)\\textwidth.*?\]|\[\])?\{([^{}]+)\}'
-        match = re.search(image_pattern, content)
-        
-        if not match:
-            # Try alternate pattern without the width parameter extraction
-            image_pattern = r'\\includegraphics(?:\[.*?\])?\{([^{}]+)\}'
-            match = re.search(image_pattern, content)
-            if match:
-                # Found image without width parameter
-                filename = match.group(1)
-                current_width = 0.8  # Default width
-            else:
-                messagebox.showinfo("No Image Found", "No image was found in the document.")
-                return
-        else:
-            # Extract current width and filename
-            current_width_str = match.group(1) if match.group(1) else "0.8"
-            try:
-                current_width = float(current_width_str)
-            except ValueError:
-                current_width = 0.8
-            
-            filename = match.group(2)
-        
-        # Log current state for debugging
-        print(f"Image found: {filename}")
-        print(f"Current width: {current_width}")
-        
-        # Show the image adjustment dialog
-        dialog = ImageSizeAdjustDialog(
-            self.root, 
-            self.editor, 
-            self.image_manager, 
-            filename, 
-            current_width
-        )
-        
-        # Update preview after dialog closes
-        self.update_preview()
     
     def set_initial_pane_position(self):
         """Set the initial position of the paned window divider"""
@@ -467,14 +423,14 @@ class MathEditor:
                 image_name = image_name.strip()
                 
                 # Get the image from the database
-                success, img = self.image_manager.image_db.get_image(image_name)
+                success, img = self.image_converter.image_db.get_image(image_name)
                 
                 if not success:
                     # Try with common image extensions if the name doesn't have one
                     if '.' not in image_name:
                         extensions = ['.png', '.jpg', '.jpeg', '.gif']
                         for ext in extensions:
-                            success, img = self.image_manager.image_db.get_image(image_name + ext)
+                            success, img = self.image_converter.image_db.get_image(image_name + ext)
                             if success:
                                 image_name = image_name + ext
                                 break
@@ -633,8 +589,29 @@ class MathEditor:
     def get_clipboard_image(self):
         """Get image from clipboard"""
         try:
-            # Try to get image from clipboard using the image manager
-            return self.image_manager.get_clipboard_image()
+            # Use PIL's ImageGrab for clipboard access
+            from PIL import ImageGrab
+            
+            # Try to grab the image from clipboard
+            image = ImageGrab.grabclipboard()
+            
+            # Check what we got back
+            if isinstance(image, Image.Image):
+                # We got an image directly
+                return image
+            elif isinstance(image, list) and len(image) > 0:
+                # We got a list of file paths
+                if os.path.isfile(image[0]):
+                    return Image.open(image[0])
+            
+            # If we get here, no valid image was found
+            return None
+            
+        except ImportError:
+            messagebox.showinfo("Missing Dependency", 
+                               "PIL ImageGrab module is required for clipboard images.\n"
+                               "On Linux, you may need additional packages.")
+            return None
         except Exception as e:
             print(f"Clipboard error: {str(e)}")
             return None
@@ -653,21 +630,15 @@ class MathEditor:
                 return
             
             # Process the image (store in database)
-            success, result = self.image_manager.process_image(clipboard_image)
+            success, result = self.image_converter.process_image(clipboard_image)
             
             if not success:
                 messagebox.showerror("Image Processing Error", result)
                 return
             
             # Create a dialog to get caption and width
-            dialog = ImageDetailsDialog(
-                self.root, 
-                result, 
-                self.image_manager,
-                self.on_image_dialog_apply
-            )
-            
-            if dialog.result["cancelled"]:
+            image_info = self.get_image_details(result)
+            if not image_info:
                 return  # User cancelled
             
             # Check if document is empty or lacks structure
@@ -680,11 +651,11 @@ class MathEditor:
                 self.editor.editor.insert(tk.INSERT, "#problem\n\n")
             
             # Create LaTeX figure code
-            latex_figure = self.image_manager.create_latex_figure(
-                image_path=dialog.result["filename"],  # Use just the filename
-                caption=dialog.result["caption"],
-                label=dialog.result["label"],
-                width=dialog.result["width"]
+            latex_figure = self.image_converter.create_latex_figure(
+                image_path=image_info["filename"],  # Use just the filename
+                caption=image_info["caption"],
+                label=image_info["label"],
+                width=image_info["width"]
             )
             
             # Insert at cursor position
@@ -696,15 +667,93 @@ class MathEditor:
         except Exception as e:
             messagebox.showerror("Image Error", str(e))
     
-    def on_image_dialog_apply(self, result):
-        """
-        Callback for when image details dialog is applied
+    def get_image_details(self, image_info):
+        """Show dialog to get image details"""
+        # Create a dialog
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Image Details")
+        dialog.geometry("400x500")
+        dialog.transient(self.root)
+        dialog.grab_set()
         
-        Args:
-            result (dict): Dialog result data
-        """
-        # Nothing to do here for now, but could be extended later
-        pass
+        # Create variables
+        caption_var = tk.StringVar(value="Figure caption")
+        label_var = tk.StringVar(value=f"fig:{Path(image_info['filename']).stem}")
+        width_var = tk.DoubleVar(value=0.8)
+        
+        # Create widgets
+        frame = ttk.Frame(dialog, padding=10)
+        frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Caption
+        ttk.Label(frame, text="Caption:").grid(row=0, column=0, sticky=tk.W, padx=5, pady=5)
+        caption_entry = ttk.Entry(frame, textvariable=caption_var, width=40)
+        caption_entry.grid(row=0, column=1, sticky=tk.W+tk.E, padx=5, pady=5)
+        
+        # Label
+        ttk.Label(frame, text="Label:").grid(row=1, column=0, sticky=tk.W, padx=5, pady=5)
+        label_entry = ttk.Entry(frame, textvariable=label_var, width=40)
+        label_entry.grid(row=1, column=1, sticky=tk.W+tk.E, padx=5, pady=5)
+        
+        # Width
+        ttk.Label(frame, text="Width (0.1-1.0):").grid(row=2, column=0, sticky=tk.W, padx=5, pady=5)
+        width_scale = ttk.Scale(frame, from_=0.1, to=1.0, variable=width_var, orient=tk.HORIZONTAL)
+        width_scale.grid(row=2, column=1, sticky=tk.W+tk.E, padx=5, pady=5)
+        width_label = ttk.Label(frame, textvariable=width_var)
+        width_label.grid(row=2, column=2, padx=5, pady=5)
+        
+        # Preview
+        ttk.Label(frame, text="Preview:").grid(row=3, column=0, sticky=tk.W, padx=5, pady=5)
+        
+        # Get the image from database for preview
+        success, image = self.image_converter.image_db.get_image(image_info["filename"])
+        if success:
+            # Resize image for preview
+            max_size = (350, 300)
+            image.thumbnail(max_size)
+            photo = ImageTk.PhotoImage(image)
+            
+            # Store reference to prevent garbage collection
+            dialog.photo = photo
+            
+            # Display image
+            image_label = ttk.Label(frame, image=photo)
+            image_label.grid(row=4, column=0, columnspan=3, padx=5, pady=5)
+        
+        # Result
+        result = {"cancelled": True}
+        
+        def on_ok():
+            result["cancelled"] = False
+            result["caption"] = caption_var.get()
+            result["label"] = label_var.get()
+            result["width"] = width_var.get()
+            result["filename"] = image_info["filename"]
+            dialog.destroy()
+        
+        def on_cancel():
+            dialog.destroy()
+        
+        # Buttons
+        button_frame = ttk.Frame(frame)
+        button_frame.grid(row=5, column=0, columnspan=3, pady=10)
+        
+        ok_button = ttk.Button(button_frame, text="OK", command=on_ok)
+        ok_button.pack(side=tk.RIGHT, padx=5)
+        
+        cancel_button = ttk.Button(button_frame, text="Cancel", command=on_cancel)
+        cancel_button.pack(side=tk.RIGHT, padx=5)
+        
+        # Configure grid
+        frame.columnconfigure(1, weight=1)
+        
+        # Wait for dialog to close
+        self.root.wait_window(dialog)
+        
+        if result["cancelled"]:
+            return None
+        
+        return result
     
     def insert_image_from_file(self):
         """Insert an image from a file"""
@@ -722,21 +771,15 @@ class MathEditor:
         
         try:
             # Process the image
-            success, result = self.image_manager.process_image(file_path)
+            success, result = self.image_converter.process_image(file_path)
             
             if not success:
                 messagebox.showerror("Image Processing Error", result)
                 return
             
             # Create a dialog to get caption and width
-            dialog = ImageDetailsDialog(
-                self.root, 
-                result, 
-                self.image_manager,
-                self.on_image_dialog_apply
-            )
-            
-            if dialog.result["cancelled"]:
+            image_info = self.get_image_details(result)
+            if not image_info:
                 return  # User cancelled
             
             # Check if document is empty or lacks structure
@@ -749,11 +792,11 @@ class MathEditor:
                 self.editor.editor.insert(tk.INSERT, "#problem\n\n")
             
             # Create LaTeX figure code
-            latex_figure = self.image_manager.create_latex_figure(
-                image_path=dialog.result["filename"],  # Use just the filename
-                caption=dialog.result["caption"],
-                label=dialog.result["label"],
-                width=dialog.result["width"]
+            latex_figure = self.image_converter.create_latex_figure(
+                image_path=image_info["filename"],  # Use just the filename
+                caption=image_info["caption"],
+                label=image_info["label"],
+                width=image_info["width"]
             )
             
             # Insert at cursor position
@@ -764,6 +807,145 @@ class MathEditor:
             
         except Exception as e:
             messagebox.showerror("Image Error", str(e))
+    
+    def adjust_image_size(self):
+        """Show dialog to adjust the size of the image in the document"""
+        # Check if there's an image in the document
+        content = self.editor.get_content()
+        
+        # More robust pattern to match includegraphics command with optional width parameter
+        image_pattern = r'\\includegraphics(?:\[.*?width=(.*?)\\textwidth.*?\]|\[\])?\{([^{}]+)\}'
+        match = re.search(image_pattern, content)
+        
+        if not match:
+            # Try alternate pattern without the width parameter extraction
+            image_pattern = r'\\includegraphics(?:\[.*?\])?\{([^{}]+)\}'
+            match = re.search(image_pattern, content)
+            if match:
+                # Found image without width parameter
+                filename = match.group(1)
+                current_width = 0.8  # Default width
+            else:
+                messagebox.showinfo("No Image Found", "No image was found in the document.")
+                return
+        else:
+            # Extract current width and filename
+            current_width_str = match.group(1) if match.group(1) else "0.8"
+            try:
+                current_width = float(current_width_str)
+            except ValueError:
+                current_width = 0.8
+            
+            filename = match.group(2)
+        
+        # Log current state for debugging
+        print(f"Image found: {filename}")
+        print(f"Current width: {current_width}")
+        
+        # Create a dialog for size adjustment
+        dialog = tk.Toplevel(self.root)
+        dialog.title("Adjust Image Size")
+        dialog.geometry("400x300")
+        dialog.transient(self.root)
+        dialog.grab_set()
+        
+        # Create variables
+        width_var = tk.DoubleVar(value=current_width)
+        
+        # Create widgets
+        frame = ttk.Frame(dialog, padding=10)
+        frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Width
+        ttk.Label(frame, text=f"Image: {filename}").pack(anchor=tk.W, padx=5, pady=5)
+        ttk.Label(frame, text="Width (0.1-1.0 × text width):").pack(anchor=tk.W, padx=5, pady=5)
+        width_scale = ttk.Scale(frame, from_=0.1, to=1.0, variable=width_var, orient=tk.HORIZONTAL)
+        width_scale.pack(fill=tk.X, padx=5, pady=5)
+        
+        # Create a label to show the current value
+        value_label = ttk.Label(frame, text=f"Current width: {current_width:.2f} × text width")
+        value_label.pack(anchor=tk.E, padx=5)
+        
+        # Update the label when the scale changes
+        def update_value_label(event=None):
+            value_label.config(text=f"Current width: {width_var.get():.2f} × text width")
+        
+        width_scale.bind("<Motion>", update_value_label)
+        width_scale.bind("<ButtonRelease-1>", update_value_label)
+        
+        # Preview image (if available)
+        try:
+            success, image = self.image_converter.image_db.get_image(filename)
+            if success:
+                # Resize image for preview
+                max_size = (350, 200)
+                image.thumbnail(max_size)
+                photo = ImageTk.PhotoImage(image)
+                
+                # Store reference to prevent garbage collection
+                dialog.photo = photo
+                
+                # Display image
+                image_label = ttk.Label(frame, image=photo)
+                image_label.pack(padx=5, pady=10)
+        except Exception as e:
+            print(f"Error loading image preview: {str(e)}")
+        
+        def on_ok():
+            # Update the image size in the document
+            new_width = width_var.get()
+            
+            print(f"New width: {new_width}")
+            
+            # Find the original includegraphics tag
+            original_pattern = r'\\includegraphics(?:\[.*?\])?\{' + re.escape(filename) + r'\}'
+            match = re.search(original_pattern, content)
+            
+            if not match:
+                print("Could not find the image tag in the document")
+                messagebox.showerror("Error", "Could not locate the image in the document for updating.")
+                dialog.destroy()
+                return
+            
+            # Get the exact original tag
+            original_tag = match.group(0)
+            print(f"Original tag: {original_tag}")
+            
+            # Create new tag - use string concatenation to avoid regex interpretation issues
+            new_image_tag = "\\includegraphics[width=" + str(new_width) + "\\textwidth]{" + filename + "}"
+            print(f"New image tag: {new_image_tag}")
+            
+            # Use simple string replacement instead of regex replacement
+            new_content = content.replace(original_tag, new_image_tag)
+            
+            # Check if replacement worked
+            if new_content == content:
+                print("Warning: Content was not modified by string replacement")
+                messagebox.showerror("Error", "Failed to update the image size.")
+                dialog.destroy()
+                return
+            
+            # Update editor content
+            self.editor.set_content(new_content)
+            
+            # Update preview
+            self.update_preview()
+            
+            dialog.destroy()
+            self.status_var.set(f"Image size updated to {new_width:.2f}×textwidth")
+        
+        def on_cancel():
+            dialog.destroy()
+        
+        # Buttons
+        button_frame = ttk.Frame(frame)
+        button_frame.pack(fill=tk.X, pady=10)
+        
+        ok_button = ttk.Button(button_frame, text="Apply", command=on_ok)
+        ok_button.pack(side=tk.RIGHT, padx=5)
+        
+        cancel_button = ttk.Button(button_frame, text="Cancel", command=on_cancel)
+        cancel_button.pack(side=tk.RIGHT, padx=5)
     
     def open_file_with_default_app(self, filepath):
         """Open a file with the default application"""
