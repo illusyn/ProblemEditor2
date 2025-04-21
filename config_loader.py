@@ -41,6 +41,11 @@ class ConfigLoader:
                     "parameters": {},
                     "latex_template": "#CONTENT#"
                 },
+                "text": {
+                    "description": "Regular text content",
+                    "parameters": {},
+                    "latex_template": "#CONTENT#"
+                },
                 "eq": {
                     "description": "Mathematical equation",
                     "parameters": {

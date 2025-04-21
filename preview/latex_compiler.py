@@ -58,12 +58,19 @@ class LaTeXCompiler:
             # Change to the working directory
             os.chdir(self.working_dir)
             
-            # Print debugging information
-            print(f"Running command: pdflatex -interaction=nonstopmode {tex_file.name}")
+            # Check if we need to use XeLaTeX (based on fontspec being in the document)
+            use_xelatex = "fontspec" in latex_content
             
-            # Run pdflatex with nonstopmode to prevent interactive prompts
+            # Determine which LaTeX engine to use
+            latex_engine = "xelatex" if use_xelatex else "pdflatex"
+            
+            # Print debugging information
+            print(f"Using {latex_engine} for compilation")
+            print(f"Running command: {latex_engine} -interaction=nonstopmode {tex_file.name}")
+            
+            # Run with nonstopmode to prevent interactive prompts
             result = subprocess.run(
-                ["pdflatex", "-interaction=nonstopmode", tex_file.name],
+                [latex_engine, "-interaction=nonstopmode", tex_file.name],
                 capture_output=True,
                 text=True
             )

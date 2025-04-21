@@ -35,7 +35,7 @@ class PreferencesDialog:
         # Create the dialog window
         self.dialog = tk.Toplevel(self.parent)
         self.dialog.title("Preferences")
-        self.dialog.geometry("500x500")
+        self.dialog.geometry("500x650")  # Increased height for new options
         self.dialog.transient(self.parent)
         self.dialog.grab_set()
         
@@ -99,6 +99,32 @@ class PreferencesDialog:
                                    "empty: Include empty caption\n"
                                    "filename: Use filename as caption").grid(
             row=4, column=0, columnspan=2, sticky=tk.W, padx=5, pady=5)
+            
+        # Figure indentation setting
+        ttk.Label(image_frame, text="Figure Indentation (points):").grid(
+            row=5, column=0, sticky=tk.W, padx=5, pady=5)
+        
+        # Get the current indent configuration or use default
+        indent_points = self.config.get("image", {}).get("indent_points", 48)
+        self.indent_var = tk.IntVar(value=indent_points)
+        indent_entry = ttk.Entry(image_frame, textvariable=self.indent_var, width=10)
+        indent_entry.grid(row=5, column=1, sticky=tk.W, padx=5, pady=5)
+        
+        # Add a slider for visual adjustment
+        indent_slider = ttk.Scale(
+            image_frame, 
+            from_=0, 
+            to=96,  # Up to 1.33 inches
+            orient=tk.HORIZONTAL, 
+            variable=self.indent_var, 
+            length=300
+        )
+        indent_slider.grid(row=6, column=0, columnspan=2, sticky=tk.W+tk.E, padx=5, pady=5)
+        
+        # Add explanation text
+        ttk.Label(image_frame, text="Note: This setting controls the indentation of figures from the left margin.\n"
+                                   "0 = no indentation, 72 = approximately 1 inch.").grid(
+            row=7, column=0, columnspan=2, sticky=tk.W, padx=5, pady=10)
         
         # Editor settings tab
         editor_frame = ttk.Frame(notebook, padding=10)
@@ -133,7 +159,7 @@ class PreferencesDialog:
         ttk.Label(preview_frame, text="Preview Font Size:").grid(
             row=0, column=0, sticky=tk.W, padx=5, pady=5)
         
-        preview_font_size = self.config.get("preview", {}).get("font_size", 11)
+        preview_font_size = self.config.get("preview", {}).get("font_size", 16)
         self.preview_font_size_var = tk.IntVar(value=preview_font_size)
         
         preview_font_entry = ttk.Entry(preview_frame, textvariable=self.preview_font_size_var, width=5)
@@ -154,23 +180,31 @@ class PreferencesDialog:
         ttk.Label(preview_frame, text="Preview Font Family:").grid(
             row=3, column=0, sticky=tk.W, padx=5, pady=5)
         
-        preview_font_family = self.config.get("preview", {}).get("font_family", "Computer Modern")
+        preview_font_family = self.config.get("preview", {}).get("font_family", "Carlito")
+        # Reset to Computer Modern if currently set to a problematic font
+        if preview_font_family in ["Calibri", "Cambria Math"]:
+            preview_font_family = "Computer Modern"
         self.preview_font_family_var = tk.StringVar(value=preview_font_family)
         
         font_options = ttk.Combobox(
             preview_frame, 
             textvariable=self.preview_font_family_var,
-            values=["Computer Modern", "Times New Roman", "Helvetica", "Courier", "Palatino", "Bookman"],
+            values=["Computer Modern", "Times New Roman", "Helvetica", "Courier", "Palatino", "Bookman", "Carlito"],
             state="readonly",
             width=20
         )
         font_options.grid(row=3, column=1, sticky=tk.W, padx=5, pady=5)
         
-        # Add explanation for preview font size and family
+        # Add explanation for preview font settings
         ttk.Label(preview_frame, text="Note: These settings control the appearance of text in the LaTeX preview.\n"
                                     "Different fonts may display mathematical content differently.\n"
                                     "Computer Modern is the standard LaTeX font.").grid(
             row=4, column=0, columnspan=2, sticky=tk.W, padx=5, pady=10)
+        
+        # Add explanation about Carlito font
+        ttk.Label(preview_frame, text="Note: Carlito is a metrically-compatible alternative to Calibri\n"
+                                    "that works well with standard LaTeX.").grid(
+            row=5, column=0, columnspan=2, sticky=tk.W, padx=5, pady=5)
         
         # Buttons frame
         button_frame = ttk.Frame(main_frame)
@@ -249,6 +283,11 @@ class PreferencesDialog:
                 if preview_font_size < 8 or preview_font_size > 24:
                     raise ValueError("Preview font size must be between 8 and 24")
                 
+                # Validate figure indentation
+                indent_points = self.indent_var.get()
+                if indent_points < 0 or indent_points > 144:
+                    raise ValueError("Figure indentation must be between 0 and 144 points")
+                
             except tk.TclError:
                 messagebox.showerror("Invalid Input", "Please enter valid numeric values")
                 return
@@ -266,6 +305,7 @@ class PreferencesDialog:
             # Update image settings
             self.config["image"]["default_max_height"] = height
             self.config["image"]["caption_behavior"] = self.caption_var.get()
+            self.config["image"]["indent_points"] = self.indent_var.get()
             
             # Update editor settings
             self.config["editor"]["font_size"] = font_size
@@ -290,10 +330,11 @@ class PreferencesDialog:
             # Reset image settings
             self.height_var.set(800)
             self.caption_var.set("none")
+            self.indent_var.set(48)  # Set to your preferred default
             
             # Reset editor settings
             self.font_size_var.set(12)
             
             # Reset preview settings
-            self.preview_font_size_var.set(11)
-            self.preview_font_family_var.set("Computer Modern")
+            self.preview_font_size_var.set(16)  # Set to your preferred default
+            self.preview_font_family_var.set("Carlito")  # Set to your preferred default

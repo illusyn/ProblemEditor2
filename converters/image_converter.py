@@ -120,33 +120,37 @@ class ImageConverter:
         if self.config_manager:
             caption_behavior = self.config_manager.get_value("image", "caption_behavior", "none")
         
+        # Get the configured indentation points (default to 48 if not configured)
+        indent_points = 48
+        if self.config_manager:
+            indent_points = self.config_manager.get_value("image", "indent_points", 48)
+        
         # If caption behavior is "filename" and no caption provided, use the filename
         if caption_behavior == "filename" and not caption:
             caption = Path(image_filename).stem
         
         # Create the LaTeX figure environment using raw strings and string concatenation
         latex = r"""
-\begin{figure}[htbp]
-    \raggedright
-    \includegraphics[width=""" + str(width) + r"""\textwidth,height=""" + str(max_height) + r"""px,keepaspectratio]{""" + image_filename + r"""}\
-"""
+    \begin{figure}[htbp]
+        \hspace{""" + str(indent_points) + r"""pt}\includegraphics[width=""" + str(width) + r"""\textwidth,height=""" + str(max_height) + r"""px,keepaspectratio]{""" + image_filename + r"""}\
+    """
         
         # Add caption based on caption behavior
         if caption_behavior != "none" and (caption or caption_behavior == "empty"):
             latex += r"""
-    \caption{""" + caption + r"""}\
-"""
+        \caption{""" + caption + r"""}\
+    """
         
         # Add label if provided
         if label:
             latex += r"""
-    \label{""" + label + r"""}\
-"""
+        \label{""" + label + r"""}\
+    """
         
         # Close the figure environment
         latex += r"""
-\end{figure}
-"""
+    \end{figure}
+    """
         
         return latex
     

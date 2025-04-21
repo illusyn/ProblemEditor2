@@ -617,29 +617,33 @@ class MarkdownParser:
         elif font_family == "Bookman":
             font_packages = "\\usepackage{bookman}"
             font_command = ""
+        elif font_family == "Carlito":
+            # Carlito uses the tgpagella package - a LaTeX-compatible alternative
+            font_packages = "\\usepackage{carlito}"
+            font_command = ""
         # Computer Modern is the default, no packages needed
         
         # Create a LaTeX document with necessary packages for math and images
         template = r"""\documentclass{article}
-\usepackage{amsmath}
-\usepackage{amssymb}
-\usepackage{graphicx}
-\graphicspath{{./}{./images/}}
-\usepackage{geometry}
-\usepackage{xcolor}
-\usepackage{mdframed}
-""" + font_packages + r"""
+    \usepackage{amsmath}
+    \usepackage{amssymb}
+    \usepackage{graphicx}
+    \graphicspath{{./}{./images/}}
+    \usepackage{geometry}
+    \usepackage{xcolor}
+    \usepackage{mdframed}
+    """ + font_packages + r"""
 
-% Set margins
-\geometry{margin=1in}
+    % Set margins
+    \geometry{margin=1in}
 
-\begin{document}
+    \begin{document}
 
-""" + font_size_cmd + font_command + r"""
+    """ + font_size_cmd + font_command + r"""
 
-""" + content + r"""
+    """ + content + r"""
 
-\end{document}
-"""
+    \end{document}
+    """
         
         return template

@@ -68,10 +68,29 @@ class ImageManager:
             bool: True if successful, False otherwise
         """
         try:
+            # Check if currently using a font that requires XeLaTeX
+            current_font = self.app.config_manager.get_value("preview", "font_family", "Computer Modern")
+            uses_xelatex = current_font in ["Calibri", "Cambria Math"]
+            
+            # If using a font that requires XeLaTeX, temporarily switch to Computer Modern
+            if uses_xelatex:
+                # Store original font
+                original_font = current_font
+                # Temporarily set to Computer Modern
+                self.app.config_manager.set_value("preview", "font_family", "Computer Modern")
+                # Flag to restore later
+                needs_restore = True
+            else:
+                needs_restore = False
+            
             # Try to get image from clipboard
             clipboard_image = self.get_clipboard_image()
             
             if not clipboard_image:
+                # Restore font if needed before returning
+                if needs_restore:
+                    self.app.config_manager.set_value("preview", "font_family", original_font)
+                    
                 messagebox.showinfo("No Image", 
                                    "No image found in clipboard.\n\n"
                                    "Note: The application can only access images that are\n"
@@ -82,12 +101,20 @@ class ImageManager:
             success, result = self.app.image_converter.process_image(clipboard_image)
             
             if not success:
+                # Restore font if needed before returning
+                if needs_restore:
+                    self.app.config_manager.set_value("preview", "font_family", original_font)
+                    
                 messagebox.showerror("Image Processing Error", result)
                 return False
             
             # Create a dialog to get caption and width
             image_info = self.get_image_details(result)
             if not image_info:
+                # Restore font if needed before returning
+                if needs_restore:
+                    self.app.config_manager.set_value("preview", "font_family", original_font)
+                    
                 return False  # User cancelled
             
             # Check if document is empty or lacks structure
@@ -112,9 +139,20 @@ class ImageManager:
             
             # Immediately extract image and update preview
             self.app.update_preview()
-            return True
             
+            # Restore original font if needed
+            if needs_restore:
+                self.app.config_manager.set_value("preview", "font_family", original_font)
+                # Refresh preview again with the original font
+                self.app.update_preview()
+                
+            return True
+                
         except Exception as e:
+            # Restore original font if needed before returning
+            if 'needs_restore' in locals() and needs_restore and 'original_font' in locals():
+                self.app.config_manager.set_value("preview", "font_family", original_font)
+                
             messagebox.showerror("Image Error", str(e))
             return False
     
@@ -125,29 +163,56 @@ class ImageManager:
         Returns:
             bool: True if successful, False otherwise
         """
-        # Ask for image file
-        file_path = filedialog.askopenfilename(
-            title="Select Image",
-            filetypes=[
-                ("Image files", "*.png *.jpg *.jpeg *.gif *.bmp"),
-                ("All files", "*.*")
-            ]
-        )
+        # Check if currently using a font that requires XeLaTeX
+        current_font = self.app.config_manager.get_value("preview", "font_family", "Computer Modern")
+        uses_xelatex = current_font in ["Calibri", "Cambria Math"]
         
-        if not file_path:
-            return False
-        
+        # If using a font that requires XeLaTeX, temporarily switch to Computer Modern
+        if uses_xelatex:
+            # Store original font
+            original_font = current_font
+            # Temporarily set to Computer Modern
+            self.app.config_manager.set_value("preview", "font_family", "Computer Modern")
+            # Flag to restore later
+            needs_restore = True
+        else:
+            needs_restore = False
+            
         try:
+            # Ask for image file
+            file_path = filedialog.askopenfilename(
+                title="Select Image",
+                filetypes=[
+                    ("Image files", "*.png *.jpg *.jpeg *.gif *.bmp"),
+                    ("All files", "*.*")
+                ]
+            )
+            
+            if not file_path:
+                # Restore font if needed before returning
+                if needs_restore:
+                    self.app.config_manager.set_value("preview", "font_family", original_font)
+                    
+                return False
+            
             # Process the image
             success, result = self.app.image_converter.process_image(file_path)
             
             if not success:
+                # Restore font if needed before returning
+                if needs_restore:
+                    self.app.config_manager.set_value("preview", "font_family", original_font)
+                    
                 messagebox.showerror("Image Processing Error", result)
                 return False
             
             # Create a dialog to get caption and width
             image_info = self.get_image_details(result)
             if not image_info:
+                # Restore font if needed before returning
+                if needs_restore:
+                    self.app.config_manager.set_value("preview", "font_family", original_font)
+                    
                 return False  # User cancelled
             
             # Check if document is empty or lacks structure
@@ -172,9 +237,20 @@ class ImageManager:
             
             # Update preview
             self.app.update_preview()
-            return True
             
+            # Restore original font if needed
+            if needs_restore:
+                self.app.config_manager.set_value("preview", "font_family", original_font)
+                # Refresh preview again with the original font
+                self.app.update_preview()
+                
+            return True
+                
         except Exception as e:
+            # Restore original font if needed before returning
+            if 'needs_restore' in locals() and needs_restore and 'original_font' in locals():
+                self.app.config_manager.set_value("preview", "font_family", original_font)
+                
             messagebox.showerror("Image Error", str(e))
             return False
     

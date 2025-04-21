@@ -70,6 +70,7 @@ class MenuManager:
         # Add markdown commands
         insert_menu.add_command(label="Problem Section", command=lambda: self.app.editor.insert_problem_section())
         insert_menu.add_command(label="Solution Section", command=lambda: self.app.editor.insert_solution_section())
+        insert_menu.add_command(label="Text Block", command=lambda: self.app.editor.insert_text_block())
         insert_menu.add_command(label="Question", command=lambda: self.app.editor.insert_question())
         insert_menu.add_command(label="Equation", command=lambda: self.app.editor.insert_equation())
         insert_menu.add_command(label="Aligned Equations", command=lambda: self.app.editor.insert_aligned_equations())

@@ -64,6 +64,7 @@ class EditorComponent:
         self.editor.tag_configure("question", foreground="red")
         self.editor.tag_configure("bullet", foreground="purple")
         self.editor.tag_configure("section", foreground="darkblue", font=(self.editor_font[0], self.editor_font[1], "bold"))
+        self.editor.tag_configure("text", foreground="black")  # Added for #text command
         
         # Bind events for syntax highlighting
         self.editor.bind("<KeyRelease>", self.highlight_syntax)
@@ -83,6 +84,7 @@ class EditorComponent:
         markdown_menu.add_command(label="Problem Section", command=self.insert_problem_section)
         markdown_menu.add_command(label="Solution Section", command=self.insert_solution_section)
         markdown_menu.add_command(label="Question", command=self.insert_question)
+        markdown_menu.add_command(label="Text Block", command=self.insert_text_block)  # Added Text Block option
         markdown_menu.add_command(label="Equation", command=self.insert_equation)
         markdown_menu.add_command(label="Aligned Equations", command=self.insert_aligned_equations)
         markdown_menu.add_command(label="Bullet Point", command=self.insert_bullet_point)
@@ -107,6 +109,7 @@ class EditorComponent:
         self.editor.bind("<Control-s>", lambda e: self.insert_solution_section())
         self.editor.bind("<Control-q>", lambda e: self.insert_question())
         self.editor.bind("<Control-e>", lambda e: self.insert_equation())
+        self.editor.bind("<Control-t>", lambda e: self.insert_text_block())  # Added shortcut for text block
         
         # Font size shortcuts
         self.editor.bind("<Control-plus>", lambda e: self.increase_font_size())
@@ -214,6 +217,11 @@ class EditorComponent:
         self.editor.insert(tk.INSERT, "\n#question\n")
         self.highlight_syntax()
     
+    def insert_text_block(self):
+        """Insert a text block marker"""
+        self.editor.insert(tk.INSERT, "\n#text\n")
+        self.highlight_syntax()
+    
     def insert_equation(self):
         """Insert an equation marker"""
         self.editor.insert(tk.INSERT, "\n#eq\n")
@@ -232,7 +240,7 @@ class EditorComponent:
     def highlight_syntax(self, event=None):
         """Apply syntax highlighting to the editor content"""
         # Remove existing tags
-        for tag in ["equation", "command", "question", "bullet", "section"]:
+        for tag in ["equation", "command", "question", "bullet", "section", "text"]:
             self.editor.tag_remove(tag, "1.0", tk.END)
         
         # Highlight equations (text between \[ and \])
@@ -274,6 +282,8 @@ class EditorComponent:
                 self.editor.tag_add("equation", cmd_start, cmd_end)
             elif cmd_text.startswith("#bullet"):
                 self.editor.tag_add("bullet", cmd_start, cmd_end)
+            elif cmd_text == "#text":
+                self.editor.tag_add("text", cmd_start, cmd_end)
             else:
                 self.editor.tag_add("command", cmd_start, cmd_end)
                 
