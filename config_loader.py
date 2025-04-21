@@ -27,11 +27,7 @@ class ConfigLoader:
                 "problem": {
                     "description": "Problem section",
                     "parameters": {
-                        "title": {
-                            "description": "Problem title",
-                            "type": "string",
-                            "default": "Problem"
-                        }
+                        
                     },
                     "latex_template": "#CONTENT#"  
                 },

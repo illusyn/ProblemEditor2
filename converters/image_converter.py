@@ -19,13 +19,14 @@ from math_image_db import MathImageDB
 class ImageConverter:
     """Converts images to LaTeX figure environments with database storage"""
     
-    def __init__(self, working_dir=None):
+    def __init__(self, working_dir=None, config_manager=None):
         """
         Initialize the image converter
         
         Args:
             working_dir (str, optional): Working directory for temporary image storage.
                                        If None, a temporary directory will be used.
+            config_manager: Configuration manager instance for accessing app settings
         """
         if working_dir:
             self.working_dir = Path(working_dir)
@@ -35,6 +36,9 @@ class ImageConverter:
         
         # Create the images directory if it doesn't exist
         self.working_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Store the configuration manager
+        self.config_manager = config_manager
         
         # Initialize the image database
         self.image_db = MathImageDB()
@@ -88,8 +92,7 @@ class ImageConverter:
     def create_latex_figure(self, image_path, caption="", label="", width=0.8):
         """
         Create a LaTeX figure environment for an image. 
-        This version uses the approach directly from the test script 
-        that was verified to work correctly.
+        This version uses the configured image height and caption behavior.
         
         Args:
             image_path (str): Path or name of the image file
@@ -107,31 +110,57 @@ class ImageConverter:
         # Use only filename instead of full path to avoid LaTeX issues
         image_filename = Path(image_path).name
         
+        # Get the configured maximum height (default to 800 if not configured)
+        max_height = 800
+        if self.config_manager:
+            max_height = self.config_manager.get_value("image", "default_max_height", 800)
+        
+        # Get the configured caption behavior
+        caption_behavior = "none"
+        if self.config_manager:
+            caption_behavior = self.config_manager.get_value("image", "caption_behavior", "none")
+        
+        # If caption behavior is "filename" and no caption provided, use the filename
+        if caption_behavior == "filename" and not caption:
+            caption = Path(image_filename).stem
+        
         # Create the LaTeX figure environment using raw strings and string concatenation
-        # This avoids any issues with Python string formatting
         latex = r"""
-    \begin{figure}[htbp]
-        \centering
-        \includegraphics[width=""" + str(width) + r"""\textwidth]{""" + image_filename + r"""}
-        \caption{""" + caption + r"""}
-        \label{""" + label + r"""}
-    \end{figure}
-    """
+\begin{figure}[htbp]
+    \raggedright
+    \includegraphics[width=""" + str(width) + r"""\textwidth,height=""" + str(max_height) + r"""px,keepaspectratio]{""" + image_filename + r"""}\
+"""
+        
+        # Add caption based on caption behavior
+        if caption_behavior != "none" and (caption or caption_behavior == "empty"):
+            latex += r"""
+    \caption{""" + caption + r"""}\
+"""
+        
+        # Add label if provided
+        if label:
+            latex += r"""
+    \label{""" + label + r"""}\
+"""
+        
+        # Close the figure environment
+        latex += r"""
+\end{figure}
+"""
         
         return latex
     
-    def process_image(self, image_data, filename=None, max_width=600, max_height=800):
+    def process_image(self, image_data, filename=None):
         """
-        Process an image and store it in the database, resizing if necessary
+        Process an image and store it in the database
         
         Args:
             image_data: PIL Image object or path to image file
             filename (str, optional): Desired filename (without extension)
-            max_width (int): Maximum width for the image
-            max_height (int): Maximum height for the image
             
         Returns:
             tuple: (success, image_info or error_message)
+                   image_info is a dict with keys: path, filename, width, height
         """
         try:
             # Generate a unique filename if none provided
@@ -147,29 +176,8 @@ class ImageConverter:
             else:
                 image = image_data
             
-            # Get original image dimensions
-            orig_width, orig_height = image.size
-            
-            # Calculate if resizing is needed while preserving aspect ratio
-            if orig_width > max_width or orig_height > max_height:
-                # Calculate scaling factors
-                width_ratio = max_width / orig_width
-                height_ratio = max_height / orig_height
-                
-                # Use the smaller ratio to ensure both dimensions fit within limits
-                scale_factor = min(width_ratio, height_ratio)
-                
-                # Calculate new dimensions
-                new_width = int(orig_width * scale_factor)
-                new_height = int(orig_height * scale_factor)
-                
-                # Resize the image
-                image = image.resize((new_width, new_height), Image.LANCZOS)
-                
-                # Get new dimensions after resize
-                width, height = image.size
-            else:
-                width, height = orig_width, orig_height
+            # Get image dimensions
+            width, height = image.size
             
             # Store in database only, not as file
             image_name = f"{filename}.png"
@@ -186,10 +194,7 @@ class ImageConverter:
                 "path": str(virtual_path),  # Virtual path for reference only
                 "filename": image_name,
                 "width": width,
-                "height": height,
-                "original_width": orig_width,
-                "original_height": orig_height,
-                "was_resized": (orig_width != width or orig_height != height)
+                "height": height
             }
             
             # Add to document images

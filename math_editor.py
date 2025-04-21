@@ -22,6 +22,9 @@ from converters.image_converter import ImageConverter
 from PIL import Image, ImageTk
 from markdown_parser import MarkdownParser  # Import for markdown parsing
 from db_interface import DatabaseInterface
+from managers.config_manager import ConfigManager
+from ui.dialogs.preferences_dialog import PreferencesDialog
+
 
 class MathEditor:
     """Main application class for the Simplified Math Editor"""
@@ -37,6 +40,9 @@ class MathEditor:
         self.root.title("Simplified Math Editor")
         self.root.geometry("1200x800")
                 
+        # Initialize configuration manager
+        self.config_manager = ConfigManager()
+        
         # Initialize working directory
         self.working_dir = Path(tempfile.gettempdir()) / "simplified_math_editor"
         self.working_dir.mkdir(parents=True, exist_ok=True)
@@ -48,8 +54,11 @@ class MathEditor:
         # Initialize the LaTeX compiler
         self.latex_compiler = LaTeXCompiler(working_dir=str(self.working_dir))
         
-        # Initialize the image converter
-        self.image_converter = ImageConverter(working_dir=str(self.working_dir / "images"))
+        # Initialize the image converter with config_manager
+        self.image_converter = ImageConverter(
+            working_dir=str(self.working_dir / "images"),
+            config_manager=self.config_manager
+        )
         
         # Initialize the database interface (will set up menu later)
         self.db_interface = DatabaseInterface(self)
@@ -72,6 +81,12 @@ class MathEditor:
         
         # Set up preview context menu
         self.setup_preview_context_menu()
+        
+        # Apply editor font size from configuration
+        font_size = self.config_manager.get_value("editor", "font_size", 12)
+        self.editor.font_size = font_size
+        self.editor.editor_font = ('Courier', font_size)
+        self.editor.editor.configure(font=self.editor.editor_font)
     
     def load_template(self):
         """Load the default LaTeX template"""
@@ -120,6 +135,8 @@ class MathEditor:
         file_menu.add_command(label="Save As...", command=self.save_as)
         file_menu.add_separator()
         file_menu.add_command(label="Export to PDF...", command=self.export_to_pdf)
+        file_menu.add_separator()
+        file_menu.add_command(label="Preferences...", command=self.show_preferences)
         file_menu.add_separator()
         file_menu.add_command(label="Exit", command=self.root.destroy)
         self.menubar.add_cascade(label="File", menu=file_menu)
@@ -677,7 +694,7 @@ class MathEditor:
         dialog.grab_set()
         
         # Create variables
-        caption_var = tk.StringVar(value="Figure caption")
+        caption_var = tk.StringVar(value="")  # Empty by default
         label_var = tk.StringVar(value=f"fig:{Path(image_info['filename']).stem}")
         width_var = tk.DoubleVar(value=0.8)
         
@@ -912,7 +929,7 @@ class MathEditor:
             print(f"Original tag: {original_tag}")
             
             # Create new tag - use string concatenation to avoid regex interpretation issues
-            new_image_tag = "\\includegraphics[width=" + str(new_width) + "\\textwidth]{" + filename + "}"
+            new_image_tag = "\\includegraphics[width=" + str(new_width) + "\\textwidth,height=" + str(self.config_manager.get_value("image", "default_max_height", 800)) + "px,keepaspectratio]{" + filename + "}"
             print(f"New image tag: {new_image_tag}")
             
             # Use simple string replacement instead of regex replacement
@@ -982,6 +999,34 @@ class MathEditor:
             except:
                 pass  # Ignore errors reading file
         return True
+    
+    def show_preferences(self):
+        """Show the preferences dialog"""
+        # Create preferences dialog
+        PreferencesDialog(
+            self.root,
+            config=self.config_manager.config,
+            on_save=self.apply_preferences
+        )
+
+    def apply_preferences(self, new_config):
+        """
+        Apply new preferences from the preferences dialog
+        
+        Args:
+            new_config (dict): Updated configuration
+        """
+        # Update configuration
+        self.config_manager.update_config(new_config)
+        
+        # Apply font size to editor
+        font_size = self.config_manager.get_value("editor", "font_size", 12)
+        self.editor.font_size = font_size
+        self.editor.editor_font = ('Courier', font_size)
+        self.editor.editor.configure(font=self.editor.editor_font)
+        
+        # Update status
+        self.status_var.set("Preferences updated")
     
     def insert_basic_template(self):
         """Insert a basic problem template"""
