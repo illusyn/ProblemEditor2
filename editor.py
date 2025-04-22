@@ -109,7 +109,8 @@ class EditorComponent:
         self.editor.bind("<Control-s>", lambda e: self.insert_solution_section())
         self.editor.bind("<Control-q>", lambda e: self.insert_question())
         self.editor.bind("<Control-e>", lambda e: self.insert_equation())
-        self.editor.bind("<Control-t>", lambda e: self.insert_text_block())  # Added shortcut for text block
+        self.editor.bind("<Control-0>", lambda e: self.insert_text_block())
+        
         
         # Font size shortcuts
         self.editor.bind("<Control-plus>", lambda e: self.increase_font_size())

@@ -14,7 +14,7 @@ import uuid
 from pathlib import Path
 import shutil
 import tempfile
-from math_image_db import MathImageDB
+from db.math_image_db import MathImageDB
 
 class ImageConverter:
     """Converts images to LaTeX figure environments with database storage"""

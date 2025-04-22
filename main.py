@@ -9,7 +9,7 @@ import tkinter as tk
 from math_editor import MathEditor
 
 # Import the database module and interface
-from math_db import MathProblemDB
+from db.math_db import MathProblemDB
 from db_interface import DatabaseInterface
 
 def main():

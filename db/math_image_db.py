@@ -24,8 +24,8 @@ class MathImageDB:
                                     If None, a default path will be used.
         """
         if db_path is None:
-            # Use a default location
-            db_dir = Path(tempfile.gettempdir()) / "simplified_math_editor"
+            # Use a default location in the /db folder
+            db_dir = Path("db")
             db_dir.mkdir(parents=True, exist_ok=True)
             db_path = db_dir / "math_images.db"
             

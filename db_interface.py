@@ -8,7 +8,8 @@ the math problem database with the editor interface.
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
 import re
-from math_db import MathProblemDB
+from db.math_db import MathProblemDB
+
 
 class DatabaseInterface:
     """UI components for database integration with the editor"""
@@ -52,7 +53,7 @@ class DatabaseInterface:
         # Create a dialog
         dialog = tk.Toplevel(self.editor.root)
         dialog.title("Save Problem to Database")
-        dialog.geometry("500x600")
+        dialog.geometry("500x850")
         dialog.transient(self.editor.root)
         dialog.grab_set()
         
@@ -463,7 +464,7 @@ class DatabaseInterface:
         if image_names:
             messagebox.showinfo("Images", 
                                f"The problem contains {len(image_names)} image references.\n"
-                               f"Image display functionality will be implemented in a future update.")
+                               f"Image handling will be implemented in a future update.")
         
         # Load content into editor
         self.editor.editor.set_content(problem["content"])

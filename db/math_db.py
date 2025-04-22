@@ -25,8 +25,8 @@ class MathProblemDB:
                                     If None, a default path will be used.
         """
         if db_path is None:
-            # Use a default location
-            db_dir = Path(tempfile.gettempdir()) / "simplified_math_editor"
+            # Use a default location in the /db folder
+            db_dir = Path("db")
             db_dir.mkdir(parents=True, exist_ok=True)
             db_path = db_dir / "math_problems.db"
             
@@ -543,7 +543,7 @@ class MathProblemDB:
             
             # If no output path provided, create one in a temp directory
             if not output_path:
-                temp_dir = Path(tempfile.gettempdir()) / "simplified_math_editor" / "temp_images"
+                temp_dir = Path("db") / "temp_images"
                 temp_dir.mkdir(parents=True, exist_ok=True)
                 
                 # Use image name or create one from ID

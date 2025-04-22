@@ -24,6 +24,8 @@ from managers.template_manager import TemplateManager
 from core.preview_manager import PreviewManager
 from ui.dialogs.preferences_dialog import PreferencesDialog
 from ui.menu_manager import MenuManager
+from ui.category_panel import CategoryPanel
+from db.math_db import MathProblemDB
 
 
 class MathEditor:
@@ -38,7 +40,7 @@ class MathEditor:
         """
         self.root = root
         self.root.title("Simplified Math Editor")
-        self.root.geometry("1200x800")
+        self.root.geometry("1700x800")  # Increased from 1200 to 1700
                 
         # Initialize configuration manager
         self.config_manager = ConfigManager()
@@ -71,6 +73,12 @@ class MathEditor:
         
         # Initialize the database interface (will set up menu later)
         self.db_interface = DatabaseInterface(self)
+        
+        # Initialize the database connection
+        self.db = MathProblemDB()
+        
+        # Initialize selected categories list
+        self.selected_categories = set()
         
         # Initialize the markdown parser with the config manager
         self.markdown_parser = MarkdownParser(config_manager=self.config_manager)
@@ -105,6 +113,18 @@ class MathEditor:
         self.editor.font_size = font_size
         self.editor.editor_font = ('Courier', font_size)
         self.editor.editor.configure(font=self.editor.editor_font)
+        
+        # Update category display
+        self.update_category_display()
+
+    def set_initial_pane_position(self):
+        """Set the initial position of the paned window divider"""
+        width = self.root.winfo_width()
+        if width > 100:  # Only if the window has been realized
+            # Account for the category panel width by subtracting it from the calculation
+            # This ensures the editor and preview have proper proportions
+            effective_width = width - 380  # Subtracting category panel width plus some padding
+            self.paned_window.sashpos(0, effective_width // 2)
     
     def load_template(self):
         """Load the default LaTeX template"""
@@ -233,9 +253,23 @@ class MathEditor:
         )
         self.font_decrease_button.pack(side=tk.LEFT, padx=5)
         
+        # Create a frame for the main content and category panel
+        self.content_frame = ttk.Frame(self.main_frame)
+        self.content_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # Create a frame for the category panel on the left
+        self.category_frame = ttk.LabelFrame(self.content_frame, text="Categories", width=350)
+        self.category_frame.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5)
+        self.category_frame.pack_propagate(False)  # Prevent the frame from shrinking to fit its contents
+        
+        # Create the category panel
+        self.category_panel = CategoryPanel(self.category_frame)
+        self.category_panel.set_multi_select(True)
+        self.category_panel.set_on_category_click_callback(self.on_category_click)
+        
         # Create paned window for editor and preview
-        self.paned_window = ttk.PanedWindow(self.main_frame, orient=tk.HORIZONTAL)
-        self.paned_window.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        self.paned_window = ttk.PanedWindow(self.content_frame, orient=tk.HORIZONTAL)
+        self.paned_window.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
         
         # Editor frame
         self.editor_frame = ttk.Frame(self.paned_window)
@@ -264,6 +298,59 @@ class MathEditor:
         width = self.root.winfo_width()
         if width > 100:  # Only if the window has been realized
             self.paned_window.sashpos(0, width // 2)
+    
+    def update_category_display(self):
+        """Update the category panel with categories from the database"""
+        try:
+            # Get all categories from the database
+            success, categories = self.db.get_categories()
+            
+            if success:
+                # Sort categories by name
+                category_names = [cat["name"] for cat in categories]
+                sorted_names = sorted(category_names)
+                
+                # Update the category panel
+                self.category_panel.update_display(sorted_names)
+                
+                # Update selection states
+                for cat in sorted_names:
+                    is_selected = cat in self.selected_categories
+                    self.category_panel.highlight_category(cat, is_selected)
+            else:
+                print(f"Failed to get categories: {categories}")
+                
+        except Exception as e:
+            print(f"Error updating category display: {str(e)}")
+    
+    def on_category_click(self, category):
+        """Handle category button click"""
+        if category in self.selected_categories:
+            self.selected_categories.remove(category)
+            selected = False
+        else:
+            self.selected_categories.add(category)
+            selected = True
+            
+        # Update the UI to reflect the selection state
+        self.category_panel.highlight_category(category, selected)
+        
+        # If a problem is loaded, update its categories
+        if hasattr(self, 'current_problem_id') and self.current_problem_id is not None:
+            if selected:
+                self.db.add_problem_to_category(self.current_problem_id, category)
+            else:
+                # Get the category ID and use it to remove the category
+                for cat in self.db.get_categories()[1]:
+                    if cat["name"] == category:
+                        self.db.remove_problem_from_category(self.current_problem_id, cat["category_id"])
+                        break
+        
+        # Update status message
+        if selected:
+            self.status_var.set(f"Category '{category}' added to selection")
+        else:
+            self.status_var.set(f"Category '{category}' removed from selection")
     
     # File operation methods - delegated to FileManager
     def new_file(self):
