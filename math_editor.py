@@ -40,7 +40,7 @@ class MathEditor:
         """
         self.root = root
         self.root.title("Simplified Math Editor")
-        self.root.geometry("1700x800")  # Increased from 1200 to 1700
+        self.root.geometry("2000x800")  # Increased from 1200 to 1700
                 
         # Initialize configuration manager
         self.config_manager = ConfigManager()
@@ -124,7 +124,11 @@ class MathEditor:
             # Account for the category panel width by subtracting it from the calculation
             # This ensures the editor and preview have proper proportions
             effective_width = width - 380  # Subtracting category panel width plus some padding
-            self.paned_window.sashpos(0, effective_width // 2)
+            ## self.paned_window.sashpos(0, effective_width // 2)
+            # Change this line to give more space to the preview
+            # Instead of dividing by 2 (50/50 split), we divide by a different value
+            # For example, using 2.5 gives approximately 40% to editor, 60% to preview
+            self.paned_window.sashpos(0, int(effective_width / 3))
     
     def load_template(self):
         """Load the default LaTeX template"""
@@ -228,6 +232,14 @@ class MathEditor:
             command=lambda: self.editor.insert_equation()
         )
         self.equation_button.pack(side=tk.LEFT, padx=5)
+        
+        # Add Save Problem button to toolbar
+        self.save_problem_button = ttk.Button(
+            self.toolbar,
+            text="Save Problem",
+            command=lambda: self.db_interface.save_problem_dialog()
+        )
+        self.save_problem_button.pack(side=tk.LEFT, padx=5)
         
         self.preview_button = ttk.Button(
             self.toolbar,
