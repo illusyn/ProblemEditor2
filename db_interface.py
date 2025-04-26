@@ -62,18 +62,19 @@ class DatabaseInterface:
         frame.pack(fill=tk.BOTH, expand=True)
         
         # Variables for form fields
-        title_var = tk.StringVar()
-        source_var = tk.StringVar()
         solution_var = tk.StringVar()
         latex_solution_var = tk.BooleanVar(value=False)
+        answer_var = tk.StringVar()  # New variable for answer field
         
-        # Title
-        ttk.Label(frame, text="Title:").grid(row=0, column=0, sticky=tk.W, padx=5, pady=5)
-        ttk.Entry(frame, textvariable=title_var, width=40).grid(row=0, column=1, sticky=tk.W+tk.E, padx=5, pady=5)
+        # Problem ID display (read-only, for existing problems)
+        if hasattr(self.editor, 'current_problem_id') and self.editor.current_problem_id:
+            ttk.Label(frame, text="Problem ID:").grid(row=0, column=0, sticky=tk.W, padx=5, pady=5)
+            problem_id_label = ttk.Label(frame, text=str(self.editor.current_problem_id))
+            problem_id_label.grid(row=0, column=1, sticky=tk.W, padx=5, pady=5)
         
-        # Source
-        ttk.Label(frame, text="Source:").grid(row=1, column=0, sticky=tk.W, padx=5, pady=5)
-        ttk.Entry(frame, textvariable=source_var, width=40).grid(row=1, column=1, sticky=tk.W+tk.E, padx=5, pady=5)
+        # Answer field (plain text, no LaTeX)
+        ttk.Label(frame, text="Answer (plain text):").grid(row=1, column=0, sticky=tk.W, padx=5, pady=5)
+        ttk.Entry(frame, textvariable=answer_var, width=40).grid(row=1, column=1, sticky=tk.W+tk.E, padx=5, pady=5)
         
         # Categories
         ttk.Label(frame, text="Categories:").grid(row=2, column=0, sticky=tk.W, padx=5, pady=5)
@@ -141,11 +142,10 @@ class DatabaseInterface:
             text="Save", 
             command=lambda: self.save_problem_to_db(
                 dialog,
-                title_var.get(),
                 content,
                 solution_text.get("1.0", tk.END),
                 latex_solution_var.get(),
-                source_var.get(),
+                answer_var.get(),  # Get answer value
                 notes_text.get("1.0", tk.END),
                 category_vars
             )
@@ -199,14 +199,10 @@ class DatabaseInterface:
             else:
                 messagebox.showerror("Error", f"Failed to add category: {category_id}")
     
-    def save_problem_to_db(self, dialog, title, content, solution, has_latex_solution, 
-                          source, notes, category_vars):
+    def save_problem_to_db(self, dialog, content, solution, has_latex_solution, 
+                          answer, notes, category_vars):
         """Save problem to database"""
-        # Validate required fields
-        if not title:
-            messagebox.showerror("Error", "Title is required")
-            return
-        
+        # Validate content
         if not content:
             messagebox.showerror("Error", "Problem content is empty")
             return
@@ -223,11 +219,10 @@ class DatabaseInterface:
             
             # First, add the problem to get the problem_id
             success, problem_id = self.db.add_problem(
-                title=title,
                 content=content,
                 solution=solution,
                 has_latex_solution=latex_solution_int,
-                source=source,
+                answer=answer,
                 notes=notes,
                 categories=selected_categories
             )
@@ -235,6 +230,9 @@ class DatabaseInterface:
             if not success:
                 messagebox.showerror("Error", f"Failed to save problem: {problem_id}")
                 return
+            
+            # Store the problem_id in the editor for reference
+            self.editor.current_problem_id = problem_id
             
             # Next, handle images in the content
             image_pattern = r'\\includegraphics(?:\[.*?\])?\{([^{}]+)\}'
@@ -249,7 +247,7 @@ class DatabaseInterface:
             dialog.destroy()
             
             # Show success message
-            messagebox.showinfo("Success", f"Problem '{title}' saved to database")
+            messagebox.showinfo("Success", f"Problem #{problem_id} saved to database")
             
         except Exception as e:
             messagebox.showerror("Error", f"An error occurred: {str(e)}")
@@ -310,18 +308,16 @@ class DatabaseInterface:
         list_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
         # Create treeview for problems
-        columns = ("ID", "Title", "Source", "Date")
+        columns = ("ID", "Answer", "Date")
         problem_tree = ttk.Treeview(list_frame, columns=columns, show="headings")
         
         # Configure columns
         problem_tree.heading("ID", text="#")
-        problem_tree.heading("Title", text="Title")
-        problem_tree.heading("Source", text="Source")
+        problem_tree.heading("Answer", text="Answer")
         problem_tree.heading("Date", text="Modified")
         
         problem_tree.column("ID", width=50)
-        problem_tree.column("Title", width=300)
-        problem_tree.column("Source", width=150)
+        problem_tree.column("Answer", width=450)
         problem_tree.column("Date", width=150)
         
         # Add scrollbars
@@ -397,8 +393,7 @@ class DatabaseInterface:
                 tk.END, 
                 values=(
                     problem["problem_id"],
-                    problem["title"],
-                    problem["source"] or "",
+                    problem["answer"] or "",
                     date_str
                 ),
                 tags=(str(problem["problem_id"]),)
@@ -469,6 +464,17 @@ class DatabaseInterface:
         # Load content into editor
         self.editor.editor.set_content(problem["content"])
         
+        # Store the problem ID in the editor
+        self.editor.current_problem_id = problem_id
+        
+        # Store the selected categories
+        if "categories" in problem and hasattr(self.editor, 'selected_categories'):
+            self.editor.selected_categories = set(cat["name"] for cat in problem["categories"])
+            
+            # Update the category panel if it exists
+            if hasattr(self.editor, 'update_category_display'):
+                self.editor.update_category_display()
+        
         # Close the dialog
         dialog.destroy()
         
@@ -476,7 +482,7 @@ class DatabaseInterface:
         self.editor.update_preview()
         
         # Show success message
-        messagebox.showinfo("Success", f"Problem '{problem['title']}' loaded from database")
+        messagebox.showinfo("Success", f"Problem #{problem_id} loaded from database")
     
     def manage_categories_dialog(self):
         """Show dialog to manage categories"""

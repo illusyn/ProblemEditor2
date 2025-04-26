@@ -44,15 +44,14 @@ class MathProblemDB:
     
     def _create_tables(self):
         """Create the necessary database tables if they don't exist"""
-        # Problems table
+        # Problems table - Modified schema: removed title, source; added answer
         self.cur.execute('''
             CREATE TABLE IF NOT EXISTS problems (
                 problem_id INTEGER PRIMARY KEY,
-                title TEXT NOT NULL,
                 content TEXT NOT NULL,
                 solution TEXT,
                 has_latex_solution INTEGER DEFAULT 0,
-                source TEXT,
+                answer TEXT,
                 notes TEXT,
                 creation_date TEXT NOT NULL,
                 last_modified TEXT NOT NULL
@@ -110,17 +109,16 @@ class MathProblemDB:
         
         self.conn.commit()
     
-    def add_problem(self, title, content, solution=None, has_latex_solution=0, 
-                   source=None, notes=None, categories=None):
+    def add_problem(self, content, solution=None, has_latex_solution=0, 
+                   answer=None, notes=None, categories=None):
         """
         Add a new math problem to the database
         
         Args:
-            title (str): Problem title
             content (str): LaTeX content of the problem
             solution (str, optional): Solution to the problem
             has_latex_solution (int, optional): 1 if solution contains LaTeX, 0 otherwise
-            source (str, optional): Source of the problem
+            answer (str, optional): Plain text answer (no LaTeX)
             notes (str, optional): Additional notes about the problem
             categories (list, optional): List of category names to associate with the problem
             
@@ -134,9 +132,9 @@ class MathProblemDB:
             # Insert problem
             self.cur.execute('''
                 INSERT INTO problems 
-                (title, content, solution, has_latex_solution, source, notes, creation_date, last_modified)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (title, content, solution, has_latex_solution, source, notes, now, now))
+                (content, solution, has_latex_solution, answer, notes, creation_date, last_modified)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (content, solution, has_latex_solution, answer, notes, now, now))
             
             # Get the problem_id of the inserted problem
             problem_id = self.cur.lastrowid
@@ -153,18 +151,17 @@ class MathProblemDB:
             self.conn.rollback()
             return (False, str(e))
     
-    def update_problem(self, problem_id, title=None, content=None, solution=None, 
-                      has_latex_solution=None, source=None, notes=None):
+    def update_problem(self, problem_id, content=None, solution=None, 
+                      has_latex_solution=None, answer=None, notes=None):
         """
         Update an existing math problem
         
         Args:
             problem_id (int): ID of the problem to update
-            title (str, optional): Updated problem title
             content (str, optional): Updated LaTeX content
             solution (str, optional): Updated solution
             has_latex_solution (int, optional): Updated solution type flag
-            source (str, optional): Updated source
+            answer (str, optional): Updated plain text answer
             notes (str, optional): Updated notes
             
         Returns:
@@ -183,10 +180,6 @@ class MathProblemDB:
             values = []
             
             # Update only provided fields
-            if title is not None:
-                columns.append("title = ?")
-                values.append(title)
-            
             if content is not None:
                 columns.append("content = ?")
                 values.append(content)
@@ -199,9 +192,9 @@ class MathProblemDB:
                 columns.append("has_latex_solution = ?")
                 values.append(has_latex_solution)
             
-            if source is not None:
-                columns.append("source = ?")
-                values.append(source)
+            if answer is not None:
+                columns.append("answer = ?")
+                values.append(answer)
             
             if notes is not None:
                 columns.append("notes = ?")
@@ -270,8 +263,8 @@ class MathProblemDB:
         try:
             # Get problem data
             self.cur.execute("""
-                SELECT problem_id, title, content, solution, has_latex_solution, 
-                       source, notes, creation_date, last_modified 
+                SELECT problem_id, content, solution, has_latex_solution, 
+                       answer, notes, creation_date, last_modified 
                 FROM problems WHERE problem_id = ?
             """, (problem_id,))
             
@@ -282,14 +275,13 @@ class MathProblemDB:
             # Convert to dictionary
             problem_dict = {
                 "problem_id": problem[0],
-                "title": problem[1],
-                "content": problem[2],
-                "solution": problem[3],
-                "has_latex_solution": problem[4],
-                "source": problem[5],
-                "notes": problem[6],
-                "creation_date": problem[7],
-                "last_modified": problem[8]
+                "content": problem[1],
+                "solution": problem[2],
+                "has_latex_solution": problem[3],
+                "answer": problem[4],
+                "notes": problem[5],
+                "creation_date": problem[6],
+                "last_modified": problem[7]
             }
             
             # Get associated images
@@ -342,7 +334,7 @@ class MathProblemDB:
         
         Args:
             category_id (int, optional): Filter by category ID
-            search_term (str, optional): Search in title, content, and notes
+            search_term (str, optional): Search in content, answer, and notes
             limit (int, optional): Maximum number of results to return
             offset (int, optional): Offset for pagination
             
@@ -351,7 +343,7 @@ class MathProblemDB:
         """
         try:
             query = """
-                SELECT p.problem_id, p.title, p.source, p.creation_date, p.last_modified
+                SELECT p.problem_id, p.content, p.answer, p.creation_date, p.last_modified
                 FROM problems p
             """
             
@@ -373,10 +365,10 @@ class MathProblemDB:
                     query += " WHERE "
                 
                 query += """
-                    (p.title LIKE ? OR p.content LIKE ? OR p.notes LIKE ? OR p.source LIKE ?)
+                    (p.content LIKE ? OR p.answer LIKE ? OR p.notes LIKE ?)
                 """
                 search_pattern = f"%{search_term}%"
-                params.extend([search_pattern, search_pattern, search_pattern, search_pattern])
+                params.extend([search_pattern, search_pattern, search_pattern])
             
             # Add ordering, limit and offset
             query += " ORDER BY p.last_modified DESC LIMIT ? OFFSET ?"
@@ -390,8 +382,8 @@ class MathProblemDB:
             for row in self.cur.fetchall():
                 problems.append({
                     "problem_id": row[0],
-                    "title": row[1],
-                    "source": row[2],
+                    "content": row[1],
+                    "answer": row[2],
                     "creation_date": row[3],
                     "last_modified": row[4]
                 })
