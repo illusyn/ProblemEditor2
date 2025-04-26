@@ -258,7 +258,7 @@ class MathEditor:
         self.content_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
         # Create a frame for the category panel on the left
-        self.category_frame = ttk.LabelFrame(self.content_frame, text="Categories", width=350)
+        self.category_frame = ttk.LabelFrame(self.content_frame, text="Categories", width=550)
         self.category_frame.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5)
         self.category_frame.pack_propagate(False)  # Prevent the frame from shrinking to fit its contents
         
@@ -297,8 +297,10 @@ class MathEditor:
         """Set the initial position of the paned window divider"""
         width = self.root.winfo_width()
         if width > 100:  # Only if the window has been realized
-            self.paned_window.sashpos(0, width // 2)
-    
+            effective_width = width - 580  # Subtracting new category panel width (550) plus some padding
+            self.paned_window.sashpos(0, effective_width // 2)
+
+            
     def update_category_display(self):
         """Update the category panel with categories from the database"""
         try:
