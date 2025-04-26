@@ -48,3 +48,6 @@ env/
 dist/
 build/
 *.egg-info/
+
+# databases
+db/math_images.db
