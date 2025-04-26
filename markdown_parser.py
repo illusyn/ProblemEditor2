@@ -637,6 +637,9 @@ class MarkdownParser:
     % Set margins
     \geometry{margin=1in}
 
+    % Set paragraph indentation to zero
+    \setlength{\parindent}{0pt}
+    
     \begin{document}
 
     """ + font_size_cmd + font_command + r"""

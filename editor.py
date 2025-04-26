@@ -140,9 +140,21 @@ class EditorComponent:
     def paste_text(self):
         """Paste text from clipboard"""
         try:
-            self.editor.event_generate("<<Paste>>")
-        except:
+            # Get clipboard content directly
+            clipboard_content = self.editor.clipboard_get()
+            
+            # Instead of event_generate, directly insert the content
+            self.editor.insert(tk.INSERT, clipboard_content)
+            
+            # Apply syntax highlighting
+            self.highlight_syntax()
+            
+            # Return 'break' to prevent the event from propagating
+            return 'break'
+        except tk.TclError:
+            # Ignore if clipboard is empty or not text
             pass
+
     
     def paste_mathml(self):
         """Paste MathML from clipboard as LaTeX"""
