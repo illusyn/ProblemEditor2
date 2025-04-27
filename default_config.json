@@ -120,7 +120,7 @@
             "options": ["tiny", "scriptsize", "footnotesize", "small", "normalsize", "large", "Large", "LARGE", "huge", "Huge"]
           }
         },
-        "latex_template": "{#IF style=bold#\\textbf{#ELSEIF style=italic#\\textit{#ELSEIF style=underline#\\underline{#ENDIF##IF color!=\"black\"#\\textcolor{#color#}{#ENDIF##IF size!=\"normalsize\"#\\#size#{#ENDIF##CONTENT##IF size!=\"normalsize\"#}#ENDIF##IF color!=\"black\"#}#ENDIF##IF style!=\"normal\"#}#ENDIF#}"
+        "latex_template": "#IF style=bold#\\#size# \\textbf{#CONTENT#}\\par#ELSE#\\#size# #CONTENT#\\par#ENDIF#"
       },
       "bullet": {
         "description": "Bullet point item",
@@ -173,6 +173,27 @@
         "description": "Document-level configuration",
         "parameters": {},
         "latex_template": ""
+      },
+      "mytext": {
+        "description": "Test styled text",
+        "parameters": {
+          "color": {
+            "description": "Text color",
+            "type": "string",
+            "default": "red"
+          },
+          "style": {
+            "description": "Text style",
+            "type": "string",
+            "default": "bold"
+          },
+          "size": {
+            "description": "Text size",
+            "type": "string",
+            "default": "normalsize"
+          }
+        },
+        "latex_template": "#IF style=bold#\\#size# \\textbf{#CONTENT#}\\par#ELSE#\\#size# #CONTENT#\\par#ENDIF#"
       }
     }
   }

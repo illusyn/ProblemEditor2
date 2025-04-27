@@ -45,9 +45,11 @@ class MathEditor:
         # Initialize configuration manager
         self.config_manager = ConfigManager()
         
-        # Initialize working directory
-        self.working_dir = Path(tempfile.gettempdir()) / "simplified_math_editor"
+        # Initialize working directory - use exports folder under dev root instead of temp
+        dev_root = Path(__file__).parent
+        self.working_dir = dev_root / "exports"
         self.working_dir.mkdir(parents=True, exist_ok=True)
+        print(f"MathEditor: Working directory set to {self.working_dir}")
         
         # Create images directory
         image_dir = self.working_dir / "images"
@@ -80,8 +82,22 @@ class MathEditor:
         # Initialize selected categories list
         self.selected_categories = set()
         
-        # Initialize the markdown parser with the config manager
-        self.markdown_parser = MarkdownParser(config_manager=self.config_manager)
+        # Initialize the markdown parser with the config manager and config file
+        config_file_path = Path(__file__).parent / "default_config.json"
+        print(f"MathEditor: Looking for config file at: {config_file_path}")
+        if config_file_path.exists():
+            print(f"MathEditor: Config file found, initializing MarkdownParser with it")
+            self.markdown_parser = MarkdownParser(config_file=str(config_file_path), config_manager=self.config_manager)
+        else:
+            print(f"MathEditor: Config file not found at {config_file_path}")
+            self.markdown_parser = MarkdownParser(config_manager=self.config_manager)
+
+        print("MathEditor: MarkdownParser initialized, checking #text command...")
+        text_cmd = self.markdown_parser.config.get_command_config("text")
+        if text_cmd:
+            print(f"MathEditor: #text template: {text_cmd.get('latex_template', 'NOT FOUND')}")
+            if 'parameters' in text_cmd:
+                print(f"MathEditor: #text parameters: {text_cmd['parameters']}")
         
         # Load the LaTeX template
         self.template = self.load_template()

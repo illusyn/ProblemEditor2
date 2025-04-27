@@ -103,15 +103,30 @@ class ConfigLoader:
             bool: True if loaded successfully, False otherwise
         """
         try:
+            print(f"ConfigLoader.load_system_config: Loading from {config_file}")
             with open(config_file, 'r', encoding='utf-8') as f:
                 user_config = json.load(f)
                 
+            # Print the loaded config keys
+            print(f"ConfigLoader.load_system_config: Loaded config keys: {list(user_config.keys() if user_config else [])}")
+            
             # Replace system configuration with the loaded one
             if "commands" in user_config:
+                print(f"ConfigLoader.load_system_config: Found commands: {list(user_config['commands'].keys())}")
                 self.system_config["commands"].update(user_config["commands"])
                 
+                # Check for text command specifically
+                if "text" in user_config["commands"]:
+                    print(f"ConfigLoader.load_system_config: Loaded text command config")
+            
             # Re-merge configurations
             self._merge_configurations()
+            
+            # Check final text command config
+            if "text" in self.config["commands"]:
+                text_cmd = self.config["commands"]["text"]
+                print(f"ConfigLoader.load_system_config: Final text command template: {text_cmd.get('latex_template', 'NONE')}")
+                print(f"ConfigLoader.load_system_config: Final text command parameters: {text_cmd.get('parameters', {})}")
             
             return True
             
@@ -370,3 +385,4 @@ class ConfigLoader:
         except Exception as e:
             print(f"Error exporting configuration: {str(e)}")
             return False
+

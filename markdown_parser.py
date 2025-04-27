@@ -19,6 +19,14 @@ class MarkdownParser:
         # Initialize the configuration loader
         try:
             self.config = ConfigLoader(config_file)
+            print(f"Markdown Parser: Config file path used: {getattr(self.config, 'config_file', 'BUILT-IN DEFAULT')}")
+            text_cmd_config = self.config.get_command_config("text")
+            if text_cmd_config:
+                print(f"Markdown Parser: Loaded #text template: {text_cmd_config.get('latex_template', 'NOT FOUND')}")
+                if 'parameters' in text_cmd_config:
+                    print(f"Markdown Parser: #text parameters: {text_cmd_config['parameters']}")
+            else:
+                print("Markdown Parser: #text command configuration not found!")
         except Exception as e:
             print(f"Warning: Failed to load config file: {str(e)}")
             print("Using default configuration")
