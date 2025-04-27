@@ -6,21 +6,10 @@
           "title": {
             "description": "Problem title",
             "type": "string",
-            "default": "Problem"
-          },
-          "points": {
-            "description": "Points assigned to the problem",
-            "type": "number",
-            "default": 0
-          },
-          "difficulty": {
-            "description": "Problem difficulty",
-            "type": "string",
-            "default": "medium",
-            "options": ["easy", "medium", "hard"]
+            "default": ""
           }
         },
-        "latex_template": "\\section*{#title##IF points>0# (#points# points)#ENDIF#}"
+        "latex_template": "\\section*{#title#}\n#CONTENT#\\par"
       },
       "solution": {
         "description": "Solution section",
@@ -41,7 +30,7 @@
       "question": {
         "description": "Question text",
         "parameters": {},
-        "latex_template": "#CONTENT#"
+        "latex_template": "#CONTENT#\\par"
       },
       "eq": {
         "description": "Mathematical equation",
@@ -120,7 +109,7 @@
             "options": ["tiny", "scriptsize", "footnotesize", "small", "normalsize", "large", "Large", "LARGE", "huge", "Huge"]
           }
         },
-        "latex_template": "#IF style=bold#\\#size# \\textbf{#CONTENT#}\\par#ELSE#\\#size# #CONTENT#\\par#ENDIF#"
+        "latex_template": "#CONTENT#\\par"
       },
       "bullet": {
         "description": "Bullet point item",
@@ -130,7 +119,7 @@
       "enum": {
         "description": "Enumerated item",
         "parameters": {},
-        "latex_template": "\\begin{enumerate}\n\\item #CONTENT#\n\\end{enumerate}"
+        "latex_template": "\\begin{enumerate}\n\\item #CONTENT#\\par\n\\end{enumerate}"
       },
       "box": {
         "description": "Boxed content",
@@ -174,26 +163,10 @@
         "parameters": {},
         "latex_template": ""
       },
-      "mytext": {
-        "description": "Test styled text",
-        "parameters": {
-          "color": {
-            "description": "Text color",
-            "type": "string",
-            "default": "red"
-          },
-          "style": {
-            "description": "Text style",
-            "type": "string",
-            "default": "bold"
-          },
-          "size": {
-            "description": "Text size",
-            "type": "string",
-            "default": "normalsize"
-          }
-        },
-        "latex_template": "#IF style=bold#\\#size# \\textbf{#CONTENT#}\\par#ELSE#\\#size# #CONTENT#\\par#ENDIF#"
+      "nl": {
+        "description": "Newline (line break)",
+        "parameters": {},
+        "latex_template": "\\medskip"
       }
     }
   }
