@@ -9,7 +9,7 @@
             "default": ""
           }
         },
-        "latex_template": "\\section*{#title#}\n#CONTENT#\\par"
+        "latex_template": "\\section*{#title#}\n\\normalsize #CONTENT#\\par"
       },
       "solution": {
         "description": "Solution section",
@@ -25,12 +25,12 @@
             "default": false
           }
         },
-        "latex_template": "\\section*{#title#}\n#CONTENT#"
+        "latex_template": "\\section*{#title#}\n\\normalsize #CONTENT#"
       },
       "question": {
         "description": "Question text",
         "parameters": {},
-        "latex_template": "#CONTENT#\\par"
+        "latex_template": "\\normalsize #CONTENT#\\par"
       },
       "eq": {
         "description": "Mathematical equation",
@@ -109,7 +109,7 @@
             "options": ["tiny", "scriptsize", "footnotesize", "small", "normalsize", "large", "Large", "LARGE", "huge", "Huge"]
           }
         },
-        "latex_template": "#CONTENT#\\par"
+        "latex_template": "#IF size!=\\\"normalsize\\\"#\\#size# #ENDIF##IF color!=\\\"black\\\"#\\textcolor{#color#}{#ENDIF##IF style=bold#\\textbf{#CONTENT#}#ELSE##IF style=italic#\textit{#CONTENT#}#ELSE##CONTENT##ENDIF##IF color!=\\\"black\\\"#}#ENDIF#\\par"
       },
       "bullet": {
         "description": "Bullet point item",
