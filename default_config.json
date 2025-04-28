@@ -1,4 +1,10 @@
 {
+  
+    "variables": {
+      "default_format": "\\medskip\\mydefaultsize",
+      "section_header": "\\section*{#TITLE#}",
+      "subsection_header": "\\subsection*{#TITLE#}"
+    },
     "commands": {
       "problem": {
         "description": "Problem section",
@@ -9,56 +15,45 @@
             "default": ""
           }
         },
-        "latex_template": "\\section*{#title#}\n\\normalsize #CONTENT#\\par"
+        "latex_template": "\\section*{#title#}\n\\mydefaultsize #CONTENT#\\par"
       },
-      "solution": {
-        "description": "Solution section",
+      "text": {
+        "description": "Formatted text",
         "parameters": {
-          "title": {
-            "description": "Solution title",
+          "style": {
+            "description": "Text style",
             "type": "string",
-            "default": "Solution"
+            "default": "normal",
+            "options": ["normal", "bold", "italic", "underline"]
           },
-          "hidden": {
-            "description": "Whether the solution should be hidden",
-            "type": "boolean",
-            "default": false
+          "color": {
+            "description": "Text color",
+            "type": "string",
+            "default": "black"
+          },
+          "size": {
+            "description": "Text size",
+            "type": "string",
+            "default": "normalsize",
+            "options": ["tiny", "scriptsize", "footnotesize", "small", "normalsize", "large", "Large", "LARGE", "huge", "Huge"]
           }
         },
-        "latex_template": "\\section*{#title#}\n\\normalsize #CONTENT#"
+        "latex_template": "$variables.default_format$\n #CONTENT#\\par"
       },
       "question": {
         "description": "Question text",
         "parameters": {},
-        "latex_template": "\\normalsize #CONTENT#\\par"
+        "latex_template": "$variables.default_format$\n #CONTENT#\\par"
       },
-      "eq": {
-        "description": "Mathematical equation",
-        "parameters": {
-          "align": {
-            "description": "Text alignment",
-            "type": "string",
-            "default": "left",
-            "options": ["left", "center", "right"]
-          },
-          "numbering": {
-            "description": "Whether equation is numbered",
-            "type": "boolean",
-            "default": false
-          }
-        },
-        "latex_template": "#IF numbering=True#\\begin{equation}#ELSE#\\begin{equation*}#ENDIF#\n#IF align=center#\\centering#ENDIF##IF align=right#\\raggedleft#ENDIF#\n#CONTENT#\n#IF numbering=True#\\end{equation}#ELSE#\\end{equation*}#ENDIF#"
+      "bullet": {
+        "description": "Bullet point item",
+        "parameters": {},
+        "latex_template": "$variables.default_format$\n\\begin{itemize}\n\\item #CONTENT#\n\\end{itemize}"
       },
-      "align": {
-        "description": "Aligned equations environment",
-        "parameters": {
-          "numbering": {
-            "description": "Whether equations should be numbered",
-            "type": "boolean",
-            "default": false
-          }
-        },
-        "latex_template": "#IF numbering=True#\\begin{align}#ELSE#\\begin{align*}#ENDIF#\n#CONTENT#\n#IF numbering=True#\\end{align}#ELSE#\\end{align*}#ENDIF#"
+      "enum": {
+        "description": "Enumerated item",
+        "parameters": {},
+        "latex_template": "$variables.default_format$\n\\begin{enumerate}\n\\item #CONTENT#\\par\n\\end{enumerate}"
       },
       "image": {
         "description": "Image insertion",
@@ -88,38 +83,65 @@
         },
         "latex_template": "\\begin{figure}[htbp]\n\\centering\n\\includegraphics[width=#width#\\textwidth]{#file#}\n#IF caption!=\"\"#\\caption{#caption#}#ENDIF#\n#IF label!=\"\"#\\label{#label#}#ENDIF#\n\\end{figure}"
       },
-      "text": {
-        "description": "Formatted text",
+      "eq": {
+        "description": "Mathematical equation",
         "parameters": {
-          "style": {
-            "description": "Text style",
+          "align": {
+            "description": "Text alignment",
             "type": "string",
-            "default": "normal",
-            "options": ["normal", "bold", "italic", "underline"]
+            "default": "left",
+            "options": ["left", "center", "right"]
           },
-          "color": {
-            "description": "Text color",
-            "type": "string",
-            "default": "black"
-          },
-          "size": {
-            "description": "Text size",
-            "type": "string",
-            "default": "normalsize",
-            "options": ["tiny", "scriptsize", "footnotesize", "small", "normalsize", "large", "Large", "LARGE", "huge", "Huge"]
+          "numbering": {
+            "description": "Whether equation is numbered",
+            "type": "boolean",
+            "default": false
           }
         },
-        "latex_template": "#IF size!=\\\"normalsize\\\"#\\#size# #ENDIF##IF color!=\\\"black\\\"#\\textcolor{#color#}{#ENDIF##IF style=bold#\\textbf{#CONTENT#}#ELSE##IF style=italic#\textit{#CONTENT#}#ELSE##CONTENT##ENDIF##IF color!=\\\"black\\\"#}#ENDIF#\\par"
+        "latex_template": "#IF numbering=True#\\begin{equation}#ELSE#\\begin{equation*}#ENDIF#\n#IF align=center#\\centering#ENDIF##IF align=right#\\raggedleft#ENDIF#\n#CONTENT#\n#IF numbering=True#\\end{equation}#ELSE#\\end{equation*}#ENDIF#"
       },
-      "bullet": {
-        "description": "Bullet point item",
+      "nl": {
+        "description": "Newline (line break)",
         "parameters": {},
-        "latex_template": "\\begin{itemize}\n\\item #CONTENT#\n\\end{itemize}"
+        "latex_template": "\\medskip"
       },
-      "enum": {
-        "description": "Enumerated item",
-        "parameters": {},
-        "latex_template": "\\begin{enumerate}\n\\item #CONTENT#\\par\n\\end{enumerate}"
+      "answer": {
+        "description": "Answer section",
+        "parameters": {
+          "color": {
+            "description": "Answer color",
+            "type": "string",
+            "default": "red"
+          }
+        },
+        "latex_template": "$variables.default_format$\n\\textcolor{#color#}{\\textbf{Answer:} #CONTENT#}\\par"
+      },
+      "solution": {
+        "description": "Solution section",
+        "parameters": {
+          "title": {
+            "description": "Solution title",
+            "type": "string",
+            "default": "Solution"
+          },
+          "hidden": {
+            "description": "Whether the solution should be hidden",
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "latex_template": "\\section*{#title#}\n\\normalsize #CONTENT#"
+      },
+      "align": {
+        "description": "Aligned equations environment",
+        "parameters": {
+          "numbering": {
+            "description": "Whether equations should be numbered",
+            "type": "boolean",
+            "default": false
+          }
+        },
+        "latex_template": "#IF numbering=True#\\begin{align}#ELSE#\\begin{align*}#ENDIF#\n#CONTENT#\n#IF numbering=True#\\end{align}#ELSE#\\end{align*}#ENDIF#"
       },
       "box": {
         "description": "Boxed content",
@@ -162,11 +184,6 @@
         "description": "Document-level configuration",
         "parameters": {},
         "latex_template": ""
-      },
-      "nl": {
-        "description": "Newline (line break)",
-        "parameters": {},
-        "latex_template": "\\medskip"
       }
     }
   }

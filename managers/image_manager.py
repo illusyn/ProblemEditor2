@@ -25,41 +25,6 @@ class ImageManager:
         """
         self.app = app
     
-    def get_clipboard_image(self):
-        """
-        Get image from clipboard
-        
-        Returns:
-            PIL.Image or None: Image object if found, None otherwise
-        """
-        try:
-            # Use PIL's ImageGrab for clipboard access
-            from PIL import ImageGrab
-            
-            # Try to grab the image from clipboard
-            image = ImageGrab.grabclipboard()
-            
-            # Check what we got back
-            if isinstance(image, Image.Image):
-                # We got an image directly
-                return image
-            elif isinstance(image, list) and len(image) > 0:
-                # We got a list of file paths
-                if os.path.isfile(image[0]):
-                    return Image.open(image[0])
-            
-            # If we get here, no valid image was found
-            return None
-            
-        except ImportError:
-            messagebox.showinfo("Missing Dependency", 
-                               "PIL ImageGrab module is required for clipboard images.\n"
-                               "On Linux, you may need additional packages.")
-            return None
-        except Exception as e:
-            print(f"Clipboard error: {str(e)}")
-            return None
-    
     def paste_image(self):
         """
         Paste image from clipboard as LaTeX figure
@@ -83,10 +48,10 @@ class ImageManager:
             else:
                 needs_restore = False
             
-            # Try to get image from clipboard
-            clipboard_image = self.get_clipboard_image()
+            # Try to get image from clipboard - use ImageConverter method
+            success, clipboard_image = self.app.image_converter.get_image_from_clipboard()
             
-            if not clipboard_image:
+            if not success:
                 # Restore font if needed before returning
                 if needs_restore:
                     self.app.config_manager.set_value("preview", "font_family", original_font)

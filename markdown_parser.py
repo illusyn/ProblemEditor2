@@ -1,12 +1,16 @@
 """
-Custom markdown parser for the Math Problem Editor with dynamic templates.
+Custom markdown parser for the Math Problem Editor with support for variables.
+
+This module enhances the existing markdown parser with:
+1. Support for variable references in templates
+2. Proper handling of variable substitution in templates
 """
 
 import re
 from config_loader import ConfigLoader
 
 class MarkdownParser:
-    """Converts custom parameterized markdown to LaTeX"""
+    """Converts custom parameterized markdown to LaTeX with variable support"""
     
     def __init__(self, config_file=None, config_manager=None):
         """
@@ -340,10 +344,14 @@ class MarkdownParser:
                 self.config.set_document_config(doc_config)
             elif command_params:
                 # If parameters are provided, convert them to a document config
-                doc_config = {"commands": {}}
+                doc_config = {"variables": {}, "commands": {}}
                 
                 for param_name, param_value in command_params.items():
-                    if "." in param_name:
+                    if param_name.startswith("var."):
+                        # It's a variable definition (var.name=value)
+                        var_name = param_name[4:]  # Remove "var." prefix
+                        doc_config["variables"][var_name] = param_value
+                    elif "." in param_name:
                         # Parameter format: command.parameter.option
                         parts = param_name.split(".")
                         
@@ -580,9 +588,9 @@ class MarkdownParser:
             str: Complete LaTeX document
         """
         # Get font size from configuration if available
-        font_size = 11  # Default font size
+        font_size = 14  # Default font size
         if self.config_manager:
-            font_size = self.config_manager.get_value("preview", "font_size", 11)
+            font_size = self.config_manager.get_value("preview", "font_size", 14)
         
         # Get font family from configuration
         font_family = "Computer Modern"  # Default LaTeX font
@@ -648,6 +656,7 @@ class MarkdownParser:
     % Set paragraph indentation to zero
     \setlength{\parindent}{0pt}
     
+    \newcommand{\mydefaultsize}{\fontsize{14pt}{16pt}\selectfont}
     \begin{document}
 
     """ + font_size_cmd + font_command + r"""

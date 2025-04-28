@@ -174,6 +174,9 @@ class MathEditor:
 \usepackage{graphicx}
 \graphicspath{{./}{./images/}}
 
+% Define the custom font size command in the preamble
+\newcommand{\mydefaultsize}{\fontsize{14pt}{16pt}\selectfont}
+
 \begin{document}
 
 #CONTENT#

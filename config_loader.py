@@ -9,6 +9,7 @@ import json
 import os
 from pathlib import Path
 import copy
+import re
 
 class ConfigLoader:
     """Loads and manages configuration for the custom markdown system"""
@@ -23,28 +24,31 @@ class ConfigLoader:
         """
         # System-level defaults (base configuration)
         self.system_config = {
+            "variables": {
+                "default_format": "\\medskip\\mydefaultsize"
+            },
             "commands": {
                 "problem": {
                     "description": "Problem section",
                     "parameters": {
                         
                     },
-                    "latex_template": "#CONTENT#"  
+                    "latex_template": "$variables.default_format$\n#CONTENT#"  
                 },
                 "solution": {
                     "description": "Solution section",
                     "parameters": {},
-                    "latex_template": "\\section*{Solution}"
+                    "latex_template": "$variables.default_format$\n\\section*{Solution}"
                 },
                 "question": {
                     "description": "Question text",
                     "parameters": {},
-                    "latex_template": "#CONTENT#"
+                    "latex_template": "$variables.default_format$\n#CONTENT#"
                 },
                 "text": {
                     "description": "Regular text content",
                     "parameters": {},
-                    "latex_template": "#CONTENT#"
+                    "latex_template": "$variables.default_format$\n#CONTENT#"
                 },
                 "eq": {
                     "description": "Mathematical equation",
@@ -60,12 +64,12 @@ class ConfigLoader:
                             "default": False
                         }
                     },
-                    "latex_template": "$$ #CONTENT# $$"
+                    "latex_template": "$variables.default_format$\n$$ #CONTENT# $$"
                 },
                 "align": {
                     "description": "Aligned equations",
                     "parameters": {},
-                    "latex_template": "\\begin{align*}\n#CONTENT#\n\\end{align*}"
+                    "latex_template": "$variables.default_format$\n\\begin{align*}\n#CONTENT#\n\\end{align*}"
                 },
                 "config": {
                     "description": "Document-level configuration",
@@ -75,13 +79,14 @@ class ConfigLoader:
                 "bullet": {
                     "description": "Bullet point",
                     "parameters": {},
-                    "latex_template": "\\begin{itemize}\n\\item #CONTENT#\n\\end{itemize}"
+                    "latex_template": "$variables.default_format$\n\\begin{itemize}\n\\item #CONTENT#\n\\end{itemize}"
                 }
             }
         }
         
         # Document-level configuration (from #config blocks)
         self.document_config = {
+            "variables": {},
             "commands": {}
         }
         
@@ -109,6 +114,11 @@ class ConfigLoader:
                 
             # Print the loaded config keys
             print(f"ConfigLoader.load_system_config: Loaded config keys: {list(user_config.keys() if user_config else [])}")
+            
+            # Update system variables if present
+            if "variables" in user_config:
+                print(f"ConfigLoader.load_system_config: Found variables: {list(user_config['variables'].keys())}")
+                self.system_config["variables"].update(user_config["variables"])
             
             # Replace system configuration with the loaded one
             if "commands" in user_config:
@@ -145,6 +155,9 @@ class ConfigLoader:
             bool: True if successful, False otherwise
         """
         try:
+            if "variables" in doc_config:
+                self.document_config["variables"] = doc_config["variables"]
+                
             if "commands" in doc_config:
                 self.document_config["commands"] = doc_config["commands"]
                 
@@ -162,6 +175,11 @@ class ConfigLoader:
         # Start with a fresh copy of system config
         self.config = copy.deepcopy(self.system_config)
         
+        # Add document-level variables
+        if "variables" in self.document_config:
+            for var_name, var_value in self.document_config["variables"].items():
+                self.config["variables"][var_name] = var_value
+        
         # Add document-level commands
         if "commands" in self.document_config:
             for cmd_name, cmd_config in self.document_config["commands"].items():
@@ -171,6 +189,28 @@ class ConfigLoader:
                 else:
                     # Add new command
                     self.config["commands"][cmd_name] = copy.deepcopy(cmd_config)
+        
+        # Process variable references in all templates
+        self._substitute_variables_in_templates()
+    
+    def _substitute_variables_in_templates(self):
+        """Substitute variable references in LaTeX templates"""
+        for cmd_name, cmd_config in self.config["commands"].items():
+            if "latex_template" in cmd_config:
+                template = cmd_config["latex_template"]
+                # Pattern for variable references: $variables.name$
+                var_pattern = r'\$variables\.([a-zA-Z0-9_]+)\$'
+                
+                def replace_var(match):
+                    var_name = match.group(1)
+                    if var_name in self.config["variables"]:
+                        return self.config["variables"][var_name]
+                    else:
+                        print(f"Warning: Variable '{var_name}' not found in configuration")
+                        return match.group(0)  # Keep the original reference
+                
+                # Replace all variable references
+                cmd_config["latex_template"] = re.sub(var_pattern, replace_var, template)
     
     def _merge_command_config(self, base_cmd, new_cmd):
         """
@@ -235,6 +275,34 @@ class ConfigLoader:
             
         except Exception as e:
             print(f"Error registering command: {str(e)}")
+            return False
+    
+    def register_variable(self, var_name, var_value):
+        """
+        Register a new variable at runtime
+        
+        Args:
+            var_name (str): Variable name
+            var_value (str): Variable value
+            
+        Returns:
+            bool: True if successful, False otherwise
+        """
+        try:
+            # Ensure variables dict exists
+            if "variables" not in self.document_config:
+                self.document_config["variables"] = {}
+                
+            # Add or update the variable
+            self.document_config["variables"][var_name] = var_value
+            
+            # Re-merge configurations
+            self._merge_configurations()
+            
+            return True
+            
+        except Exception as e:
+            print(f"Error registering variable: {str(e)}")
             return False
     
     def register_command_from_definition(self, cmd_def):
@@ -352,6 +420,19 @@ class ConfigLoader:
             return cmd_config["latex_template"]
         return ""
     
+    def get_variable(self, var_name, default=""):
+        """
+        Get the value of a variable
+        
+        Args:
+            var_name (str): Name of the variable
+            default (str, optional): Default value if variable not found
+            
+        Returns:
+            str: Variable value or default if not found
+        """
+        return self.config["variables"].get(var_name, default)
+    
     def get_all_commands(self):
         """
         Get all registered commands
@@ -360,6 +441,15 @@ class ConfigLoader:
             dict: Dictionary of all commands
         """
         return self.config["commands"]
+    
+    def get_all_variables(self):
+        """
+        Get all registered variables
+        
+        Returns:
+            dict: Dictionary of all variables
+        """
+        return self.config["variables"]
     
     def export_config(self, file_path=None):
         """
@@ -385,4 +475,3 @@ class ConfigLoader:
         except Exception as e:
             print(f"Error exporting configuration: {str(e)}")
             return False
-

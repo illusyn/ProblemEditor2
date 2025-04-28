@@ -46,6 +46,41 @@ class ImageConverter:
         # Keep track of images used in the current document
         self.document_images = {}
     
+    def get_clipboard_image(self):
+        """
+        Get image from clipboard
+        
+        Returns:
+            PIL.Image or None: Image object if found, None otherwise
+        """
+        try:
+            # Use PIL's ImageGrab for clipboard access
+            from PIL import ImageGrab
+            
+            # Try to grab the image from clipboard
+            image = ImageGrab.grabclipboard()
+            
+            # Check what we got back
+            if isinstance(image, Image.Image):
+                # We got an image directly
+                return image
+            elif isinstance(image, list) and len(image) > 0:
+                # We got a list of file paths
+                if os.path.isfile(image[0]):
+                    return Image.open(image[0])
+            
+            # If we get here, no valid image was found
+            return None
+            
+        except ImportError:
+            messagebox.showinfo("Missing Dependency", 
+                              "PIL ImageGrab module is required for clipboard images.\n"
+                              "On Linux, you may need additional packages.")
+            return None
+        except Exception as e:
+            print(f"Clipboard error: {str(e)}")
+            return None
+    
     def get_image_from_clipboard(self):
         """
         Get an image from the clipboard
@@ -55,31 +90,7 @@ class ImageConverter:
         """
         try:
             # Try to get image from clipboard
-            image = None
-            
-            # Create a temporary window to access clipboard
-            root = tk.Tk()
-            root.withdraw()  # Hide the window
-            
-            try:
-                # Try to get image data
-                image_data = root.clipboard_get(type='PNG')
-                if image_data:
-                    # Convert clipboard data to PIL Image
-                    image = ImageTk.PhotoImage(data=image_data).image()
-            except tk.TclError:
-                pass
-            
-            # Clean up
-            root.destroy()
-            
-            if not image:
-                # Try with PIL's ImageGrab if available
-                try:
-                    from PIL import ImageGrab
-                    image = ImageGrab.grabclipboard()
-                except ImportError:
-                    pass
+            image = self.get_clipboard_image()
             
             if not image:
                 return (False, "No image found in clipboard")
@@ -164,7 +175,6 @@ class ImageConverter:
             
         Returns:
             tuple: (success, image_info or error_message)
-                   image_info is a dict with keys: path, filename, width, height
         """
         try:
             # Generate a unique filename if none provided
