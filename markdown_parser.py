@@ -1,16 +1,12 @@
 """
-Custom markdown parser for the Math Problem Editor with support for variables.
-
-This module enhances the existing markdown parser with:
-1. Support for variable references in templates
-2. Proper handling of variable substitution in templates
+Custom markdown parser for the Math Problem Editor with dynamic templates and enum tracking.
 """
 
 import re
 from config_loader import ConfigLoader
 
 class MarkdownParser:
-    """Converts custom parameterized markdown to LaTeX with variable support"""
+    """Converts custom parameterized markdown to LaTeX with enum tracking"""
     
     def __init__(self, config_file=None, config_manager=None):
         """
@@ -55,6 +51,13 @@ class MarkdownParser:
             '^': '\\textasciicircum{}',
             '\\': '\\textbackslash{}'
         }
+        
+        # Initialize counter for enumeration tracking
+        self.enum_counter = 0
+        # Flag to track if we're in an enumeration block
+        self.in_enum_block = False
+        # Track if there is content between enums
+        self.has_content_between_enums = False
     
     def escape_latex(self, text):
         """
@@ -344,14 +347,10 @@ class MarkdownParser:
                 self.config.set_document_config(doc_config)
             elif command_params:
                 # If parameters are provided, convert them to a document config
-                doc_config = {"variables": {}, "commands": {}}
+                doc_config = {"commands": {}}
                 
                 for param_name, param_value in command_params.items():
-                    if param_name.startswith("var."):
-                        # It's a variable definition (var.name=value)
-                        var_name = param_name[4:]  # Remove "var." prefix
-                        doc_config["variables"][var_name] = param_value
-                    elif "." in param_name:
+                    if "." in param_name:
                         # Parameter format: command.parameter.option
                         parts = param_name.split(".")
                         
@@ -394,6 +393,39 @@ class MarkdownParser:
         # No output from config command
         return ""
     
+    def handle_enum_command(self, command_params, content_lines):
+        """
+        Handle the #enum command to create incremental enumerated lists
+        
+        Args:
+            command_params (dict): Parameters from the enum command
+            content_lines (list): Content lines after the command
+            
+        Returns:
+            str: LaTeX enumerated list with proper continuation
+        """
+        # Get content
+        content = "\n".join(content_lines)
+        
+        # If there was content between enums, or this is the first enum, 
+        # we need to start a new enumeration environment
+        if not self.in_enum_block or self.has_content_between_enums:
+            # This is the first enum in a sequence or there was text between enums
+            self.enum_counter = 1  # Reset counter
+            self.in_enum_block = True
+            self.has_content_between_enums = False
+            
+            # Start a new enumeration environment
+            result = "\\begin{enumerate}\n\\item " + content + "\n\\end{enumerate}"
+        else:
+            # Continuing an existing enumeration
+            self.enum_counter += 1
+            
+            # Just return the item without the environment - we'll rebuild the environments later
+            result = "\\item " + content
+        
+        return result
+    
     def parse_command(self, markdown_text):
         """
         Parse a single command line and its content
@@ -430,10 +462,43 @@ class MarkdownParser:
         if command_name == "config":
             return self.handle_config_command(params, content_lines)
         
+        # Special handling for enum commands
+        if command_name == "enum":
+            # Get content
+            content = "\n".join(content_lines)
+            
+            if not self.in_enum_block:
+                # Start a new enumeration if we're not already in one
+                self.in_enum_block = True
+                return "\\begin{enumerate}\n\\item " + content
+            else:
+                # Continue the existing enumeration
+                return "\\item " + content
+        
+        # For non-enum commands, check if we need to close an enum block
+        if self.in_enum_block:
+            self.in_enum_block = False
+            return "\\end{enumerate}\n\n" + self.parse_standard_command(command_name, params, content_lines)
+        
+        # Standard command handling
+        return self.parse_standard_command(command_name, params, content_lines)
+
+    def parse_standard_command(self, command_name, params, content_lines):
+        """
+        Parse a standard (non-enum) command
+        
+        Args:
+            command_name (str): Name of the command
+            params (dict): Command parameters
+            content_lines (list): Content lines
+            
+        Returns:
+            str: Processed LaTeX content
+        """
         # Get command configuration
         cmd_config = self.config.get_command_config(command_name)
         if not cmd_config:
-            return markdown_text
+            return "#" + command_name
         
         # Apply default parameters
         if "parameters" in cmd_config:
@@ -461,6 +526,26 @@ class MarkdownParser:
         result = self.apply_template(template, params, content)
         
         return result
+    
+    def post_process_enums(self, latex_content):
+        """
+        Fix the enum environments in the LaTeX content
+        
+        Args:
+            latex_content (str): The LaTeX content to process
+            
+        Returns:
+            str: Fixed LaTeX content
+        """
+        import re
+        
+        # Pattern to find consecutive enum environments
+        pattern = r'\\end{enumerate}\s*\\begin{enumerate}'
+        
+        # Replace with just an item separator
+        fixed_content = re.sub(pattern, '\\\\item', latex_content)
+        
+        return fixed_content    
     
     def preprocess_document(self, markdown_text):
         """
@@ -514,6 +599,9 @@ class MarkdownParser:
         Returns:
             str: Converted LaTeX document
         """
+        # Reset enum state
+        self.in_enum_block = False
+        
         # Store original document content
         self.document_content = markdown_text
         
@@ -566,16 +654,155 @@ class MarkdownParser:
             else:
                 # Regular text - escape LaTeX special characters
                 escaped_line = self.escape_latex(line)
+                
+                # If we are in an enum block, we need to close it before adding regular text
+                if self.in_enum_block and escaped_line.strip():
+                    processed_lines.append("\\end{enumerate}")
+                    self.in_enum_block = False
+                
                 processed_lines.append(escaped_line)
                 i += 1
         
         # Join the processed lines
         content = '\n'.join(processed_lines)
         
+        # Close any open enum block
+        if self.in_enum_block:
+            content += "\n\\end{enumerate}"
+            self.in_enum_block = False
+        
         # Create the full LaTeX document
         document = self.create_latex_document(content)
         
         return document
+    
+    def wrap_enum_items(self, content):
+        """
+        Fix issues with enumeration environments in LaTeX content
+        
+        Args:
+            content (str): LaTeX content to process
+            
+        Returns:
+            str: Processed content with fixed enumerate environments
+        """
+        import re
+        
+        # First, remove nested enumeration environments
+        content = re.sub(r'\\begin{enumerate}\s*\\begin{enumerate}', r'\\begin{enumerate}', content)
+        content = re.sub(r'\\end{enumerate}\s*\\end{enumerate}', r'\\end{enumerate}', content)
+        
+        # Fix any empty enumeration environments
+        content = re.sub(r'\\begin{enumerate}\s*\\end{enumerate}', r'', content)
+        
+        return content
+    
+    def process_enum_sequences(self, content):
+        """
+        Process LaTeX content to fix separate enum environments
+        
+        Args:
+            content (str): LaTeX content to process
+            
+        Returns:
+            str: Fixed LaTeX content with consolidated enum environments
+        """
+        import re
+        
+        # Fix isolated \item commands that appear outside enumerate environments
+        pattern = r'(\\end{enumerate})\s*(\\item\s+[^\n]+)'
+        
+        # Keep applying the fix until no more matches are found
+        while re.search(pattern, content):
+            content = re.sub(pattern, r'\2', content)
+        
+        # Now ensure all \item commands are within enumerate environments
+        lines = content.split('\n')
+        result = []
+        in_enum = False
+        
+        for line in lines:
+            stripped = line.strip()
+            
+            if stripped.startswith('\\item '):
+                if not in_enum:
+                    # Start a new enumeration
+                    result.append('\\begin{enumerate}')
+                    in_enum = True
+                result.append(line)
+            elif in_enum and '\\end{enumerate}' in stripped:
+                # End the current enumeration
+                in_enum = False
+                result.append(stripped)
+            elif in_enum and '\\begin{document}' in stripped:
+                # We've reached the end of the document without closing the enumeration
+                result.append('\\end{enumerate}')
+                in_enum = False
+                result.append(stripped)
+            else:
+                result.append(line)
+        
+        # Ensure any open enumeration is closed before the end of the document
+        if in_enum:
+            # Find the index of \end{document}
+            content = '\n'.join(result)
+            doc_end_index = content.rfind('\\end{document}')
+            
+            if doc_end_index >= 0:
+                # Insert \end{enumerate} before \end{document}
+                content = content[:doc_end_index] + '\\end{enumerate}\n' + content[doc_end_index:]
+            else:
+                # Append \end{enumerate} if \end{document} not found
+                content += '\n\\end{enumerate}'
+        else:
+            content = '\n'.join(result)
+        
+        return content
+
+    def process_enumeration_items(self, content):
+        """
+        Process and consolidate enumeration items into proper LaTeX lists
+        
+        Args:
+            content (str): Processed content with individual enum items
+            
+        Returns:
+            str: Content with proper LaTeX enumeration environments
+        """
+        # Find isolated \item entries and consolidate them into environments
+        lines = content.split('\n')
+        result_lines = []
+        
+        # Tracking enum state
+        in_enum = False
+        current_enum = []
+        
+        for line in lines:
+            if line.strip().startswith('\\item '):
+                if not in_enum:
+                    # Start a new enumeration
+                    in_enum = True
+                    current_enum = ["\\begin{enumerate}"]
+                
+                # Add the item
+                current_enum.append(line)
+            else:
+                if in_enum:
+                    # Close the current enumeration
+                    current_enum.append("\\end{enumerate}")
+                    result_lines.extend(current_enum)
+                    in_enum = False
+                    current_enum = []
+                
+                # Add the non-enum line
+                result_lines.append(line)
+        
+        # Don't forget to close the last enum if there is one
+        if in_enum:
+            current_enum.append("\\end{enumerate}")
+            result_lines.extend(current_enum)
+        
+        return '\n'.join(result_lines)
     
     def create_latex_document(self, content):
         """
@@ -648,6 +875,7 @@ class MarkdownParser:
     \usepackage{geometry}
     \usepackage{xcolor}
     \usepackage{mdframed}
+    \usepackage{enumitem}
     """ + font_packages + r"""
 
     % Set margins

@@ -51,9 +51,9 @@
         "latex_template": "$variables.default_format$\n\\begin{itemize}\n\\item #CONTENT#\n\\end{itemize}"
       },
       "enum": {
-        "description": "Enumerated item",
+        "description": "Enumerated list item",
         "parameters": {},
-        "latex_template": "$variables.default_format$\n\\begin{enumerate}\n\\item #CONTENT#\\par\n\\end{enumerate}"
+        "latex_template": "\\item #CONTENT#"
       },
       "image": {
         "description": "Image insertion",
@@ -103,7 +103,7 @@
       "nl": {
         "description": "Newline (line break)",
         "parameters": {},
-        "latex_template": "\\medskip"
+        "latex_template": "\\\\"
       },
       "answer": {
         "description": "Answer section",
