@@ -688,6 +688,7 @@ class DatabaseInterface:
                 # Update categories
                 self._update_problem_categories(self.editor.current_problem_id, categories)
                 self.editor.status_var.set(f"Updated problem #{self.editor.current_problem_id}")
+                messagebox.showinfo("Success", f"Problem #{self.editor.current_problem_id} updated successfully")
             else:
                 messagebox.showerror("Error", f"Failed to update problem: {message}")
         else:
@@ -703,6 +704,7 @@ class DatabaseInterface:
                 problem_id = result
                 self.editor.current_problem_id = problem_id
                 self.editor.status_var.set(f"Saved new problem #{problem_id}")
+                messagebox.showinfo("Success", f"New problem saved with ID #{problem_id}")
             else:
                 messagebox.showerror("Error", f"Failed to save problem: {result}")
 

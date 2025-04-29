@@ -400,12 +400,20 @@ class MathEditor:
                 self.category_panel.highlight_category(cat, cat in self.selected_categories)
     
     def on_category_click(self, category):
-        """Handle category button click"""
-        # Get the updated selection state from the panel
+        """
+        Handle category button click
+        
+        Args:
+            category: Name of the clicked category
+        """
+        # Get the current selected categories from the panel
         self.selected_categories = set(self.category_panel.get_selected_categories())
         
-        # Update the display to ensure visual state matches
-        self.update_category_display()
+        # Update status bar with selected categories
+        if self.selected_categories:
+            self.status_var.set(f"Selected categories: {', '.join(sorted(self.selected_categories))}")
+        else:
+            self.status_var.set("No categories selected")
         
         # Check if there's unsaved content that would be lost
         current_content = self.editor.get_text().strip()
@@ -445,25 +453,43 @@ class MathEditor:
                     self.status_var.set("No problems found with all selected categories")
     
     def load_problem_content(self, problem):
-        """Load a problem's content into the editor"""
-        # Update problem ID field
-        self.problem_id_entry.delete(0, tk.END)
-        self.problem_id_entry.insert(0, str(problem["problem_id"]))
+        """
+        Load problem content into the editor
         
-        # Load content into editor
-        self.editor.set_text(problem["content"])
-        
-        # Update answer and notes
-        if "answer" in problem:
-            self.answer_text.delete(0, tk.END)
-            self.answer_text.insert(0, problem["answer"] or "")
-        
-        if "notes" in problem:
-            self.notes_text.delete("1.0", tk.END)
-            self.notes_text.insert("1.0", problem["notes"] or "")
-        
+        Args:
+            problem: Problem dictionary containing content and metadata
+        """
         # Store the problem ID
-        self.current_problem_id = problem["problem_id"]
+        self.current_problem_id = problem.get('problem_id')
+        
+        # Set the content
+        self.editor.set_text(problem.get('content', ''))
+        
+        # Set answer and notes
+        self.answer_text.delete(0, tk.END)
+        self.answer_text.insert(0, problem.get('answer', ''))
+        
+        self.notes_text.delete("1.0", tk.END)
+        self.notes_text.insert("1.0", problem.get('notes', ''))
+        
+        # Clear and set categories
+        self.selected_categories.clear()
+        if 'categories' in problem and problem['categories']:
+            self.selected_categories = {cat['name'] for cat in problem['categories']}
+            
+        # Update category panel to reflect the loaded problem's categories
+        if hasattr(self, 'category_panel'):
+            for cat, btn in self.category_panel.buttons.items():
+                if cat in self.selected_categories:
+                    self.category_panel.highlight_category(cat, True)
+                    self.category_panel.selected_categories.add(cat)
+                else:
+                    self.category_panel.highlight_category(cat, False)
+                    if cat in self.category_panel.selected_categories:
+                        self.category_panel.selected_categories.remove(cat)
+        
+        # Update status
+        self.status_var.set(f"Loaded problem #{self.current_problem_id}")
         
         # Update preview
         self.update_preview()
@@ -643,26 +669,9 @@ x = 2
             if not success:
                 messagebox.showerror("Error", f"Failed to load problem: {problem}")
                 return
-                
-            # Load content into editor
-            self.editor.set_text(problem["content"])
             
-            # Update answer and notes
-            if "answer" in problem:
-                self.answer_text.delete(0, tk.END)
-                self.answer_text.insert(0, problem["answer"] or "")
-            
-            if "notes" in problem:
-                self.notes_text.delete("1.0", tk.END)
-                self.notes_text.insert("1.0", problem["notes"] or "")
-            
-            # Update categories
-            if "categories" in problem:
-                self.selected_categories = set(cat["name"] for cat in problem["categories"])
-                self.update_category_display()
-            
-            self.current_problem_id = problem_id
-            self.status_var.set(f"Loaded problem #{problem_id}")
+            # Load the problem content
+            self.load_problem_content(problem)
             
         except ValueError:
             messagebox.showerror("Error", "Please enter a valid problem ID")

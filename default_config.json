@@ -14,17 +14,17 @@
             "default": ""
           }
         },
-        "latex_template": "\\section*{#title#}\n#CONTENT#\\par"
+        "latex_template": "$variables.default_format$\n\\section*{#title#}\n#CONTENT#\\par"
       },
       "text": {
         "description": "Text block",
         "parameters": {},
-        "latex_template": "#CONTENT#\\par"
+        "latex_template": "$variables.default_format$\n#CONTENT#\\par"
       },
       "question": {
         "description": "Question text",
         "parameters": {},
-        "latex_template": "#CONTENT#\\par"
+        "latex_template": "$variables.default_format$\n#CONTENT#\\par"
       },
       "bullet": {
         "description": "Bullet point item",
@@ -34,7 +34,7 @@
       "enum": {
         "description": "Enumerated list item",
         "parameters": {},
-        "latex_template": "\\item #CONTENT#"
+        "latex_template": "$variables.default_format$\n\\item #CONTENT#"
       },
       "image": {
         "description": "Image insertion",
