@@ -52,3 +52,14 @@ build/
 
 # databases
 db/math_images.db
+
+# Database files
+db/math_problems.db
+
+# Coverage data
+.coverage
+
+# Temporary and generated files
+exports/
+latex_test_output/
+*.log
