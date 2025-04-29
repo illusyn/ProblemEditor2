@@ -61,7 +61,6 @@ class MenuManager:
     def create_insert_menu(self):
         """Create the Insert menu"""
         insert_menu = tk.Menu(self.menubar, tearoff=0)
-        insert_menu.add_command(label="Paste MathML as LaTeX", command=lambda: self.app.editor.paste_mathml())
         insert_menu.add_command(label="Paste LaTeX as Equation", command=lambda: self.app.editor.paste_latex())
         insert_menu.add_command(label="Paste Image as Figure", command=self.app.paste_image)
         insert_menu.add_command(label="Insert Image from File...", command=self.app.insert_image_from_file)

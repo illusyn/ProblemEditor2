@@ -1,0 +1,3 @@
+#problem
+#text
+A phone's battery life decreases by 5\% each year due to degradation. What fraction of the original battery life will remain after 5 years? Express your answer as a decimal rounded to four places. 

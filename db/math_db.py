@@ -58,6 +58,14 @@ class MathProblemDB:
             )
         ''')
         
+        # Check if answer column exists, add it if it doesn't
+        self.cur.execute("PRAGMA table_info(problems)")
+        columns = [col[1] for col in self.cur.fetchall()]
+        if 'answer' not in columns:
+            self.cur.execute('ALTER TABLE problems ADD COLUMN answer TEXT')
+            self.conn.commit()
+            print("Added 'answer' column to problems table")
+        
         # Problem images table
         self.cur.execute('''
             CREATE TABLE IF NOT EXISTS problem_images (
@@ -342,8 +350,9 @@ class MathProblemDB:
             tuple: (success, list_of_problems or error_message)
         """
         try:
+            # First get the problems
             query = """
-                SELECT p.problem_id, p.content, p.answer, p.creation_date, p.last_modified
+                SELECT DISTINCT p.problem_id, p.content, p.answer, p.creation_date, p.last_modified
                 FROM problems p
             """
             
@@ -380,13 +389,30 @@ class MathProblemDB:
             # Build result list
             problems = []
             for row in self.cur.fetchall():
-                problems.append({
-                    "problem_id": row[0],
+                problem_id = row[0]
+                problem = {
+                    "problem_id": problem_id,
                     "content": row[1],
                     "answer": row[2],
                     "creation_date": row[3],
-                    "last_modified": row[4]
-                })
+                    "last_modified": row[4],
+                    "categories": []
+                }
+                
+                # Get categories for this problem
+                self.cur.execute("""
+                    SELECT c.category_id, c.name
+                    FROM math_categories c
+                    JOIN problem_math_categories pc ON c.category_id = pc.category_id
+                    WHERE pc.problem_id = ?
+                """, (problem_id,))
+                
+                problem["categories"] = [
+                    {"category_id": cat[0], "name": cat[1]}
+                    for cat in self.cur.fetchall()
+                ]
+                
+                problems.append(problem)
             
             return (True, problems)
             

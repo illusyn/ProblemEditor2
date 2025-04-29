@@ -124,7 +124,7 @@ class DatabaseInterface:
         ttk.Label(frame, text="Problem Preview:").grid(row=6, column=0, columnspan=2, sticky=tk.W, padx=5, pady=5)
         
         # Get the current content from editor
-        content = self.editor.editor.get_content()
+        content = self.editor.editor.get_text()
         
         # Create a read-only text widget to show content preview
         preview_text = tk.Text(frame, height=10, width=50)
@@ -447,7 +447,7 @@ class DatabaseInterface:
             return
         
         # Ask for confirmation if there is content in the editor
-        current_content = self.editor.editor.get_content().strip()
+        current_content = self.editor.editor.get_text().strip()
         if current_content:
             if not messagebox.askyesno("Confirm", "Current content will be replaced. Continue?"):
                 return
@@ -462,7 +462,7 @@ class DatabaseInterface:
                                f"Image handling will be implemented in a future update.")
         
         # Load content into editor
-        self.editor.editor.set_content(problem["content"])
+        self.editor.editor.set_text(problem["content"])
         
         # Store the problem ID in the editor
         self.editor.current_problem_id = problem_id
@@ -662,3 +662,110 @@ class DatabaseInterface:
         # This is already implemented as part of the load_problem_dialog
         # Just call that method as it includes search functionality
         self.load_problem_dialog()
+
+    def save_problem_direct(self):
+        """Save the current problem directly to the database"""
+        # Get content from editor
+        content = self.editor.editor.get_text()
+        
+        # Get answer and notes
+        answer = self.editor.answer_text.get()
+        notes = self.editor.notes_text.get("1.0", "end-1c")
+        
+        # Get selected categories
+        categories = list(self.editor.selected_categories)
+        
+        # If we have a current problem ID, update it
+        if hasattr(self.editor, 'current_problem_id') and self.editor.current_problem_id is not None:
+            success, message = self.db.update_problem(
+                self.editor.current_problem_id,
+                content=content,
+                answer=answer,
+                notes=notes
+            )
+            
+            if success:
+                # Update categories
+                self._update_problem_categories(self.editor.current_problem_id, categories)
+                self.editor.status_var.set(f"Updated problem #{self.editor.current_problem_id}")
+            else:
+                messagebox.showerror("Error", f"Failed to update problem: {message}")
+        else:
+            # Add new problem
+            success, result = self.db.add_problem(
+                content=content,
+                answer=answer,
+                notes=notes,
+                categories=categories
+            )
+            
+            if success:
+                problem_id = result
+                self.editor.current_problem_id = problem_id
+                self.editor.status_var.set(f"Saved new problem #{problem_id}")
+            else:
+                messagebox.showerror("Error", f"Failed to save problem: {result}")
+
+    def _update_problem_categories(self, problem_id, categories):
+        """Update the categories for a problem"""
+        # First get current categories
+        success, problem = self.db.get_problem(problem_id)
+        if not success:
+            return
+            
+        current_categories = set()
+        if "categories" in problem:
+            current_categories = {cat["name"] for cat in problem["categories"]}
+        
+        # Add new categories
+        for category in categories:
+            if category not in current_categories:
+                self.db.add_problem_to_category(problem_id, category)
+        
+        # Remove old categories
+        for category in current_categories:
+            if category not in categories:
+                # Get category ID
+                success, cats = self.db.get_categories()
+                if success:
+                    for cat in cats:
+                        if cat["name"] == category:
+                            self.db.remove_problem_from_category(problem_id, cat["category_id"])
+                            break
+
+    def save_problem_with_dialog(self):
+        """Save the current problem with a dialog for additional options"""
+        # Get current content
+        current_content = self.editor.editor.get_text().strip()
+        
+        if not current_content:
+            messagebox.showwarning("Warning", "No content to save")
+            return
+        
+        # Create dialog
+        dialog = SaveProblemDialog(self.editor.root, self.db)
+        
+        # If dialog was cancelled, return
+        if not dialog.result:
+            return
+            
+        # Get dialog results
+        categories = dialog.result.get("categories", [])
+        
+        # Save problem
+        success, result = self.db.add_problem(
+            content=current_content,
+            categories=categories
+        )
+        
+        if success:
+            problem_id = result
+            self.editor.status_var.set(f"Saved problem #{problem_id}")
+        else:
+            messagebox.showerror("Error", f"Failed to save problem: {result}")
+
+    def save_problem_to_file(self):
+        """Save the current problem to a file"""
+        # Get content
+        content = self.editor.editor.get_text()
+        # ... existing code ...

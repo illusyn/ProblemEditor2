@@ -10,8 +10,9 @@ from tkinter import ttk, filedialog, messagebox
 import os
 from pathlib import Path
 import tempfile
+import re
 
-from editor import EditorComponent
+from editor import Editor
 from preview.latex_compiler import LaTeXCompiler
 from preview.pdf_viewer import PDFViewer
 from converters.image_converter import ImageConverter
@@ -40,8 +41,12 @@ class MathEditor:
         """
         self.root = root
         self.root.title("Simplified Math Editor")
-        self.root.geometry("2000x800")  # Increased from 1200 to 1700
+        self.root.geometry("2200x1200")  # Increased height from 800 to 1200
                 
+        # Initialize result set tracking
+        self.current_results = []
+        self.current_result_index = -1
+        
         # Initialize configuration manager
         self.config_manager = ConfigManager()
         
@@ -106,7 +111,8 @@ class MathEditor:
         self.create_layout()
         
         # Create editor component and PDF viewer (needed before preview manager)
-        self.editor = EditorComponent(self.editor_frame)
+        self.editor = Editor(self.editor_frame)
+        self.editor.pack(fill=tk.BOTH, expand=True)
         self.pdf_viewer = PDFViewer(self.preview_frame)
         
         # Initialize the template manager
@@ -137,15 +143,10 @@ class MathEditor:
         """Set the initial position of the paned window divider"""
         width = self.root.winfo_width()
         if width > 100:  # Only if the window has been realized
-            # Account for the category panel width by subtracting it from the calculation
-            # This ensures the editor and preview have proper proportions
-            effective_width = width - 380  # Subtracting category panel width plus some padding
-            ## self.paned_window.sashpos(0, effective_width // 2)
-            # Change this line to give more space to the preview
-            # Instead of dividing by 2 (50/50 split), we divide by a different value
-            # For example, using 2.5 gives approximately 40% to editor, 60% to preview
-            self.paned_window.sashpos(0, int(effective_width / 3))
-    
+            effective_width = width - 580  # Subtracting new category panel width (550) plus some padding
+            # Give 40% to editor, 60% to preview
+            self.paned_window.sashpos(0, int(effective_width * 0.37))
+
     def load_template(self):
         """Load the default LaTeX template"""
         # Look for template in resources directory first
@@ -195,13 +196,6 @@ class MathEditor:
         self.toolbar.pack(fill=tk.X, padx=5, pady=5)
         
         # Add toolbar buttons
-        self.math_button = ttk.Button(
-            self.toolbar, 
-            text="Paste MathML",
-            command=lambda: self.editor.paste_mathml()
-        )
-        self.math_button.pack(side=tk.LEFT, padx=5)
-        
         self.latex_button = ttk.Button(
             self.toolbar,
             text="Paste LaTeX",
@@ -252,14 +246,6 @@ class MathEditor:
         )
         self.equation_button.pack(side=tk.LEFT, padx=5)
         
-        # Add Save Problem button to toolbar
-        self.save_problem_button = ttk.Button(
-            self.toolbar,
-            text="Save Problem",
-            command=lambda: self.db_interface.save_problem_dialog()
-        )
-        self.save_problem_button.pack(side=tk.LEFT, padx=5)
-        
         self.preview_button = ttk.Button(
             self.toolbar,
             text="Update Preview",
@@ -288,15 +274,92 @@ class MathEditor:
         self.content_frame = ttk.Frame(self.main_frame)
         self.content_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
-        # Create a frame for the category panel on the left
-        self.category_frame = ttk.LabelFrame(self.content_frame, text="Categories", width=550)
-        self.category_frame.pack(side=tk.LEFT, fill=tk.Y, padx=5, pady=5)
-        self.category_frame.pack_propagate(False)  # Prevent the frame from shrinking to fit its contents
+        # Left side panel containing categories, notes, and answer
+        self.left_panel = ttk.Frame(self.content_frame)
+        self.left_panel.pack(side=tk.LEFT, fill=tk.BOTH, padx=5, pady=5)
+        
+        # Query section
+        self.query_frame = ttk.LabelFrame(self.left_panel, text="Query")
+        self.query_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        # Problem ID query
+        id_frame = ttk.Frame(self.query_frame)
+        id_frame.pack(fill=tk.X, padx=5, pady=5)
+        ttk.Label(id_frame, text="Problem ID:").pack(side=tk.LEFT)
+        self.problem_id_entry = ttk.Entry(id_frame, width=10)
+        self.problem_id_entry.pack(side=tk.LEFT, padx=5)
+        
+        # Query buttons
+        button_frame = ttk.Frame(self.query_frame)
+        button_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        ttk.Button(
+            button_frame,
+            text="Load by ID",
+            command=self.load_problem_by_id
+        ).pack(side=tk.LEFT, padx=2)
+        
+        ttk.Button(
+            button_frame,
+            text="Query Categories",
+            command=self.query_by_categories
+        ).pack(side=tk.LEFT, padx=2)
+        
+        ttk.Button(
+            button_frame,
+            text="Next Match",
+            command=self.next_match
+        ).pack(side=tk.LEFT, padx=2)
+        
+        ttk.Button(
+            button_frame,
+            text="Reset",
+            command=self.reset_form
+        ).pack(side=tk.LEFT, padx=2)
+        
+        ttk.Button(
+            button_frame,
+            text="Delete Problem",
+            command=self.delete_problem
+        ).pack(side=tk.LEFT, padx=2)
+        
+        # Categories section
+        self.category_frame = ttk.LabelFrame(self.left_panel, text="Categories", width=550)
+        self.category_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        self.category_frame.pack_propagate(False)
         
         # Create the category panel
         self.category_panel = CategoryPanel(self.category_frame)
         self.category_panel.set_multi_select(True)
         self.category_panel.set_on_category_click_callback(self.on_category_click)
+        
+        # Notes section
+        self.notes_frame = ttk.LabelFrame(self.left_panel, text="Notes")
+        self.notes_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        # Set fixed width and height for notes
+        self.notes_text = tk.Text(self.notes_frame, height=4, width=30, wrap=tk.WORD)
+        self.notes_text.pack(fill=tk.X, padx=5, pady=5)
+        
+        # Answer section with save button
+        self.answer_frame = ttk.LabelFrame(self.left_panel, text="Answer")
+        self.answer_frame.pack(fill=tk.X, padx=5, pady=5)
+        
+        # Create a frame for answer and save button
+        answer_container = ttk.Frame(self.answer_frame)
+        answer_container.pack(fill=tk.X, padx=5, pady=5)
+        
+        # Save Problem button (now to the left of answer field)
+        self.save_problem_button = ttk.Button(
+            answer_container,
+            text="Save Problem",
+            command=lambda: self.db_interface.save_problem_direct()
+        )
+        self.save_problem_button.pack(side=tk.LEFT, padx=(0,5))
+        
+        # Answer entry with reduced width
+        self.answer_text = ttk.Entry(answer_container, width=20)
+        self.answer_text.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(5,0))
         
         # Create paned window for editor and preview
         self.paned_window = ttk.PanedWindow(self.content_frame, orient=tk.HORIZONTAL)
@@ -304,10 +367,12 @@ class MathEditor:
         
         # Editor frame
         self.editor_frame = ttk.Frame(self.paned_window)
+        self.editor_frame.pack(fill=tk.BOTH, expand=True)
         self.paned_window.add(self.editor_frame, weight=1)
         
         # Preview frame
         self.preview_frame = ttk.Frame(self.paned_window)
+        self.preview_frame.pack(fill=tk.BOTH, expand=True)
         self.paned_window.add(self.preview_frame, weight=1)
         
         # Status bar
@@ -324,66 +389,84 @@ class MathEditor:
         # Set initial paned window position (after a delay)
         self.root.after(100, self.set_initial_pane_position)
     
-    def set_initial_pane_position(self):
-        """Set the initial position of the paned window divider"""
-        width = self.root.winfo_width()
-        if width > 100:  # Only if the window has been realized
-            effective_width = width - 580  # Subtracting new category panel width (550) plus some padding
-            self.paned_window.sashpos(0, effective_width // 2)
-
-            
     def update_category_display(self):
-        """Update the category panel with categories from the database"""
-        try:
-            # Get all categories from the database
-            success, categories = self.db.get_categories()
-            
-            if success:
-                # Sort categories by name
-                category_names = [cat["name"] for cat in categories]
-                sorted_names = sorted(category_names)
-                
-                # Update the category panel
-                self.category_panel.update_display(sorted_names)
-                
-                # Update selection states
-                for cat in sorted_names:
-                    is_selected = cat in self.selected_categories
-                    self.category_panel.highlight_category(cat, is_selected)
-            else:
-                print(f"Failed to get categories: {categories}")
-                
-        except Exception as e:
-            print(f"Error updating category display: {str(e)}")
+        """Update the category panel display"""
+        success, categories = self.db.get_categories()
+        if success:
+            category_names = [cat["name"] for cat in categories]
+            self.category_panel.update_display(category_names)
+            # Ensure panel's selected categories match editor's
+            for cat in category_names:
+                self.category_panel.highlight_category(cat, cat in self.selected_categories)
     
     def on_category_click(self, category):
         """Handle category button click"""
-        if category in self.selected_categories:
-            self.selected_categories.remove(category)
-            selected = False
-        else:
-            self.selected_categories.add(category)
-            selected = True
+        # Get the updated selection state from the panel
+        self.selected_categories = set(self.category_panel.get_selected_categories())
+        
+        # Update the display to ensure visual state matches
+        self.update_category_display()
+        
+        # Check if there's unsaved content that would be lost
+        current_content = self.editor.get_text().strip()
+        if current_content and not hasattr(self, 'current_problem_id'):
+            if not messagebox.askyesno("Unsaved Content", 
+                "Loading an existing problem will replace your current unsaved content. Continue?"):
+                return
+        
+        # Only proceed with auto-loading if explicitly enabled
+        if not hasattr(self, 'current_problem_id'):  # Don't auto-load when creating new problem
+            return
             
-        # Update the UI to reflect the selection state
-        self.category_panel.highlight_category(category, selected)
+        # Query problems with selected categories
+        if self.selected_categories:
+            success, problems = self.db.get_problems_list(
+                category_id=None,  # We'll filter by category names
+                search_term=None
+            )
+            
+            if success and problems:
+                # Filter problems that have ALL selected categories
+                matching_problems = []
+                for problem in problems:
+                    if "categories" in problem:
+                        problem_categories = set(cat["name"] for cat in problem["categories"])
+                        if self.selected_categories.issubset(problem_categories):
+                            matching_problems.append(problem)
+                
+                if matching_problems:
+                    # Take the most recent problem
+                    latest_problem = max(matching_problems, key=lambda p: p["last_modified"])
+                    
+                    # Load the problem
+                    self.load_problem_content(latest_problem)
+                    self.status_var.set(f"Loaded problem #{latest_problem['problem_id']} matching selected categories")
+                else:
+                    self.status_var.set("No problems found with all selected categories")
+    
+    def load_problem_content(self, problem):
+        """Load a problem's content into the editor"""
+        # Update problem ID field
+        self.problem_id_entry.delete(0, tk.END)
+        self.problem_id_entry.insert(0, str(problem["problem_id"]))
         
-        # If a problem is loaded, update its categories
-        if hasattr(self, 'current_problem_id') and self.current_problem_id is not None:
-            if selected:
-                self.db.add_problem_to_category(self.current_problem_id, category)
-            else:
-                # Get the category ID and use it to remove the category
-                for cat in self.db.get_categories()[1]:
-                    if cat["name"] == category:
-                        self.db.remove_problem_from_category(self.current_problem_id, cat["category_id"])
-                        break
+        # Load content into editor
+        self.editor.set_text(problem["content"])
         
-        # Update status message
-        if selected:
-            self.status_var.set(f"Category '{category}' added to selection")
-        else:
-            self.status_var.set(f"Category '{category}' removed from selection")
+        # Update answer and notes
+        if "answer" in problem:
+            self.answer_text.delete(0, tk.END)
+            self.answer_text.insert(0, problem["answer"] or "")
+        
+        if "notes" in problem:
+            self.notes_text.delete("1.0", tk.END)
+            self.notes_text.insert("1.0", problem["notes"] or "")
+        
+        # Store the problem ID
+        self.current_problem_id = problem["problem_id"]
+        
+        # Update preview
+        self.update_preview()
     
     # File operation methods - delegated to FileManager
     def new_file(self):
@@ -550,3 +633,152 @@ x = 2
         # Close button
         close_button = ttk.Button(help_window, text="Close", command=help_window.destroy)
         close_button.pack(pady=10)
+
+    def load_problem_by_id(self):
+        """Load a problem using its ID"""
+        try:
+            problem_id = int(self.problem_id_entry.get())
+            success, problem = self.db.get_problem(problem_id)
+            
+            if not success:
+                messagebox.showerror("Error", f"Failed to load problem: {problem}")
+                return
+                
+            # Load content into editor
+            self.editor.set_text(problem["content"])
+            
+            # Update answer and notes
+            if "answer" in problem:
+                self.answer_text.delete(0, tk.END)
+                self.answer_text.insert(0, problem["answer"] or "")
+            
+            if "notes" in problem:
+                self.notes_text.delete("1.0", tk.END)
+                self.notes_text.insert("1.0", problem["notes"] or "")
+            
+            # Update categories
+            if "categories" in problem:
+                self.selected_categories = set(cat["name"] for cat in problem["categories"])
+                self.update_category_display()
+            
+            self.current_problem_id = problem_id
+            self.status_var.set(f"Loaded problem #{problem_id}")
+            
+        except ValueError:
+            messagebox.showerror("Error", "Please enter a valid problem ID")
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred: {str(e)}")
+    
+    def query_by_categories(self):
+        """Query problems based on selected categories"""
+        if not self.selected_categories:
+            messagebox.showwarning("Warning", "No categories selected")
+            return
+            
+        print(f"Querying with categories: {self.selected_categories}")
+        success, problems = self.db.get_problems_list(
+            category_id=None,  # We'll filter by category names
+            search_term=None
+        )
+        
+        if not success:
+            messagebox.showerror("Error", f"Failed to query problems: {problems}")
+            return
+            
+        print(f"Got {len(problems)} problems from database")
+        
+        # Filter problems that have ALL selected categories
+        self.current_results = []
+        for problem in problems:
+            print(f"\nChecking problem {problem.get('problem_id')}:")
+            if "categories" in problem:
+                problem_categories = set(cat["name"] for cat in problem["categories"])
+                print(f"  Problem categories: {problem_categories}")
+                print(f"  Selected categories: {self.selected_categories}")
+                print(f"  Selected categories is subset? {self.selected_categories.issubset(problem_categories)}")
+                print(f"  Problem categories is subset? {problem_categories.issubset(self.selected_categories)}")
+                if self.selected_categories.issubset(problem_categories):
+                    print(f"  -> Adding problem {problem.get('problem_id')} to results")
+                    self.current_results.append(problem)
+                else:
+                    print(f"  -> Not adding problem {problem.get('problem_id')} (categories don't match)")
+            else:
+                print(f"  -> Problem {problem.get('problem_id')} has no categories")
+        
+        print(f"\nFound {len(self.current_results)} matching problems")
+        
+        if not self.current_results:
+            messagebox.showinfo("No Results", "No problems found with all selected categories")
+            return
+            
+        # Sort by last modified date, most recent first
+        self.current_results.sort(key=lambda p: p["last_modified"], reverse=True)
+        
+        # Reset index and load first result
+        self.current_result_index = 0
+        self.load_problem_content(self.current_results[0])
+        self.status_var.set(f"Showing result 1 of {len(self.current_results)}")
+    
+    def next_match(self):
+        """Load the next matching problem from the current result set"""
+        if not self.current_results:
+            messagebox.showinfo("No Results", "No active query results")
+            return
+            
+        # Move to next result, wrapping around to start if at end
+        self.current_result_index = (self.current_result_index + 1) % len(self.current_results)
+        problem = self.current_results[self.current_result_index]
+        
+        # Load the problem
+        self.load_problem_content(problem)
+        self.status_var.set(
+            f"Showing result {self.current_result_index + 1} of {len(self.current_results)}"
+        )
+    
+    def reset_form(self):
+        """Reset all form fields"""
+        # Clear editor content
+        self.editor.set_text("")
+        
+        # Clear answer and notes
+        self.answer_text.delete(0, tk.END)
+        self.notes_text.delete("1.0", tk.END)
+        
+        # Clear problem ID
+        self.problem_id_entry.delete(0, tk.END)
+        
+        # Clear selected categories
+        self.selected_categories.clear()
+        # Reset category panel's internal state
+        self.category_panel.selected_categories.clear()
+        self.update_category_display()
+        
+        # Clear current problem ID and results
+        self.current_problem_id = None
+        self.current_results = []
+        self.current_result_index = -1
+        
+        # Update status
+        self.status_var.set("Form reset")
+    
+    def delete_problem(self):
+        """Delete the current problem from the database"""
+        if not hasattr(self, 'current_problem_id') or self.current_problem_id is None:
+            messagebox.showwarning("Warning", "No problem is currently loaded")
+            return
+            
+        if not messagebox.askyesno("Confirm Delete", 
+            f"Are you sure you want to delete problem #{self.current_problem_id}?\nThis action cannot be undone."):
+            return
+            
+        success, message = self.db.delete_problem(self.current_problem_id)
+        if success:
+            self.status_var.set(f"Deleted problem #{self.current_problem_id}")
+            self.reset_form()
+        else:
+            messagebox.showerror("Error", f"Failed to delete problem: {message}")
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = MathEditor(root)
+    root.mainloop()

@@ -79,11 +79,48 @@ class MarkdownParser:
         if text.startswith('\\[') and text.endswith('\\]'):
             return text
             
-        # Escape each special character
-        result = text
-        for char, replacement in self.latex_special_chars.items():
-            result = result.replace(char, replacement)
-            
+        # Split text into math and non-math parts
+        parts = []
+        current_part = ""
+        in_math = False
+        
+        i = 0
+        while i < len(text):
+            if text[i:i+2] == '\\[' or text[i:i+2] == '\\]':
+                if current_part:
+                    parts.append((current_part, in_math))
+                    current_part = ""
+                current_part += text[i:i+2]
+                i += 2
+                in_math = not in_math
+            elif text[i] == '$':
+                if current_part:
+                    parts.append((current_part, in_math))
+                    current_part = ""
+                current_part += text[i]
+                i += 1
+                in_math = not in_math
+            else:
+                current_part += text[i]
+                i += 1
+        
+        if current_part:
+            parts.append((current_part, in_math))
+        
+        # Process each part
+        result = ""
+        for part, is_math in parts:
+            if is_math:
+                result += part  # Don't escape math parts
+            else:
+                # Create a copy of special chars without % for text content
+                special_chars = {k: v for k, v in self.latex_special_chars.items() if k != '%'}
+                # Escape special characters in non-math parts
+                escaped_part = part
+                for char, replacement in special_chars.items():
+                    escaped_part = escaped_part.replace(char, replacement)
+                result += escaped_part
+        
         return result
     
     def parse_parameters(self, param_text):
@@ -549,45 +586,38 @@ class MarkdownParser:
     
     def preprocess_document(self, markdown_text):
         """
-        Preprocess document to extract document-level configurations
+        Preprocess the document text before parsing
         
         Args:
-            markdown_text (str): Full markdown document
+            markdown_text (str): Raw markdown text
             
         Returns:
-            str: Markdown with configuration blocks removed
+            str: Preprocessed text
         """
-        lines = markdown_text.strip().split('\n')
-        processed_lines = []
-        i = 0
-        
-        # First pass: find and process config commands
-        while i < len(lines):
-            line = lines[i].strip()
+        if not markdown_text:
+            return ""
             
-            # Check if this is a config command
-            if line.startswith('#config'):
-                # Extract the command line
-                command_line = line
-                command_content = []
-                i += 1
-                
-                # Collect content until next command or end of input
-                while i < len(lines) and not lines[i].strip().startswith('#'):
-                    command_content.append(lines[i])
-                    i += 1
-                
-                # Process the command
-                command_text = '\n'.join([command_line] + command_content)
-                self.parse_command(command_text)
-                
-                # Don't add these to the final document
-            else:
-                # Keep other content
-                processed_lines.append(line)
-                i += 1
+        # Store original content
+        self.document_content = markdown_text
         
-        return '\n'.join(processed_lines)
+        # Automatically escape unescaped % signs
+        processed_text = ""
+        i = 0
+        while i < len(markdown_text):
+            if markdown_text[i] == '%' and (i == 0 or markdown_text[i-1] != '\\'):
+                processed_text += '\\%'
+            else:
+                processed_text += markdown_text[i]
+            i += 1
+            
+        # Split into lines and remove trailing whitespace
+        lines = processed_text.splitlines()
+        
+        # Remove trailing whitespace from each line
+        lines = [line.rstrip() for line in lines]
+        
+        # Join lines back together
+        return "\n".join(lines)
     
     def parse(self, markdown_text):
         """
@@ -861,10 +891,8 @@ class MarkdownParser:
             font_packages = "\\usepackage{bookman}"
             font_command = ""
         elif font_family == "Carlito":
-            # Carlito uses the tgpagella package - a LaTeX-compatible alternative
             font_packages = "\\usepackage{carlito}"
             font_command = ""
-        # Computer Modern is the default, no packages needed
         
         # Create a LaTeX document with necessary packages for math and images
         template = r"""\documentclass{article}

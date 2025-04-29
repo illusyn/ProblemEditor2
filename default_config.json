@@ -2,8 +2,8 @@
   
     "variables": {
       "default_format": "\\medskip\\mydefaultsize",
-      "section_header": "\\section*{#TITLE#}",
-      "subsection_header": "\\subsection*{#TITLE#}"
+      "section_header": "\\section*{#CONTENT#}",
+      "subsection_header": "\\subsection*{#CONTENT#}"
     },
     "commands": {
       "problem": {
@@ -11,39 +11,20 @@
         "parameters": {
           "title": {
             "description": "Problem title",
-            "type": "string",
             "default": ""
           }
         },
-        "latex_template": "\\section*{#title#}\n\\mydefaultsize #CONTENT#\\par"
+        "latex_template": "\\section*{#title#}\n#CONTENT#\\par"
       },
       "text": {
-        "description": "Formatted text",
-        "parameters": {
-          "style": {
-            "description": "Text style",
-            "type": "string",
-            "default": "normal",
-            "options": ["normal", "bold", "italic", "underline"]
-          },
-          "color": {
-            "description": "Text color",
-            "type": "string",
-            "default": "black"
-          },
-          "size": {
-            "description": "Text size",
-            "type": "string",
-            "default": "normalsize",
-            "options": ["tiny", "scriptsize", "footnotesize", "small", "normalsize", "large", "Large", "LARGE", "huge", "Huge"]
-          }
-        },
-        "latex_template": "$variables.default_format$\n #CONTENT#\\par"
+        "description": "Text block",
+        "parameters": {},
+        "latex_template": "#CONTENT#\\par"
       },
       "question": {
         "description": "Question text",
         "parameters": {},
-        "latex_template": "$variables.default_format$\n #CONTENT#\\par"
+        "latex_template": "#CONTENT#\\par"
       },
       "bullet": {
         "description": "Bullet point item",
@@ -84,21 +65,9 @@
         "latex_template": "\\begin{figure}[htbp]\n\\centering\n\\includegraphics[width=#width#\\textwidth]{#file#}\n#IF caption!=\"\"#\\caption{#caption#}#ENDIF#\n#IF label!=\"\"#\\label{#label#}#ENDIF#\n\\end{figure}"
       },
       "eq": {
-        "description": "Mathematical equation",
-        "parameters": {
-          "align": {
-            "description": "Text alignment",
-            "type": "string",
-            "default": "left",
-            "options": ["left", "center", "right"]
-          },
-          "numbering": {
-            "description": "Whether equation is numbered",
-            "type": "boolean",
-            "default": false
-          }
-        },
-        "latex_template": "#IF numbering=True#\\begin{equation}#ELSE#\\begin{equation*}#ENDIF#\n#IF align=center#\\centering#ENDIF##IF align=right#\\raggedleft#ENDIF#\n#CONTENT#\n#IF numbering=True#\\end{equation}#ELSE#\\end{equation*}#ENDIF#"
+        "description": "Equation block",
+        "parameters": {},
+        "latex_template": "\\[\n#CONTENT#\n\\]"
       },
       "nl": {
         "description": "Newline (line break)",
@@ -118,46 +87,23 @@
       },
       "solution": {
         "description": "Solution section",
-        "parameters": {
-          "title": {
-            "description": "Solution title",
-            "type": "string",
-            "default": "Solution"
-          },
-          "hidden": {
-            "description": "Whether the solution should be hidden",
-            "type": "boolean",
-            "default": false
-          }
-        },
-        "latex_template": "\\section*{#title#}\n\\normalsize #CONTENT#"
+        "parameters": {},
+        "latex_template": "\\textbf{Solution:}\n#CONTENT#\\par"
       },
       "align": {
-        "description": "Aligned equations environment",
-        "parameters": {
-          "numbering": {
-            "description": "Whether equations should be numbered",
-            "type": "boolean",
-            "default": false
-          }
-        },
-        "latex_template": "#IF numbering=True#\\begin{align}#ELSE#\\begin{align*}#ENDIF#\n#CONTENT#\n#IF numbering=True#\\end{align}#ELSE#\\end{align*}#ENDIF#"
+        "description": "Aligned equations block",
+        "parameters": {},
+        "latex_template": "\\begin{align*}\n#CONTENT#\n\\end{align*}"
       },
       "box": {
-        "description": "Boxed content",
+        "description": "Colored box",
         "parameters": {
-          "title": {
-            "description": "Box title",
-            "type": "string",
-            "default": ""
-          },
           "color": {
-            "description": "Box background color",
-            "type": "string",
-            "default": "gray!10"
+            "description": "Background color",
+            "default": "white"
           }
         },
-        "latex_template": "\\begin{mdframed}[backgroundcolor=#color##IF title!=\"\"#, frametitle=#title##ENDIF#]\n#CONTENT#\n\\end{mdframed}"
+        "latex_template": "\\begin{mdframed}[backgroundcolor=#color#]\n#CONTENT#\n\\end{mdframed}"
       },
       "table": {
         "description": "Simple table",
