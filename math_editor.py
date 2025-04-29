@@ -406,8 +406,11 @@ class MathEditor:
         Args:
             category: Name of the clicked category
         """
-        # Get the current selected categories from the panel
-        self.selected_categories = set(self.category_panel.get_selected_categories())
+        # Toggle the clicked category in our set
+        if category in self.selected_categories:
+            self.selected_categories.remove(category)
+        else:
+            self.selected_categories.add(category)
         
         # Update status bar with selected categories
         if self.selected_categories:
@@ -415,42 +418,8 @@ class MathEditor:
         else:
             self.status_var.set("No categories selected")
         
-        # Check if there's unsaved content that would be lost
-        current_content = self.editor.get_text().strip()
-        if current_content and not hasattr(self, 'current_problem_id'):
-            if not messagebox.askyesno("Unsaved Content", 
-                "Loading an existing problem will replace your current unsaved content. Continue?"):
-                return
-        
-        # Only proceed with auto-loading if explicitly enabled
-        if not hasattr(self, 'current_problem_id'):  # Don't auto-load when creating new problem
-            return
-            
-        # Query problems with selected categories
-        if self.selected_categories:
-            success, problems = self.db.get_problems_list(
-                category_id=None,  # We'll filter by category names
-                search_term=None
-            )
-            
-            if success and problems:
-                # Filter problems that have ALL selected categories
-                matching_problems = []
-                for problem in problems:
-                    if "categories" in problem:
-                        problem_categories = set(cat["name"] for cat in problem["categories"])
-                        if self.selected_categories.issubset(problem_categories):
-                            matching_problems.append(problem)
-                
-                if matching_problems:
-                    # Take the most recent problem
-                    latest_problem = max(matching_problems, key=lambda p: p["last_modified"])
-                    
-                    # Load the problem
-                    self.load_problem_content(latest_problem)
-                    self.status_var.set(f"Loaded problem #{latest_problem['problem_id']} matching selected categories")
-                else:
-                    self.status_var.set("No problems found with all selected categories")
+        # Don't auto-load problems on category click - let user explicitly query when ready
+        # This prevents unwanted loading after reset or during new problem creation
     
     def load_problem_content(self, problem):
         """
@@ -756,11 +725,12 @@ x = 2
         # Clear problem ID
         self.problem_id_entry.delete(0, tk.END)
         
-        # Clear selected categories
+        # Clear selected categories and reset category panel
         self.selected_categories.clear()
-        # Reset category panel's internal state
         self.category_panel.selected_categories.clear()
-        self.update_category_display()
+        # Reset visual state of all category buttons
+        for cat, btn in self.category_panel.buttons.items():
+            self.category_panel.highlight_category(cat, False)
         
         # Clear current problem ID and results
         self.current_problem_id = None

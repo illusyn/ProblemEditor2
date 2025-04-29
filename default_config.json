@@ -1,12 +1,41 @@
 {
-  
     "variables": {
       "default_format": "\\medskip\\mydefaultsize",
       "section_header": "\\section*{#CONTENT#}",
       "subsection_header": "\\subsection*{#CONTENT#}"
     },
+    "base_commands": {
+      "text_base": {
+        "description": "Base for text-containing commands",
+        "parameters": {
+          "vspace": {
+            "description": "Equal vertical space to add above and below (e.g. '1em', '10pt', '0.5in')",
+            "type": "string",
+            "default": "0pt"
+          }
+        },
+        "latex_template": "#IF vspace!=\"0pt\"#\\vspace{#vspace#}#ENDIF#\n$variables.default_format$\n#CONTENT#\\par#IF vspace!=\"0pt\"#\n\\vspace{#vspace#}#ENDIF#"
+      },
+      "container_base": {
+        "description": "Base for commands that contain other elements",
+        "parameters": {
+          "vspace": {
+            "description": "Equal vertical space to add above and below (e.g. '1em', '10pt', '0.5in')",
+            "type": "string",
+            "default": "0pt"
+          },
+          "label": {
+            "description": "Reference label",
+            "type": "string",
+            "default": ""
+          }
+        },
+        "latex_template": "#IF vspace!=\"0pt\"#\\vspace{#vspace#}#ENDIF#\n#CONTENT##IF label!=\"\"#\\label{#label#}#ENDIF##IF vspace!=\"0pt\"#\n\\vspace{#vspace#}#ENDIF#"
+      }
+    },
     "commands": {
       "problem": {
+        "extends": "text_base",
         "description": "Problem section",
         "parameters": {
           "title": {
@@ -14,29 +43,28 @@
             "default": ""
           }
         },
-        "latex_template": "$variables.default_format$\n\\section*{#title#}\n#CONTENT#\\par"
+        "latex_template": "#IF vspace!=\"0pt\"#\\vspace{#vspace#}#ENDIF#\n$variables.default_format$\n\\section*{#title#}\n#CONTENT#\\par#IF vspace!=\"0pt\"#\n\\vspace{#vspace#}#ENDIF#"
       },
       "text": {
-        "description": "Text block",
-        "parameters": {},
-        "latex_template": "$variables.default_format$\n#CONTENT#\\par"
+        "extends": "text_base",
+        "description": "Text block"
       },
       "question": {
-        "description": "Question text",
-        "parameters": {},
-        "latex_template": "$variables.default_format$\n#CONTENT#\\par"
+        "extends": "text_base",
+        "description": "Question text"
       },
       "bullet": {
+        "extends": "text_base",
         "description": "Bullet point item",
-        "parameters": {},
-        "latex_template": "$variables.default_format$\n\\begin{itemize}\n\\item #CONTENT#\n\\end{itemize}"
+        "latex_template": "#IF vspace!=\"0pt\"#\\vspace{#vspace#}#ENDIF#\n$variables.default_format$\n\\begin{itemize}\n\\item #CONTENT#\n\\end{itemize}#IF vspace!=\"0pt\"#\n\\vspace{#vspace#}#ENDIF#"
       },
       "enum": {
+        "extends": "text_base",
         "description": "Enumerated list item",
-        "parameters": {},
-        "latex_template": "$variables.default_format$\n\\item #CONTENT#"
+        "latex_template": "#IF vspace!=\"0pt\"#\\vspace{#vspace#}#ENDIF#\n$variables.default_format$\n\\item #CONTENT##IF vspace!=\"0pt\"#\n\\vspace{#vspace#}#ENDIF#"
       },
       "image": {
+        "extends": "container_base",
         "description": "Image insertion",
         "parameters": {
           "file": {
@@ -55,26 +83,22 @@
             "description": "Image caption",
             "type": "string",
             "default": ""
-          },
-          "label": {
-            "description": "Reference label",
-            "type": "string",
-            "default": ""
           }
         },
-        "latex_template": "\\begin{figure}[htbp]\n\\centering\n\\includegraphics[width=#width#\\textwidth]{#file#}\n#IF caption!=\"\"#\\caption{#caption#}#ENDIF#\n#IF label!=\"\"#\\label{#label#}#ENDIF#\n\\end{figure}"
+        "latex_template": "#IF vspace!=\"0pt\"#\\vspace{#vspace#}#ENDIF#\n\\begin{figure}[htbp]\n\\centering\n\\includegraphics[width=#width#\\textwidth]{#file#}\n#IF caption!=\"\"#\\caption{#caption#}#ENDIF#\n#IF label!=\"\"#\\label{#label#}#ENDIF#\n\\end{figure}#IF vspace!=\"0pt\"#\n\\vspace{#vspace#}#ENDIF#"
       },
       "eq": {
+        "extends": "container_base",
         "description": "Equation block",
-        "parameters": {},
-        "latex_template": "\\[\n#CONTENT#\n\\]"
+        "latex_template": "#IF vspace!=\"0pt\"#\\vspace{#vspace#}#ENDIF#\n\\[\n#CONTENT#\n\\]#IF vspace!=\"0pt\"#\n\\vspace{#vspace#}#ENDIF#"
       },
-      "nl": {
-        "description": "Newline (line break)",
-        "parameters": {},
-        "latex_template": "\\\\"
+      "align": {
+        "extends": "container_base",
+        "description": "Aligned equations block",
+        "latex_template": "#IF vspace!=\"0pt\"#\\vspace{#vspace#}#ENDIF#\n\\begin{align*}\n#CONTENT#\n\\end{align*}#IF vspace!=\"0pt\"#\n\\vspace{#vspace#}#ENDIF#"
       },
       "answer": {
+        "extends": "text_base",
         "description": "Answer section",
         "parameters": {
           "color": {
@@ -83,19 +107,15 @@
             "default": "red"
           }
         },
-        "latex_template": "$variables.default_format$\n\\textcolor{#color#}{\\textbf{Answer:} #CONTENT#}\\par"
+        "latex_template": "#IF vspace!=\"0pt\"#\\vspace{#vspace#}#ENDIF#\n$variables.default_format$\n\\textcolor{#color#}{\\textbf{Answer:} #CONTENT#}\\par#IF vspace!=\"0pt\"#\n\\vspace{#vspace#}#ENDIF#"
       },
       "solution": {
+        "extends": "text_base",
         "description": "Solution section",
-        "parameters": {},
-        "latex_template": "\\textbf{Solution:}\n#CONTENT#\\par"
-      },
-      "align": {
-        "description": "Aligned equations block",
-        "parameters": {},
-        "latex_template": "\\begin{align*}\n#CONTENT#\n\\end{align*}"
+        "latex_template": "#IF vspace!=\"0pt\"#\\vspace{#vspace#}#ENDIF#\n\\textbf{Solution:}\n#CONTENT#\\par#IF vspace!=\"0pt\"#\n\\vspace{#vspace#}#ENDIF#"
       },
       "box": {
+        "extends": "container_base",
         "description": "Colored box",
         "parameters": {
           "color": {
@@ -103,9 +123,10 @@
             "default": "white"
           }
         },
-        "latex_template": "\\begin{mdframed}[backgroundcolor=#color#]\n#CONTENT#\n\\end{mdframed}"
+        "latex_template": "#IF vspace!=\"0pt\"#\\vspace{#vspace#}#ENDIF#\n\\begin{mdframed}[backgroundcolor=#color#]\n#CONTENT#\n\\end{mdframed}#IF vspace!=\"0pt\"#\n\\vspace{#vspace#}#ENDIF#"
       },
       "table": {
+        "extends": "container_base",
         "description": "Simple table",
         "parameters": {
           "columns": {
@@ -117,19 +138,9 @@
             "description": "Table caption",
             "type": "string",
             "default": ""
-          },
-          "label": {
-            "description": "Reference label",
-            "type": "string",
-            "default": ""
           }
         },
-        "latex_template": "\\begin{table}[htbp]\n\\centering\n\\begin{tabular}{#columns#}\n#CONTENT#\n\\end{tabular}\n#IF caption!=\"\"#\\caption{#caption#}#ENDIF#\n#IF label!=\"\"#\\label{#label#}#ENDIF#\n\\end{table}"
-      },
-      "config": {
-        "description": "Document-level configuration",
-        "parameters": {},
-        "latex_template": ""
+        "latex_template": "#IF vspace!=\"0pt\"#\\vspace{#vspace#}#ENDIF#\n\\begin{table}[htbp]\n\\centering\n\\begin{tabular}{#columns#}\n#CONTENT#\n\\end{tabular}\n#IF caption!=\"\"#\\caption{#caption#}#ENDIF#\n#IF label!=\"\"#\\label{#label#}#ENDIF#\n\\end{table}#IF vspace!=\"0pt\"#\n\\vspace{#vspace#}#ENDIF#"
       }
     }
   }
