@@ -16,7 +16,7 @@ from editor import Editor
 from preview.latex_compiler import LaTeXCompiler
 from preview.pdf_viewer import PDFViewer
 from converters.image_converter import ImageConverter
-from markdown_parser import MarkdownParser
+from core.parser import MarkdownParser
 from db_interface import DatabaseInterface
 from managers.config_manager import ConfigManager
 from managers.file_manager import FileManager
@@ -88,22 +88,10 @@ class MathEditor:
         self.selected_categories = set()
         
         # Initialize the markdown parser with the config manager and config file
-        config_file_path = Path(__file__).parent / "default_config.json"
-        print(f"MathEditor: Looking for config file at: {config_file_path}")
-        if config_file_path.exists():
-            print(f"MathEditor: Config file found, initializing MarkdownParser with it")
-            self.markdown_parser = MarkdownParser(config_file=str(config_file_path), config_manager=self.config_manager)
-        else:
-            print(f"MathEditor: Config file not found at {config_file_path}")
-            self.markdown_parser = MarkdownParser(config_manager=self.config_manager)
+        print("MathEditor: Initializing class-based MarkdownParser")
+        self.markdown_parser = MarkdownParser()
 
-        print("MathEditor: MarkdownParser initialized, checking #text command...")
-        text_cmd = self.markdown_parser.config.get_command_config("text")
-        if text_cmd:
-            print(f"MathEditor: #text template: {text_cmd.get('latex_template', 'NOT FOUND')}")
-            if 'parameters' in text_cmd:
-                print(f"MathEditor: #text parameters: {text_cmd['parameters']}")
-        
+        print("MathEditor: MarkdownParser initialized.")
         # Load the LaTeX template
         self.template = self.load_template()
         

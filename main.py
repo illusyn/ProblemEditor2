@@ -7,6 +7,7 @@ This module sets up the main application window with support for custom markdown
 
 import tkinter as tk
 from math_editor import MathEditor
+import sys
 
 # Import the database module and interface
 from db.math_db import MathProblemDB

@@ -10,6 +10,7 @@ import re
 import tkinter as tk
 from tkinter import messagebox
 from pathlib import Path
+from typing import Optional, Dict, Any
 
 
 class PreviewManager:
@@ -36,13 +37,14 @@ class PreviewManager:
             content = self.app.editor.get_content()
             
             # Parse the markdown to LaTeX
-            latex_document = self.app.markdown_parser.parse(content)
+            latex_content = self.app.markdown_parser.parse(content)
+            full_latex = self.app.template.replace("#CONTENT#", latex_content)
             
             # Check if graphicx package is in the template
-            if "\\usepackage{graphicx}" not in latex_document:
+            if "\\usepackage{graphicx}" not in full_latex:
                 print("WARNING: graphicx package missing from template!")
                 # Add it immediately before \begin{document}
-                latex_document = latex_document.replace("\\begin{document}", 
+                full_latex = full_latex.replace("\\begin{document}", 
                     "\\usepackage{graphicx}\n\\graphicspath{{./}{./images/}}\n\n\\begin{document}")
                 print("Added graphicx package to template")
             
@@ -59,7 +61,7 @@ class PreviewManager:
             # Write debug LaTeX file
             debug_file = self.app.working_dir / "debug_latex.tex"
             with open(debug_file, "w", encoding="utf-8") as f:
-                f.write(latex_document)
+                f.write(full_latex)
             print(f"Debug LaTeX document written to: {debug_file}")
             
             # Update status for compilation
@@ -67,7 +69,7 @@ class PreviewManager:
             self.app.root.update_idletasks()  # Force UI update
             
             # Compile the LaTeX document
-            success, result = self.app.latex_compiler.compile_latex(latex_document)
+            success, result = self.app.latex_compiler.compile_latex(full_latex)
             
             if success:
                 # Display the PDF
@@ -194,3 +196,11 @@ class PreviewManager:
             self.preview_context_menu.tk_popup(event.x_root, event.y_root)
         finally:
             self.preview_context_menu.grab_release()
+
+    def render_latex(self, content: str, params: Optional[Dict[str, Any]] = None) -> str:
+        params = params or {}
+        indent = params.get("indent", self._parameters["indent"]["default"])
+        vspace = params.get('vspace', self._parameters['vspace']['default'])
+        if indent > 0:
+            return f"\\hspace{{{indent}em}}{content}\\par\n\\vspace{{{vspace}em}}\n"
+        return f"{content}\\par\n\\vspace{{{vspace}em}}\n"

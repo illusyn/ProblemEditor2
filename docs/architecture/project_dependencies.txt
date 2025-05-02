@@ -4,6 +4,7 @@ core\preview_manager.py
 db\math_db.py
 db\math_image_db.py
 db_interface.py
+default_config.json
 editor.py
 managers\config_manager.py
 managers\file_manager.py
@@ -13,6 +14,7 @@ markdown_parser.py
 math_editor.py
 preview\latex_compiler.py
 preview\pdf_viewer.py
+resources\default_template.tex
 ui\category_panel.py
 ui\dialogs\preferences_dialog.py
 ui\menu_manager.py

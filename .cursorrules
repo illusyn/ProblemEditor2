@@ -1,0 +1,136 @@
+In addition to this file consult ./README.md and the ./docs folder for project structure and guidelines
+
+A specification framework to ensure consistency, leanness, good design patterns, and proper documentation across the codebase. A framework with specific rules for achieving these goals.
+
+# Math Editor Specification Framework
+
+## 1. Code Structure and Organization
+
+### Module Organization
+- Each module must have a clear, single responsibility
+- Group related functionality into logical packages
+- Follow the existing directory structure:
+  - Core modules in root directory
+  - UI components in `/ui/`
+  - Data handling in `/db/`
+  - Converters in `/converters/`
+  - Managers in `/managers/`
+
+### File Structure
+- Each file must begin with a module docstring explaining its purpose
+- Import statements organized in order: standard library, third-party, local imports
+- Class/function implementations in order of importance and dependency
+- Maximum file length of 500 lines (break into smaller modules if needed)
+
+## 2. Coding Style Conventions
+
+### Naming Conventions
+- Class names: `PascalCase`
+- Methods/functions: `snake_case`
+- Private methods/attributes: `_prefix_with_underscore`
+- Constants: `ALL_CAPS`
+- Module names: `lowercase_with_underscores`
+
+### Documentation Standards
+- All modules, classes, methods, and functions must have docstrings
+- Docstring format: Google-style with Args, Returns, Raises sections
+- Include parameter types and return types in docstrings
+- Add inline comments for complex logic only, avoid redundant comments
+
+### Code Formatting
+- 4-space indentation (no tabs)
+- Maximum line length of 100 characters
+- Use vertical whitespace to separate logical blocks
+- Follow PEP 8 style guidelines
+
+## 3. Implementation Guidelines
+
+### General Principles
+- Favor composition over inheritance
+- Design for testability
+- Write code that is easy to understand rather than clever
+- Use descriptive variable and function names
+
+### Error Handling
+- Use explicit error handling with try/except blocks
+- Return tuple of (success, result/error_message) for operations that can fail
+- Log errors with appropriate context information
+- Display user-friendly error messages
+
+### Lean Code Generation
+- Implement only what is explicitly requested
+- Avoid speculative features
+- No placeholder code or "TODO" comments
+- Limit file size to exactly what's needed
+
+### UI Components
+- Separate UI layout from functionality
+- Use consistent padding and margins (5px standard, 10px for sections)
+- Implement responsive layouts with proper weight distribution
+- Add appropriate keyboard shortcuts for accessibility
+
+## 4. Design Patterns and Architecture
+
+### MVC Pattern Adaptation
+- Separate data models from UI views
+- Controllers (manager classes) coordinate between models and views
+- Use event-driven communication where appropriate
+
+### Component Communication
+- Avoid tight coupling between components
+- Use callback functions for component communication
+- Store references to related components rather than global variables
+- Maintain clear ownership of data
+
+### State Management
+- Clearly define where state is stored and modified
+- Use dedicated manager classes for complex state
+- Avoid unnecessary state duplication across components
+- Implement proper state validation
+
+## 5. Performance Considerations
+
+### Resource Management
+- Close database connections and file handles properly
+- Use context managers where appropriate
+- Release unnecessary resources when they're no longer needed
+- Implement proper cleanup in destructors
+
+### Efficiency Guidelines
+- Avoid expensive operations in UI event handlers
+- Implement lazy loading for database queries
+- Cache results of expensive operations when appropriate
+- Profile and optimize only when necessary
+
+## 6. Testing and Quality Assurance
+
+### Testability
+- Design components with testable interfaces
+- Provide mock implementations for external dependencies
+- Clearly separate business logic from UI code to facilitate testing
+- Add debugging code only when necessary and disable in production
+
+### Code Quality Checks
+- No unused imports or variables
+- No duplicated code
+- Functions should have a single responsibility
+- Limit complexity of individual functions (maximum 30 lines)
+
+## 7. Development Workflow
+
+### Feature Implementation Process
+1. Define the specific requirements and constraints
+2. Design the solution with minimal modifications to existing code
+3. Implement only what is requested and no more
+4. Document all changes thoroughly
+5. Test for edge cases and integration issues
+
+### Incremental Development
+- Implement one feature at a time
+- Complete each feature fully before moving to the next
+- Ensure backward compatibility with existing functionality
+- Focus on minimal viable implementations
+
+By following this specification framework, AI-generated code for the Math Editor project will be consistent, lean, well-designed, and properly documented, addressing the concerns you've identified.
+
+

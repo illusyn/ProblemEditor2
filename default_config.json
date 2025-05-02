@@ -41,13 +41,25 @@
           "title": {
             "description": "Problem title",
             "default": ""
+          },
+          "bold": {
+            "type": "boolean",
+            "description": "Whether to bold the problem statement",
+            "default": false
           }
         },
         "latex_template": "#IF vspace!=\"0pt\"#\\vspace{#vspace#}#ENDIF#\n$variables.default_format$\n\\section*{#title#}\n#CONTENT#\\par#IF vspace!=\"0pt\"#\n\\vspace{#vspace#}#ENDIF#"
       },
       "text": {
         "extends": "text_base",
-        "description": "Text block"
+        "description": "Text block",
+        "parameters": {
+          "indent": {
+            "type": "float",
+            "description": "Left indentation in em units",
+            "default": 0.0
+          }
+        }
       },
       "question": {
         "extends": "text_base",
@@ -56,11 +68,30 @@
       "bullet": {
         "extends": "text_base",
         "description": "Bullet point item",
+        "parameters": {
+          "indent": {
+            "type": "float",
+            "description": "Left indentation in em units",
+            "default": 1.0
+          },
+          "bullet_style": {
+            "type": "string",
+            "description": "Style of bullet point",
+            "default": "•"
+          }
+        },
         "latex_template": "#IF vspace!=\"0pt\"#\\vspace{#vspace#}#ENDIF#\n$variables.default_format$\n\\begin{itemize}\n\\item #CONTENT#\n\\end{itemize}#IF vspace!=\"0pt\"#\n\\vspace{#vspace#}#ENDIF#"
       },
       "enum": {
         "extends": "text_base",
         "description": "Enumerated list item",
+        "parameters": {
+          "indent": {
+            "type": "float",
+            "description": "Left indentation in em units",
+            "default": 1.0
+          }
+        },
         "latex_template": "#IF vspace!=\"0pt\"#\\vspace{#vspace#}#ENDIF#\n$variables.default_format$\n\\item #CONTENT##IF vspace!=\"0pt\"#\n\\vspace{#vspace#}#ENDIF#"
       },
       "image": {
@@ -141,6 +172,13 @@
           }
         },
         "latex_template": "#IF vspace!=\"0pt\"#\\vspace{#vspace#}#ENDIF#\n\\begin{table}[htbp]\n\\centering\n\\begin{tabular}{#columns#}\n#CONTENT#\n\\end{tabular}\n#IF caption!=\"\"#\\caption{#caption#}#ENDIF#\n#IF label!=\"\"#\\label{#label#}#ENDIF#\n\\end{table}#IF vspace!=\"0pt\"#\n\\vspace{#vspace#}#ENDIF#"
+      },
+      "equation": {
+        "display": {
+          "type": "boolean",
+          "description": "Whether to render as display equation",
+          "default": true
+        }
       }
     }
   }
