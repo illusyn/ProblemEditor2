@@ -1,4 +1,12 @@
 In addition to this file consult ./README.md and the ./docs folder for project structure and guidelines
+There is just one user for this app, me.
+Developing on Windows 11 computer in a Powershell with cywin installed.
+
+## Roles & Responsibilities
+
+- **Project Manager (User)**: Provides requirements, selects approach, final approval
+- **Developer (Claude)**: Analyzes issues, presents options, implements solutions
+NOTE: The role of the AI is *NOT* to teach the user about programming
 
 A specification framework to ensure consistency, leanness, good design patterns, and proper documentation across the codebase. A framework with specific rules for achieving these goals.
 

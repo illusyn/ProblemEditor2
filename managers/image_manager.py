@@ -335,3 +335,23 @@ class ImageManager:
             print("No image match found in document.")
             messagebox.showinfo("No Image Found", "No image was found in the document.")
             return False
+
+    def clean_pasted_text(self, text):
+        # Replace known unicode with LaTeX equivalents
+        UNICODE_LATEX_MAP = {
+            "π": r"\\pi",
+            "Π": r"\\Pi",
+            "α": r"\\alpha",
+            "β": r"\\beta",
+            "θ": r"\\theta",
+            "μ": r"\\mu",
+            "–": "-",  # en-dash
+            "—": "--", # em-dash
+            "“": "\"", "": "\"", "‘": "'", "’": "'",
+            # Add more as needed
+        }
+        for uni, latex in UNICODE_LATEX_MAP.items():
+            text = text.replace(uni, latex)
+        # Optionally, remove any remaining non-ASCII characters
+        text = re.sub(r'[^\x00-\x7F]+', '', text)
+        return text

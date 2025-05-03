@@ -140,12 +140,13 @@ class ImageConverter:
         if margin is None:
             margin = self.config_manager.get_value("image", "default_margin", None) if self.config_manager else None
 
-        # Compose adjustbox options
-        adjustbox_opts = [f"width={width}\\textwidth"]
-        if align:
-            adjustbox_opts.append(align)
-        if margin:
-            adjustbox_opts.append(f"margin={margin}")
+        # Use new default: height=6.00cm, left, margin=4.00cm 0.00cm 0cm 0.50cm
+        height = 6.00
+        left_margin = 4.00
+        top_margin = 0.00
+        bottom_margin = 0.00
+        right_margin = 0.50
+        adjustbox_opts = [f"height={height:.2f}cm", "left", f"margin={left_margin:.2f}cm {bottom_margin:.2f}cm {top_margin:.2f}cm {right_margin:.2f}cm"]
         adjustbox_opts_str = ",".join(adjustbox_opts)
 
         # Use adjustbox for image placement

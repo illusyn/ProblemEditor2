@@ -5,6 +5,37 @@ Text editing area with custom markdown syntax and highlighting.
 import tkinter as tk
 from tkinter import ttk, messagebox
 import re
+import unicodedata
+
+UNICODE_LATEX_MAP = {
+    "π": r"\pi",
+    "Π": r"\Pi",
+    "α": r"\alpha",
+    "β": r"\beta",
+    "θ": r"\theta",
+    "μ": r"\mu",
+    "–": "-",  # en-dash
+    "—": "--", # em-dash
+    "“": "\"", "”": "\"", "‘": "'", "’": "'",
+    # Add more as needed
+}
+
+GREEK_COMMANDS = [
+    "pi", "alpha", "beta", "theta", "mu", "Pi", "Alpha", "Beta", "Theta", "Mu"
+    # Add more as needed
+]
+
+def clean_pasted_text(text):
+    # Normalize to NFKC to catch composed characters
+    text = unicodedata.normalize('NFKC', text)
+    for uni, latex in UNICODE_LATEX_MAP.items():
+        text = text.replace(uni, latex)
+    # Remove any remaining non-ASCII characters
+    text = re.sub(r'[^\x00-\x7F]+', '', text)
+    # Add thin space after Greek letter commands when followed by units (cm, mm, m, etc.)
+    greek_pattern = r'\\(' + '|'.join(GREEK_COMMANDS) + r')(?=\s*(cm|mm|m|km|in|ft|yd|g|kg|s|ms|K|N|J|W|V|A|Hz|rad|deg|mol|Pa|bar|atm|L|l|h|min|d|yr|eV|u|au|pc|ly|sr|T|C|F|S|S/m|Ω|ohm|lx|lm|cd|Bq|Gy|Sv|kat|cal|calorie|BTU|hp|psi|lb|oz|ton|gal|qt|pt|cup|tbsp|tsp|yd|mi|nmi|acre|ha|angstrom|barn|furlong|chain|rod|link|mil|thou|hand|pica|point|pixel|dot|dpi|ppi|sp|em|ex|rem|ch|vw|vh|vmin|vmax|Q|H|G|D|S|P|E|Z|Y|da|h|k|M|G|T|P|E|Z|Y))'
+    text = re.sub(greek_pattern, r'\\\1\\,', text)
+    return text
 
 class Editor(ttk.Frame):
     """Text editing area with syntax highlighting"""
@@ -61,6 +92,12 @@ class Editor(ttk.Frame):
     
     def paste_text(self):
         """Paste text from clipboard"""
+        try:
+            clipboard_content = self.editor.clipboard_get()
+            cleaned = clean_pasted_text(clipboard_content)
+            self.editor.insert("insert", cleaned)
+        except tk.TclError:
+            pass
         self.highlight_syntax()
     
     def paste_latex(self):
@@ -120,8 +157,9 @@ class Editor(ttk.Frame):
     
     def set_text(self, text):
         """Set the text content of the editor"""
+        cleaned_text = clean_pasted_text(text)
         self.editor.delete("1.0", tk.END)
-        self.editor.insert("1.0", text)
+        self.editor.insert("1.0", cleaned_text)
         self.highlight_syntax()
 
     def set_content(self, text):

@@ -9,6 +9,7 @@ import os
 import subprocess
 import tempfile
 from pathlib import Path
+from editor import clean_pasted_text
 
 class LaTeXCompiler:
     """Handles compiling LaTeX documents to PDF"""
@@ -44,6 +45,8 @@ class LaTeXCompiler:
         pdf_file = self.working_dir / f"{output_filename}.pdf"
         
         try:
+            # Clean LaTeX content for Unicode before writing
+            latex_content = clean_pasted_text(latex_content)
             # Write the LaTeX content to the file
             with open(tex_file, "w", encoding="utf-8") as f:
                 f.write(latex_content)

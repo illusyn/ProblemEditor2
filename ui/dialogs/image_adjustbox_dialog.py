@@ -28,7 +28,8 @@ class AdjustboxImageDialog:
         self.filename = image_filename
 
         # Parse current LaTeX settings for this image
-        self.width, left, top, bottom, self.align = self.parse_latex_settings()
+        self.height, left, top, bottom, self.align = self.parse_latex_settings()
+        self.height_var = tk.DoubleVar(value=self.height)
         self.left_margin_var = tk.DoubleVar(value=left)
         self.top_margin_var = tk.DoubleVar(value=top)
         self.bottom_margin_var = tk.DoubleVar(value=bottom)
@@ -44,10 +45,6 @@ class AdjustboxImageDialog:
         self.dialog.transient(parent)
         self.dialog.grab_set()
 
-        # Tkinter variables
-        self.width_var = tk.DoubleVar(value=self.width)
-        self.margin_var = tk.StringVar(value=self.align)
-
         # Build UI
         self.create_widgets()
         self.update_preview()
@@ -57,28 +54,28 @@ class AdjustboxImageDialog:
 
     def parse_latex_settings(self):
         """
-        Parse LaTeX code in the editor to extract width, margin, and alignment for this image.
+        Parse LaTeX code in the editor to extract height, margin, and alignment for this image.
         Returns:
-            tuple: (width, left, top, bottom, align)
+            tuple: (height, left, top, bottom, align)
         """
         content = self.editor.get_content()
         pattern = r'\\adjustbox\{([^}]*)\}\s*\{\s*\\includegraphics\[.*?\]\{' + re.escape(self.filename) + r'\}\s*\}'
         print("Searching for pattern:", pattern)
         print("Content:", content)
         match = re.search(pattern, content, re.DOTALL)
-        width = 0.8
+        height = 4.0
         left = top = bottom = 0.0
         align = 'left'
         if match:
             print("Matched options:", match.group(1))
             opts = match.group(1)
-            # Parse width
-            width_match = re.search(r'width=([0-9.]+)\\textwidth', opts)
-            if width_match:
+            # Parse height
+            height_match = re.search(r'height=([0-9.]+)cm', opts)
+            if height_match:
                 try:
-                    width = float(width_match.group(1))
+                    height = float(height_match.group(1))
                 except Exception:
-                    width = 0.8
+                    height = 4.0
             # Parse margin
             margin_match = re.search(r'margin=([^,}]+)', opts)
             if margin_match:
@@ -101,17 +98,17 @@ class AdjustboxImageDialog:
                     break
         else:
             print("No match found for adjustbox pattern.")
-        return width, left, top, bottom, align
+        return height, left, top, bottom, align
 
     def create_widgets(self):
         """Create dialog widgets."""
         frame = ttk.Frame(self.dialog, padding=10)
         frame.pack(fill=tk.BOTH, expand=True)
 
-        # Scale (width) spinbox
-        ttk.Label(frame, text="Scale (width, 0.1–1.0 × text width):").pack(anchor=tk.W, padx=5, pady=5)
-        width_spin = ttk.Spinbox(frame, from_=0.1, to=1.0, increment=0.01, textvariable=self.width_var, width=6, format="%.2f")
-        width_spin.pack(anchor=tk.W, padx=5, pady=5)
+        # Height spinbox
+        ttk.Label(frame, text="Height (cm, 1–10):").pack(anchor=tk.W, padx=5, pady=5)
+        height_spin = ttk.Spinbox(frame, from_=1.0, to=10.0, increment=0.1, textvariable=self.height_var, width=6, format="%.2f")
+        height_spin.pack(anchor=tk.W, padx=5, pady=5)
 
         # Left margin spinbox
         ttk.Label(frame, text="Left margin (cm):").pack(anchor=tk.W, padx=5, pady=5)
@@ -144,7 +141,7 @@ class AdjustboxImageDialog:
         close_button.pack(side=tk.RIGHT, padx=5)
 
         # Bind events for live preview
-        self.width_var.trace_add("write", lambda *args: self.update_preview())
+        self.height_var.trace_add("write", lambda *args: self.update_preview())
         self.left_margin_var.trace_add("write", lambda *args: self.update_preview())
         self.top_margin_var.trace_add("write", lambda *args: self.update_preview())
         self.bottom_margin_var.trace_add("write", lambda *args: self.update_preview())
@@ -153,11 +150,12 @@ class AdjustboxImageDialog:
         """Update the image preview."""
         if not self.image:
             return
-        # Scale preview width according to width_var (simulate LaTeX width)
-        width_factor = self.width_var.get()
+        # Scale preview height according to height_var (simulate LaTeX height)
+        height_cm = self.height_var.get()
+        # Assume 1cm = 37.8 pixels (approximate for preview)
+        preview_h = int(height_cm * 37.8)
         orig_w, orig_h = self.image.size
-        preview_w = int(400 * width_factor)  # 400 is max preview width
-        preview_h = int(orig_h * (preview_w / orig_w)) if orig_w > 0 else 1
+        preview_w = int(orig_w * (preview_h / orig_h)) if orig_h > 0 else 1
         preview_img = self.image.copy().resize((preview_w, preview_h), Image.LANCZOS)
         photo = ImageTk.PhotoImage(preview_img)
         self.dialog.photo = photo
@@ -165,15 +163,15 @@ class AdjustboxImageDialog:
 
     def on_apply(self):
         """Apply the current settings to the LaTeX code in the editor and refresh preview."""
-        width = self.width_var.get()
+        height = self.height_var.get()
         left_margin = self.left_margin_var.get()
         top_margin = self.top_margin_var.get()
         bottom_margin = self.bottom_margin_var.get()
         # Compose margin string (left, bottom, right=0, top)
         margin = f"{left_margin:.2f}cm {bottom_margin:.2f}cm 0cm {top_margin:.2f}cm"
-        align = self.margin_var.get().strip() or 'left'
+        align = self.align or 'left'
         # Compose adjustbox options
-        adjustbox_opts = [f"width={width:.2f}\\textwidth"]
+        adjustbox_opts = [f"height={height:.2f}cm"]
         if align:
             adjustbox_opts.append(align)
         # Only add margin if any value is nonzero
@@ -184,7 +182,7 @@ class AdjustboxImageDialog:
         new_tag = f"\\adjustbox{{{adjustbox_opts_str}}}{{\\includegraphics[keepaspectratio]{{{self.filename}}}}}"
         # Replace in editor content
         content = self.editor.get_content()
-        pattern = r'\\adjustbox\{[^}]*\}\{\\includegraphics\[.*?\]\{' + re.escape(self.filename) + r'\}\}'
+        pattern = r'\\adjustbox\{[^}]*\}\s*\{\s*\\includegraphics\[.*?\]\{' + re.escape(self.filename) + r'\}\s*\}'
         new_content, count = re.subn(pattern, lambda m: new_tag, content)
         if count == 0:
             pattern2 = r'\\includegraphics\[.*?\]\{' + re.escape(self.filename) + r'\}'
