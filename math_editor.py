@@ -41,7 +41,7 @@ class MathEditor:
         """
         self.root = root
         self.root.title("Simplified Math Editor")
-        self.root.geometry("2200x1200")  # Increased height from 800 to 1200
+        self.root.geometry("2200x1200")  # Restore former width and height
                 
         # Initialize result set tracking
         self.current_results = []
@@ -127,6 +127,14 @@ class MathEditor:
         # Update category display
         self.update_category_display()
 
+        # Force window layout and ensure it is visible
+        self.root.update_idletasks()
+        self.root.deiconify()
+
+        root.lift()
+        root.attributes('-topmost', True)
+        root.after_idle(root.attributes, '-topmost', False)
+
     def set_initial_pane_position(self):
         """Set the initial position of the paned window divider"""
         width = self.root.winfo_width()
@@ -157,14 +165,13 @@ class MathEditor:
                 return template
         
         # Fallback to a basic template - use raw string directly from test_math_editor.py
-        return r"""\documentclass{article}
+        return r"""\documentclass{exam}
 \usepackage{amsmath}
 \usepackage{amssymb}
+\usepackage{enumitem}
 \usepackage{graphicx}
-\graphicspath{{./}{./images/}}
-
-% Define the custom font size command in the preamble
-\newcommand{\mydefaultsize}{\fontsize{14pt}{16pt}\selectfont}
+\graphicspath{{./}{./images/}} 
+\setlength{\parindent}{0pt}
 
 \begin{document}
 
@@ -354,14 +361,14 @@ class MathEditor:
         self.paned_window.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5, pady=5)
         
         # Editor frame
-        self.editor_frame = ttk.Frame(self.paned_window)
+        self.editor_frame = ttk.Frame(self.paned_window, height=400)  # Less height for editor
         self.editor_frame.pack(fill=tk.BOTH, expand=True)
         self.paned_window.add(self.editor_frame, weight=1)
         
         # Preview frame
         self.preview_frame = ttk.Frame(self.paned_window)
         self.preview_frame.pack(fill=tk.BOTH, expand=True)
-        self.paned_window.add(self.preview_frame, weight=1)
+        self.paned_window.add(self.preview_frame, weight=2)  # Give preview more weight
         
         # Status bar
         self.status_var = tk.StringVar()
@@ -746,6 +753,11 @@ x = 2
             messagebox.showerror("Error", f"Failed to delete problem: {message}")
 
 if __name__ == "__main__":
-    root = tk.Tk()
-    app = MathEditor(root)
-    root.mainloop()
+    try:
+        root = tk.Tk()
+        app = MathEditor(root)
+        print("Before mainloop")
+        root.mainloop()
+        print("After mainloop")  # Should not print until window closes
+    except Exception as e:
+        print("Error during startup:", e)

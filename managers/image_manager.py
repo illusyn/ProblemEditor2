@@ -11,6 +11,7 @@ from tkinter import ttk, filedialog, messagebox
 import re
 from pathlib import Path
 from PIL import Image, ImageTk
+from ui.dialogs.image_adjustbox_dialog import AdjustboxImageDialog
 
 
 class ImageManager:
@@ -317,150 +318,20 @@ class ImageManager:
     
     def adjust_image_size(self):
         """
-        Show dialog to adjust the size of the image in the document
-        
+        Show the new Adjustbox-based dialog to adjust the image in the document.
         Returns:
             bool: True if successful, False otherwise
         """
-        # Check if there's an image in the document
         content = self.app.editor.get_content()
-        
-        # More robust pattern to match includegraphics command with optional width parameter
-        image_pattern = r'\\includegraphics(?:\[.*?width=(.*?)\\textwidth.*?\]|\[\])?\{([^{}]+)\}'
-        match = re.search(image_pattern, content)
-        
-        if not match:
-            # Try alternate pattern without the width parameter extraction
-            image_pattern = r'\\includegraphics(?:\[.*?\])?\{([^{}]+)\}'
-            match = re.search(image_pattern, content)
-            if match:
-                # Found image without width parameter
-                filename = match.group(1)
-                current_width = 0.8  # Default width
-            else:
-                messagebox.showinfo("No Image Found", "No image was found in the document.")
-                return False
-        else:
-            # Extract current width and filename
-            current_width_str = match.group(1) if match.group(1) else "0.8"
-            try:
-                current_width = float(current_width_str)
-            except ValueError:
-                current_width = 0.8
-            
-            filename = match.group(2)
-        
-        # Log current state for debugging
-        print(f"Image found: {filename}")
-        print(f"Current width: {current_width}")
-        
-        # Create a dialog for size adjustment
-        dialog = tk.Toplevel(self.app.root)
-        dialog.title("Adjust Image Size")
-        dialog.geometry("400x700")
-        dialog.transient(self.app.root)
-        dialog.grab_set()
-        
-        # Create variables
-        width_var = tk.DoubleVar(value=current_width)
-        
-        # Create widgets
-        frame = ttk.Frame(dialog, padding=10)
-        frame.pack(fill=tk.BOTH, expand=True)
-        
-        # Width
-        ttk.Label(frame, text=f"Image: {filename}").pack(anchor=tk.W, padx=5, pady=5)
-        ttk.Label(frame, text="Width (0.1-1.0 × text width):").pack(anchor=tk.W, padx=5, pady=5)
-        width_scale = ttk.Scale(frame, from_=0.1, to=1.0, variable=width_var, orient=tk.HORIZONTAL)
-        width_scale.pack(fill=tk.X, padx=5, pady=5)
-        
-        # Create a label to show the current value
-        value_label = ttk.Label(frame, text=f"Current width: {current_width:.2f} × text width")
-        value_label.pack(anchor=tk.E, padx=5)
-        
-        # Update the label when the scale changes
-        def update_value_label(event=None):
-            value_label.config(text=f"Current width: {width_var.get():.2f} × text width")
-        
-        width_scale.bind("<Motion>", update_value_label)
-        width_scale.bind("<ButtonRelease-1>", update_value_label)
-        
-        # Preview image (if available)
-        try:
-            success, image = self.app.image_converter.image_db.get_image(filename)
-            if success:
-                # Resize image for preview
-                max_size = (350, 200)
-                image.thumbnail(max_size)
-                photo = ImageTk.PhotoImage(image)
-                
-                # Store reference to prevent garbage collection
-                dialog.photo = photo
-                
-                # Display image
-                image_label = ttk.Label(frame, image=photo)
-                image_label.pack(padx=5, pady=10)
-        except Exception as e:
-            print(f"Error loading image preview: {str(e)}")
-        
-        def on_ok():
-            # Update the image size in the document
-            new_width = width_var.get()
-            
-            print(f"New width: {new_width}")
-            
-            # Find the original includegraphics tag
-            original_pattern = r'\\includegraphics(?:\[.*?\])?\{' + re.escape(filename) + r'\}'
-            match = re.search(original_pattern, content)
-            
-            if not match:
-                print("Could not find the image tag in the document")
-                messagebox.showerror("Error", "Could not locate the image in the document for updating.")
-                dialog.destroy()
-                return False
-            
-            # Get the exact original tag
-            original_tag = match.group(0)
-            print(f"Original tag: {original_tag}")
-            
-            # Create new tag - use string concatenation to avoid regex interpretation issues
-            max_height = self.app.config_manager.get_value("image", "default_max_height", 800)
-            new_image_tag = "\\includegraphics[width=" + str(new_width) + "\\textwidth,height=" + str(max_height) + "px,keepaspectratio]{" + filename + "}"
-            print(f"New image tag: {new_image_tag}")
-            
-            # Use simple string replacement instead of regex replacement
-            new_content = content.replace(original_tag, new_image_tag)
-            
-            # Check if replacement worked
-            if new_content == content:
-                print("Warning: Content was not modified by string replacement")
-                messagebox.showerror("Error", "Failed to update the image size.")
-                dialog.destroy()
-                return False
-            
-            # Update editor content
-            self.app.editor.set_content(new_content)
-            
-            # Update preview
-            self.app.update_preview()
-            
-            dialog.destroy()
-            self.app.status_var.set(f"Image size updated to {new_width:.2f}×textwidth")
+        # Try to match adjustbox-wrapped images first
+        adjustbox_pattern = r'\\adjustbox\{[^}]*\}\s*\{\s*\\includegraphics\[.*?\]\{([^{}]+)\}\s*\}'
+        match = re.search(adjustbox_pattern, content, re.DOTALL)
+        if match:
+            filename = match.group(1)
+            print(f"Launching AdjustboxImageDialog for: {filename}")
+            AdjustboxImageDialog(self.app.root, self.app.editor, self, filename)
             return True
-        
-        def on_cancel():
-            dialog.destroy()
+        else:
+            print("No image match found in document.")
+            messagebox.showinfo("No Image Found", "No image was found in the document.")
             return False
-        
-        # Buttons
-        button_frame = ttk.Frame(frame)
-        button_frame.pack(fill=tk.X, pady=10)
-        
-        ok_button = ttk.Button(button_frame, text="Apply", command=on_ok)
-        ok_button.pack(side=tk.RIGHT, padx=5)
-        
-        cancel_button = ttk.Button(button_frame, text="Cancel", command=on_cancel)
-        cancel_button.pack(side=tk.RIGHT, padx=5)
-        
-        # Wait for dialog to close (the result will be determined by the callbacks)
-        return True

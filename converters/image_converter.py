@@ -100,17 +100,16 @@ class ImageConverter:
         except Exception as e:
             return (False, str(e))
     
-    def create_latex_figure(self, image_path, caption="", label="", width=0.8):
+    def create_latex_figure(self, image_path, caption="", label="", width=0.8, align=None, margin=None):
         """
-        Create a LaTeX figure environment for an image. 
-        This version uses the configured image height and caption behavior.
-        
+        Create a LaTeX figure environment for an image using adjustbox for placement.
         Args:
             image_path (str): Path or name of the image file
             caption (str): Figure caption
             label (str): Figure label (for referencing)
             width (float): Width as a fraction of the text width (0.0-1.0)
-            
+            align (str, optional): adjustbox alignment option ('left', 'center', 'right'). Defaults to config or 'left'.
+            margin (str, optional): adjustbox margin option (e.g., '1cm 0pt 0pt 0pt'). Defaults to config or None.
         Returns:
             str: LaTeX figure environment code
         """
@@ -120,49 +119,49 @@ class ImageConverter:
 
         # Use only filename instead of full path to avoid LaTeX issues
         image_filename = Path(image_path).name
-        
+
         # Get the configured maximum height (default to 800 if not configured)
         max_height = 800
         if self.config_manager:
             max_height = self.config_manager.get_value("image", "default_max_height", 800)
-        
+
         # Get the configured caption behavior
         caption_behavior = "none"
         if self.config_manager:
             caption_behavior = self.config_manager.get_value("image", "caption_behavior", "none")
-        
-        # Get the configured indentation points (default to 48 if not configured)
-        indent_points = 48
-        if self.config_manager:
-            indent_points = self.config_manager.get_value("image", "indent_points", 48)
-        
+
         # If caption behavior is "filename" and no caption provided, use the filename
         if caption_behavior == "filename" and not caption:
             caption = Path(image_filename).stem
-        
-        # Create the LaTeX figure environment using raw strings and string concatenation
-        latex = r"""
-    \begin{figure}[htbp]
-        \hspace{""" + str(indent_points) + r"""pt}\includegraphics[width=""" + str(width) + r"""\textwidth,height=""" + str(max_height) + r"""px,keepaspectratio]{""" + image_filename + r"""}\
-    """
-        
+
+        # Get alignment and margin from config if not provided
+        if align is None:
+            align = self.config_manager.get_value("image", "default_align", "left") if self.config_manager else "left"
+        if margin is None:
+            margin = self.config_manager.get_value("image", "default_margin", None) if self.config_manager else None
+
+        # Compose adjustbox options
+        adjustbox_opts = [f"width={width}\\textwidth"]
+        if align:
+            adjustbox_opts.append(align)
+        if margin:
+            adjustbox_opts.append(f"margin={margin}")
+        adjustbox_opts_str = ",".join(adjustbox_opts)
+
+        # Use adjustbox for image placement
+        latex = (
+            f"\\begin{{figure}}[htbp]\n"
+            f"    \\centering\n"
+            f"    \\adjustbox{{{adjustbox_opts_str}}}{{\\includegraphics[keepaspectratio]{{{image_filename}}}}}\n"
+        )
         # Add caption based on caption behavior
         if caption_behavior != "none" and (caption or caption_behavior == "empty"):
-            latex += r"""
-        \caption{""" + caption + r"""}\
-    """
-        
+            latex += "    \\caption{" + caption + "}\n"
         # Add label if provided
         if label:
-            latex += r"""
-        \label{""" + label + r"""}\
-    """
-        
+            latex += "    \\label{" + label + "}\n"
         # Close the figure environment
-        latex += r"""
-    \end{figure}
-    """
-        
+        latex += "\\end{figure}\n"
         return latex
     
     def process_image(self, image_data, filename=None):

@@ -28,4 +28,9 @@ def main():
     root.mainloop()
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        import traceback
+        print("Exception in main():", e)
+        traceback.print_exc()

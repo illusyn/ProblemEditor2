@@ -1,5 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import Dict, Any, Optional
+import re
+import tkinter as tk
 
 class Command(ABC):
     """Abstract base class for all markdown commands"""
@@ -43,6 +45,16 @@ class ContentCommand(Command):
                 "type": "float",
                 "description": "Left indentation in em units",
                 "default": 0.0
+            },
+            "font_size_pt": {
+                "type": "float",
+                "description": "Font size in points (pt) for LaTeX output",
+                "default": 16.0  # Set your global default here!
+            },
+            "font_name": {
+                "type": "string",
+                "description": "Font family name for LaTeX output (e.g., 'Times New Roman', 'Arial')",
+                "default": ""  # Empty means use document default
             }
         })
 
@@ -131,4 +143,56 @@ class ProblemCommand(ContentCommand):
         vspace = params.get('vspace', self._parameters['vspace']['default'])
         if params.get("bold", self._parameters["bold"]["default"]):
             return f"\\textbf{{{content}}}\\par\n\\vspace{{{vspace}em}}\n"
-        return f"{content}\\par\n\\vspace{{{vspace}em}}\n" 
+        font_size_pt = params.get("font_size_pt", self._parameters["font_size_pt"]["default"])
+        font_name = params.get("font_name", self._parameters["font_name"]["default"])
+
+        font_cmd = ""
+        if font_size_pt and font_size_pt > 0:
+            baseline_skip = font_size_pt + 2
+            font_cmd += f"\\fontsize{{{font_size_pt}pt}}{{{baseline_skip}pt}}\\selectfont "
+        if font_name:
+            # Use LaTeX fontspec package for custom fonts (requires XeLaTeX or LuaLaTeX)
+            font_cmd += f"\\setmainfont{{{font_name}}} "
+
+        return f"{font_cmd}{content}\\par\n\\vspace{{{vspace}em}}\n"
+
+def parse_latex_settings(self):
+    """
+    Parse LaTeX code in the editor to extract width, margin, and alignment for this image.
+    Returns:
+        tuple: (width, left, top, bottom, align)
+    """
+    content = self.editor.get_content()
+    pattern = r'\\adjustbox\{([^}]*)\}\{\\includegraphics\[.*?\]\{' + re.escape(self.filename) + r'\}\}'
+    match = re.search(pattern, content)
+    width = 0.8
+    left = top = bottom = 0.0
+    align = 'left'
+    if match:
+        opts = match.group(1)
+        # Parse width
+        width_match = re.search(r'width=([0-9.]+)\\textwidth', opts)
+        if width_match:
+            try:
+                width = float(width_match.group(1))
+            except Exception:
+                width = 0.8
+        # Parse margin
+        margin_match = re.search(r'margin=([^,}]+)', opts)
+        if margin_match:
+            margin_str = margin_match.group(1)
+            parts = margin_str.split()
+            if len(parts) == 4:
+                try:
+                    left = float(parts[0].replace('cm', ''))
+                    bottom = float(parts[1].replace('cm', ''))
+                    # right = float(parts[2].replace('cm', ''))  # ignored
+                    top = float(parts[3].replace('cm', ''))
+                except Exception:
+                    left = top = bottom = 0.0
+        # Parse align
+        for a in ['left', 'center', 'right']:
+            if a in opts:
+                align = a
+                break
+    return width, left, top, bottom, align 
