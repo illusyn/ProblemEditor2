@@ -49,14 +49,28 @@ class ContentCommand(Command):
             "font_size_pt": {
                 "type": "float",
                 "description": "Font size in points (pt) for LaTeX output",
-                "default": 16.0  # Set your global default here!
+                "default": 17.0  # Set your global default here!
             },
             "font_name": {
                 "type": "string",
                 "description": "Font family name for LaTeX output (e.g., 'Times New Roman', 'Arial')",
-                "default": ""  # Empty means use document default
+                "default": "Calibri"
+            },
+            "spacing": {
+                "type": "float",
+                "description": "Vertical space above and below content in em units",
+                "default": 0.25
+            },
+            "line_spacing": {
+                "type": "float",
+                "description": "Line spacing (baseline skip) in points for LaTeX output. Controls vertical space between lines in a paragraph.",
+                "default": None
             }
         })
+
+    def get_default_line_spacing(self, font_size_pt):
+        """Return the default line spacing (baseline skip) for this command. Subclasses can override."""
+        return round(font_size_pt * 1.5)
 
 class TextCommand(ContentCommand):
     """Basic text command (#text)"""
@@ -72,10 +86,20 @@ class TextCommand(ContentCommand):
     def render_latex(self, content: str, params: Optional[Dict[str, Any]] = None) -> str:
         params = params or {}
         indent = params.get("indent", self._parameters["indent"]["default"])
-        vspace = params.get('vspace', self._parameters['vspace']['default'])
+        spacing = params.get('spacing', self._parameters['spacing']['default'])
+        font_size_pt = params.get('font_size_pt', self._parameters.get('font_size_pt', {}).get('default', 17.0))
+        font_name = params.get('font_name', self._parameters.get('font_name', {}).get('default', 'Calibri'))
+        line_spacing = params.get('line_spacing', None)
+        if line_spacing is None:
+            line_spacing = self.get_default_line_spacing(font_size_pt)
+        font_cmd = ""
+        if font_size_pt and font_size_pt > 0:
+            font_cmd += f"\\fontsize{{{font_size_pt}pt}}{{{line_spacing}pt}}\\selectfont "
+        if font_name:
+            font_cmd += f"\\setmainfont{{{font_name}}} "
         if indent > 0:
-            return f"\\hspace{{{indent}em}}{content}\\par\n\\vspace{{{vspace}em}}\n"
-        return f"{content}\\par\n\\vspace{{{vspace}em}}\n"
+            return f"\\vspace{{{spacing}em}}\n\\hspace{{{indent}em}}{font_cmd}{content}\\par\n\\vspace{{{spacing}em}}\n"
+        return f"\\vspace{{{spacing}em}}\n{font_cmd}{content}\\par\n\\vspace{{{spacing}em}}\n"
 
 class EnumCommand(TextCommand):
     """Enumerated item command (#enum)"""
@@ -140,21 +164,21 @@ class ProblemCommand(ContentCommand):
     
     def render_latex(self, content: str, params: Optional[Dict[str, Any]] = None) -> str:
         params = params or {}
+        spacing = params.get('spacing', self._parameters['spacing']['default'])
         vspace = params.get('vspace', self._parameters['vspace']['default'])
-        if params.get("bold", self._parameters["bold"]["default"]):
-            return f"\\textbf{{{content}}}\\par\n\\vspace{{{vspace}em}}\n"
-        font_size_pt = params.get("font_size_pt", self._parameters["font_size_pt"]["default"])
-        font_name = params.get("font_name", self._parameters["font_name"]["default"])
-
+        font_size_pt = params.get('font_size_pt', self._parameters.get('font_size_pt', {}).get('default', 16.0))
+        font_name = params.get('font_name', self._parameters.get('font_name', {}).get('default', ''))
+        line_spacing = params.get('line_spacing', None)
+        if line_spacing is None:
+            line_spacing = self.get_default_line_spacing(font_size_pt)
         font_cmd = ""
         if font_size_pt and font_size_pt > 0:
-            baseline_skip = font_size_pt + 2
-            font_cmd += f"\\fontsize{{{font_size_pt}pt}}{{{baseline_skip}pt}}\\selectfont "
+            font_cmd += f"\\fontsize{{{font_size_pt}pt}}{{{line_spacing}pt}}\\selectfont "
         if font_name:
-            # Use LaTeX fontspec package for custom fonts (requires XeLaTeX or LuaLaTeX)
             font_cmd += f"\\setmainfont{{{font_name}}} "
 
-        return f"{font_cmd}{content}\\par\n\\vspace{{{vspace}em}}\n"
+        # Add spacing above and below content
+        return f"\\vspace{{{spacing}em}}\n{font_cmd}{content}\\par\n\\vspace{{{spacing}em}}\n"
 
 def parse_latex_settings(self):
     """

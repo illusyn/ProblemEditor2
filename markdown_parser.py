@@ -4,6 +4,9 @@ Custom markdown parser for the Math Problem Editor with dynamic templates and en
 
 import re
 from config_loader import ConfigLoader
+import sys
+sys.path.append('./core')
+from core.commands import ContentCommand, TextCommand, ProblemCommand, EnumCommand
 
 class MarkdownParser:
     """Converts custom parameterized markdown to LaTeX with enum tracking"""
@@ -16,6 +19,7 @@ class MarkdownParser:
             config_file (str, optional): Path to the configuration file
             config_manager: Configuration manager instance for accessing app settings
         """
+        print(f"Markdown Parser: Initializing with config_file={config_file}")
         # Initialize the configuration loader
         try:
             self.config = ConfigLoader(config_file)
@@ -473,6 +477,7 @@ class MarkdownParser:
         Returns:
             str: Processed LaTeX content
         """
+        print(f"parse_command: markdown_text={markdown_text}")
         lines = markdown_text.strip().split('\n')
         
         # Parse the command line
@@ -532,37 +537,26 @@ class MarkdownParser:
         Returns:
             str: Processed LaTeX content
         """
-        # Get command configuration
-        cmd_config = self.config.get_command_config(command_name)
-        if not cmd_config:
-            return "#" + command_name
-        
-        # Apply default parameters
-        if "parameters" in cmd_config:
-            for param_name, param_config in cmd_config["parameters"].items():
-                if param_name not in params and "default" in param_config:
-                    params[param_name] = param_config["default"]
-        
-        # Get content
-        content = "\n".join(content_lines)
-        
-        # Special handling for equations
-        if command_name == "eq" and content:
-            # Remove trailing empty lines which can cause issues
-            content = content.rstrip()
-            
-            # Check if there's a trailing "#eq" to terminate the environment
-            if content.endswith("#eq"):
-                # Remove the terminating tag
-                content = content[:-3].rstrip()
-        
-        # Get LaTeX template
-        template = cmd_config.get("latex_template", "")
-        
-        # Apply template
-        result = self.apply_template(template, params, content)
-        
-        return result
+        print(f"parse_standard_command: command_name={command_name}, params={params}")
+        # PATCH: Ignore all command/parameter definitions in config. Use only code-defined commands/parameters.
+        code_commands = {
+            'text': TextCommand(),
+            'problem': ProblemCommand(),
+            'enum': EnumCommand(),
+        }
+        if command_name in code_commands:
+            code_cmd = code_commands[command_name]
+            for param_name, param_config in code_cmd.parameters.items():
+                if param_name not in params and 'default' in param_config:
+                    params[param_name] = param_config['default']
+            content = "\n".join(content_lines)
+            # Allow variable substitution from config variables
+            template = code_cmd.render_latex(content, params)
+            # Substitute $variables.varname$ in the output
+            for var, value in self.config.get_all_variables().items():
+                template = template.replace(f'$variables.{var}$', value)
+            return template
+        return "#" + command_name
     
     def post_process_enums(self, latex_content):
         """
@@ -701,10 +695,8 @@ class MarkdownParser:
             content += "\n\\end{enumerate}"
             self.in_enum_block = False
         
-        # Create the full LaTeX document
-        document = self.create_latex_document(content)
-        
-        return document
+        # Return only the content, not a full LaTeX document
+        return content
     
     def wrap_enum_items(self, content):
         """
@@ -893,6 +885,9 @@ class MarkdownParser:
         elif font_family == "Carlito":
             font_packages = "\\usepackage{carlito}"
             font_command = ""
+        # Add fontspec for custom fonts (e.g., Calibri)
+        if font_family not in ["Computer Modern", "Times New Roman", "Helvetica", "Courier", "Palatino", "Bookman", "Carlito"]:
+            font_packages = "\\usepackage{fontspec}\n" + font_packages
         
         # Create a LaTeX document with necessary packages for math and images
         template = r"""\documentclass{article}

@@ -214,6 +214,11 @@ class DatabaseInterface:
                 if var.get():
                     selected_categories.append(name)
             
+            # Warn if no categories selected
+            if not selected_categories:
+                messagebox.showwarning("No Categories Selected", "Please select at least one category before saving the problem.")
+                return
+            
             # Convert has_latex_solution to integer
             latex_solution_int = 1 if has_latex_solution else 0
             
@@ -675,6 +680,11 @@ class DatabaseInterface:
         # Get selected categories
         categories = list(self.editor.selected_categories)
         
+        # Warn if no categories selected
+        if not categories:
+            messagebox.showwarning("No Categories Selected", "Please select at least one category before saving the problem.")
+            return
+        
         # If we have a current problem ID, update it
         if hasattr(self.editor, 'current_problem_id') and self.editor.current_problem_id is not None:
             success, message = self.db.update_problem(
@@ -687,8 +697,10 @@ class DatabaseInterface:
             if success:
                 # Update categories
                 self._update_problem_categories(self.editor.current_problem_id, categories)
-                self.editor.status_var.set(f"Updated problem #{self.editor.current_problem_id}")
-                messagebox.showinfo("Success", f"Problem #{self.editor.current_problem_id} updated successfully")
+                self.editor.status_var.set(f"Updated problem #{self.editor.current_problem_id} successfully.")
+                # Remove intrusive popup
+                # Optionally clear status after 3 seconds
+                self.editor.root.after(3000, lambda: self.editor.status_var.set("Ready"))
             else:
                 messagebox.showerror("Error", f"Failed to update problem: {message}")
         else:
@@ -703,8 +715,9 @@ class DatabaseInterface:
             if success:
                 problem_id = result
                 self.editor.current_problem_id = problem_id
-                self.editor.status_var.set(f"Saved new problem #{problem_id}")
-                messagebox.showinfo("Success", f"New problem saved with ID #{problem_id}")
+                self.editor.status_var.set(f"Saved new problem #{problem_id} successfully.")
+                # Remove intrusive popup
+                self.editor.root.after(3000, lambda: self.editor.status_var.set("Ready"))
             else:
                 messagebox.showerror("Error", f"Failed to save problem: {result}")
 

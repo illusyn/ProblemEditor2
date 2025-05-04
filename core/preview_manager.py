@@ -171,7 +171,7 @@ class PreviewManager:
         """Set up context menu for the preview panel"""
         self.preview_context_menu = tk.Menu(self.app.root, tearoff=0)
         self.preview_context_menu.add_command(
-            label="Adjust Image Size", 
+            label="Adjust Image", 
             command=self.app.adjust_image_size
         )
         

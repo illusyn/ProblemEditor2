@@ -16,7 +16,7 @@ from editor import Editor
 from preview.latex_compiler import LaTeXCompiler
 from preview.pdf_viewer import PDFViewer
 from converters.image_converter import ImageConverter
-from core.parser import MarkdownParser
+from markdown_parser import MarkdownParser
 from db_interface import DatabaseInterface
 from managers.config_manager import ConfigManager
 from managers.file_manager import FileManager
@@ -452,9 +452,6 @@ class MathEditor:
                     if cat in self.category_panel.selected_categories:
                         self.category_panel.selected_categories.remove(cat)
         
-        # Update status
-        self.status_var.set(f"Loaded problem #{self.current_problem_id}")
-        
         # Update preview
         self.update_preview()
     
@@ -636,6 +633,7 @@ x = 2
             
             # Load the problem content
             self.load_problem_content(problem)
+            self.status_var.set(f"Loaded problem #{problem_id}")
             
         except ValueError:
             messagebox.showerror("Error", "Please enter a valid problem ID")
@@ -690,7 +688,8 @@ x = 2
         # Reset index and load first result
         self.current_result_index = 0
         self.load_problem_content(self.current_results[0])
-        self.status_var.set(f"Showing result 1 of {len(self.current_results)}")
+        first_problem_id = self.current_results[0].get('problem_id', '?')
+        self.status_var.set(f"Showing result 1 of {len(self.current_results)} (Problem ID: {first_problem_id})")
     
     def next_match(self):
         """Load the next matching problem from the current result set"""
@@ -704,8 +703,9 @@ x = 2
         
         # Load the problem
         self.load_problem_content(problem)
+        problem_id = problem.get('problem_id', '?')
         self.status_var.set(
-            f"Showing result {self.current_result_index + 1} of {len(self.current_results)}"
+            f"Showing result {self.current_result_index + 1} of {len(self.current_results)} (Problem ID: {problem_id})"
         )
     
     def reset_form(self):

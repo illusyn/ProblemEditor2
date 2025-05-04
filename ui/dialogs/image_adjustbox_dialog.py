@@ -41,7 +41,7 @@ class AdjustboxImageDialog:
         # Create dialog window
         self.dialog = tk.Toplevel(parent)
         self.dialog.title("Adjust Image (adjustbox)")
-        self.dialog.geometry("500x600")
+        self.dialog.geometry("500x900")
         self.dialog.transient(parent)
         self.dialog.grab_set()
 
