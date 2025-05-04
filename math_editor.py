@@ -41,6 +41,9 @@ class MathEditor:
         """
         self.root = root
         self.root.title("Simplified Math Editor")
+        # Open in full screen mode
+        self.root.state('zoomed')  # For Windows; use self.root.attributes('-fullscreen', True) for cross-platform
+        # self.root.attributes('-fullscreen', True)  # Uncomment for true cross-platform fullscreen
         self.root.geometry("2200x1200")  # Restore former width and height
                 
         # Initialize result set tracking
@@ -284,6 +287,18 @@ class MathEditor:
         self.problem_id_entry = ttk.Entry(id_frame, width=10)
         self.problem_id_entry.pack(side=tk.LEFT, padx=5)
         
+        # Search text entry for querying by problem content
+        search_text_frame = ttk.Frame(self.query_frame)
+        search_text_frame.pack(fill=tk.X, padx=5, pady=2)
+        ttk.Label(search_text_frame, text="Search Text:").pack(side=tk.LEFT, padx=2)
+        self.search_text_entry = ttk.Entry(search_text_frame, width=20)
+        self.search_text_entry.pack(side=tk.LEFT, padx=2)
+        ttk.Button(
+            search_text_frame,
+            text="Query Text",
+            command=self.query_by_text
+        ).pack(side=tk.LEFT, padx=2)
+        
         # Query buttons
         button_frame = ttk.Frame(self.query_frame)
         button_frame.pack(fill=tk.X, padx=5, pady=5)
@@ -304,6 +319,12 @@ class MathEditor:
             button_frame,
             text="Next Match",
             command=self.next_match
+        ).pack(side=tk.LEFT, padx=2)
+        
+        ttk.Button(
+            button_frame,
+            text="Previous Match",
+            command=self.previous_match
         ).pack(side=tk.LEFT, padx=2)
         
         ttk.Button(
@@ -425,22 +446,22 @@ class MathEditor:
         """
         # Store the problem ID
         self.current_problem_id = problem.get('problem_id')
-        
+        # Set the Problem ID field
+        if hasattr(self, 'problem_id_entry'):
+            self.problem_id_entry.delete(0, tk.END)
+            if self.current_problem_id is not None:
+                self.problem_id_entry.insert(0, str(self.current_problem_id))
         # Set the content
         self.editor.set_text(problem.get('content', ''))
-        
         # Set answer and notes
         self.answer_text.delete(0, tk.END)
         self.answer_text.insert(0, problem.get('answer', ''))
-        
         self.notes_text.delete("1.0", tk.END)
         self.notes_text.insert("1.0", problem.get('notes', ''))
-        
         # Clear and set categories
         self.selected_categories.clear()
         if 'categories' in problem and problem['categories']:
             self.selected_categories = {cat['name'] for cat in problem['categories']}
-            
         # Update category panel to reflect the loaded problem's categories
         if hasattr(self, 'category_panel'):
             for cat, btn in self.category_panel.buttons.items():
@@ -451,7 +472,6 @@ class MathEditor:
                     self.category_panel.highlight_category(cat, False)
                     if cat in self.category_panel.selected_categories:
                         self.category_panel.selected_categories.remove(cat)
-        
         # Update preview
         self.update_preview()
     
@@ -708,6 +728,20 @@ x = 2
             f"Showing result {self.current_result_index + 1} of {len(self.current_results)} (Problem ID: {problem_id})"
         )
     
+    def previous_match(self):
+        """Load the previous matching problem from the current result set"""
+        if not self.current_results:
+            messagebox.showinfo("No Results", "No active query results")
+            return
+        # Move to previous result, wrapping around to end if at start
+        self.current_result_index = (self.current_result_index - 1) % len(self.current_results)
+        problem = self.current_results[self.current_result_index]
+        self.load_problem_content(problem)
+        problem_id = problem.get('problem_id', '?')
+        self.status_var.set(
+            f"Showing result {self.current_result_index + 1} of {len(self.current_results)} (Problem ID: {problem_id})"
+        )
+    
     def reset_form(self):
         """Reset all form fields"""
         # Clear editor content
@@ -751,6 +785,36 @@ x = 2
             self.reset_form()
         else:
             messagebox.showerror("Error", f"Failed to delete problem: {message}")
+
+    def query_by_text(self):
+        """Query problems by text in the problem content"""
+        search_text = self.search_text_entry.get().strip()
+        if not search_text:
+            messagebox.showwarning("Warning", "Please enter text to search for.")
+            return
+
+        # Get all problems
+        success, problems = self.db.get_problems_list()
+        if not success:
+            messagebox.showerror("Error", f"Failed to query problems: {problems}")
+            return
+
+        # Filter by text (case-insensitive)
+        matches = [
+            p for p in problems
+            if search_text.lower() in p.get('content', '').lower()
+        ]
+
+        if not matches:
+            messagebox.showinfo("No Results", f"No problems found containing '{search_text}'.")
+            return
+
+        self.current_results = matches
+        self.current_result_index = 0
+        self.load_problem_content(self.current_results[0])
+        self.status_var.set(
+            f"Showing result 1 of {len(self.current_results)} (Problem ID: {self.current_results[0].get('problem_id', '?')})"
+        )
 
 if __name__ == "__main__":
     try:
