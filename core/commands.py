@@ -3,6 +3,20 @@ from typing import Dict, Any, Optional
 import re
 import tkinter as tk
 
+# Context-aware font size configuration
+FONT_SIZES = {
+    "preview": {
+        "problem": 14,
+        "text": 14,
+        "section": 16,
+    },
+    "export": {
+        "problem": 14,
+        "text": 14,
+        "section": 16,
+    }
+}
+
 class Command(ABC):
     """Abstract base class for all markdown commands"""
     
@@ -49,7 +63,7 @@ class ContentCommand(Command):
             "font_size_pt": {
                 "type": "float",
                 "description": "Font size in points (pt) for LaTeX output",
-                "default": 17.0  # Set your global default here!
+                "default": 16.0  # Set your global default here!
             },
             "font_name": {
                 "type": "string",
@@ -83,11 +97,15 @@ class TextCommand(ContentCommand):
         indent = " " * int(params.get("indent", self._parameters["indent"]["default"]) * 2)
         return f"{indent}{content}"
     
-    def render_latex(self, content: str, params: Optional[Dict[str, Any]] = None) -> str:
+    def render_latex(self, content: str, params: Optional[Dict[str, Any]] = None, context: str = "export") -> str:
         params = params or {}
         indent = params.get("indent", self._parameters["indent"]["default"])
         spacing = params.get('spacing', self._parameters['spacing']['default'])
-        font_size_pt = params.get('font_size_pt', self._parameters.get('font_size_pt', {}).get('default', 17.0))
+        # Context-aware font size
+        if context == "export":
+            font_size_pt = FONT_SIZES.get(context, {}).get("text", 12)
+        else:
+            font_size_pt = params.get('font_size_pt', FONT_SIZES.get(context, {}).get("text", 12))
         font_name = params.get('font_name', self._parameters.get('font_name', {}).get('default', 'Calibri'))
         line_spacing = params.get('line_spacing', None)
         if line_spacing is None:
@@ -162,11 +180,15 @@ class ProblemCommand(ContentCommand):
             return f"**{content}**"
         return content
     
-    def render_latex(self, content: str, params: Optional[Dict[str, Any]] = None) -> str:
+    def render_latex(self, content: str, params: Optional[Dict[str, Any]] = None, context: str = "export") -> str:
         params = params or {}
         spacing = params.get('spacing', self._parameters['spacing']['default'])
         vspace = params.get('vspace', self._parameters['vspace']['default'])
-        font_size_pt = params.get('font_size_pt', self._parameters.get('font_size_pt', {}).get('default', 16.0))
+        # Context-aware font size
+        if context == "export":
+            font_size_pt = FONT_SIZES.get(context, {}).get("problem", 12)
+        else:
+            font_size_pt = params.get('font_size_pt', FONT_SIZES.get(context, {}).get("problem", 12))
         font_name = params.get('font_name', self._parameters.get('font_name', {}).get('default', ''))
         line_spacing = params.get('line_spacing', None)
         if line_spacing is None:
@@ -176,7 +198,10 @@ class ProblemCommand(ContentCommand):
             font_cmd += f"\\fontsize{{{font_size_pt}pt}}{{{line_spacing}pt}}\\selectfont "
         if font_name:
             font_cmd += f"\\setmainfont{{{font_name}}} "
-
+        # Prepend problem number if provided
+        number = params.get('number', None)
+        if number is not None:
+            content = f"{number}. {content}"
         # Add spacing above and below content
         return f"\\vspace{{{spacing}em}}\n{font_cmd}{content}\\par\n\\vspace{{{spacing}em}}\n"
 

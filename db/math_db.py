@@ -559,9 +559,9 @@ class MathProblemDB:
             image = result["image"]
             format = result["format"]
             
-            # If no output path provided, create one in a temp directory
+            # If no output path provided, create one in temp_images directory
             if not output_path:
-                temp_dir = Path("db") / "temp_images"
+                temp_dir = Path("temp_images")
                 temp_dir.mkdir(parents=True, exist_ok=True)
                 
                 # Use image name or create one from ID
@@ -810,8 +810,8 @@ class MathProblemDB:
             tuple: (success, message)
         """
         try:
-            # Create the output directory if it doesn't exist
-            output_path = Path(output_dir)
+            # Always use temp_images as the output directory
+            output_path = Path("temp_images")
             output_path.mkdir(parents=True, exist_ok=True)
             
             # Get all images for the problem
@@ -840,7 +840,7 @@ class MathProblemDB:
                     failed_count += 1
                     print(f"Failed to export image {image_id}: {result}")
             
-            message = f"Exported {exported_count} images to {output_dir}"
+            message = f"Exported {exported_count} images to temp_images"
             if failed_count > 0:
                 message += f" ({failed_count} failed)"
                 

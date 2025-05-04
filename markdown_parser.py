@@ -467,13 +467,14 @@ class MarkdownParser:
         
         return result
     
-    def parse_command(self, markdown_text):
+    def parse_command(self, markdown_text, context="export"):
         """
         Parse a single command line and its content
         
         Args:
             markdown_text (str): Markdown command with optional parameters and content
-            
+            context (str): Rendering context (e.g., 'export', 'preview')
+        
         Returns:
             str: Processed LaTeX content
         """
@@ -520,12 +521,12 @@ class MarkdownParser:
         # For non-enum commands, check if we need to close an enum block
         if self.in_enum_block:
             self.in_enum_block = False
-            return "\\end{enumerate}\n\n" + self.parse_standard_command(command_name, params, content_lines)
+            return "\\end{enumerate}\n\n" + self.parse_standard_command(command_name, params, content_lines, context=context)
         
         # Standard command handling
-        return self.parse_standard_command(command_name, params, content_lines)
+        return self.parse_standard_command(command_name, params, content_lines, context=context)
 
-    def parse_standard_command(self, command_name, params, content_lines):
+    def parse_standard_command(self, command_name, params, content_lines, context="export"):
         """
         Parse a standard (non-enum) command
         
@@ -533,7 +534,8 @@ class MarkdownParser:
             command_name (str): Name of the command
             params (dict): Command parameters
             content_lines (list): Content lines
-            
+            context (str): Rendering context (e.g., 'export', 'preview')
+        
         Returns:
             str: Processed LaTeX content
         """
@@ -551,7 +553,7 @@ class MarkdownParser:
                     params[param_name] = param_config['default']
             content = "\n".join(content_lines)
             # Allow variable substitution from config variables
-            template = code_cmd.render_latex(content, params)
+            template = code_cmd.render_latex(content, params, context=context)
             # Substitute $variables.varname$ in the output
             for var, value in self.config.get_all_variables().items():
                 template = template.replace(f'$variables.{var}$', value)
@@ -613,13 +615,14 @@ class MarkdownParser:
         # Join lines back together
         return "\n".join(lines)
     
-    def parse(self, markdown_text):
+    def parse(self, markdown_text, context="export"):
         """
         Convert markdown to LaTeX
         
         Args:
             markdown_text (str): Markdown content to convert
-            
+            context (str): Rendering context (e.g., 'export', 'preview')
+        
         Returns:
             str: Converted LaTeX document
         """
@@ -673,7 +676,7 @@ class MarkdownParser:
                 
                 # Parse the command and its content
                 command_text = '\n'.join(command_content)
-                processed_command = self.parse_command(command_text)
+                processed_command = self.parse_command(command_text, context=context)
                 processed_lines.append(processed_command)
             else:
                 # Regular text - escape LaTeX special characters

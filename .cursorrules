@@ -8,6 +8,16 @@ Developing on Windows 11 computer in a Powershell with cywin installed.
 - **Developer (Claude)**: Analyzes issues, presents options, implements solutions
 NOTE: The role of the AI is *NOT* to teach the user about programming
 
+##AI Guidance: Prioritizing Specific Context Over General Assumptions
+1 Always give priority to explicit, local, and recent information provided by the user or found in the current project context, codebase, or conversation.
+2. Only use general programming assumptions, best practices, or default patterns when there is no clear, specific guidance from the user or project.
+3. If there is any conflict between general knowledge and the user's explicit instructions, code, or workflow, the user's/project's specifics take precedence.
+4. If unsure whether to apply a general assumption or a specific context, ask the user for clarification before proceeding.
+5. Reference recent conversation, code, and user actions to inform all answers.
+6. Do not default to generalizations when specifics are available.
+Example: If the user has recently modified code to use LaTeX-based rendering in-app, do not assume standard Tkinter font logic applies, even if that is common elsewhere.
+
+
 A specification framework to ensure consistency, leanness, good design patterns, and proper documentation across the codebase. A framework with specific rules for achieving these goals.
 
 # Math Editor Specification Framework

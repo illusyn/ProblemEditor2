@@ -37,7 +37,7 @@ class PreviewManager:
             content = self.app.editor.get_content()
             
             # Parse the markdown to LaTeX
-            latex_content = self.app.markdown_parser.parse(content)
+            latex_content = self.app.markdown_parser.parse(content, context='preview')
             full_latex = self.app.template.replace("#CONTENT#", latex_content)
             
             # Check if graphicx package is in the template
