@@ -27,6 +27,7 @@ from ui.dialogs.preferences_dialog import PreferencesDialog
 from ui.menu_manager import MenuManager
 from ui.category_panel import CategoryPanel
 from db.math_db import MathProblemDB
+from ui.sat_type_panel import SatTypePanel
 
 
 class MathEditor:
@@ -349,6 +350,16 @@ class MathEditor:
         self.category_panel.set_multi_select(True)
         self.category_panel.set_on_category_click_callback(self.on_category_click)
         
+        # SAT Problem Types section (below categories)
+        self.sat_type_frame = ttk.LabelFrame(self.left_panel, text="SAT Problem Types", width=550)
+        self.sat_type_frame.pack(fill=tk.X, padx=5, pady=5)
+        # Get SAT types from DB
+        self.db.cur.execute("SELECT name FROM sat_problem_types ORDER BY name")
+        sat_type_names = [row[0] for row in self.db.cur.fetchall()]
+        self.sat_type_panel = SatTypePanel(self.sat_type_frame, types=sat_type_names)
+        self.sat_type_panel.pack(fill=tk.X, padx=5, pady=5)
+        self.selected_sat_types = set()
+        
         # Notes section
         self.notes_frame = ttk.LabelFrame(self.left_panel, text="Notes")
         self.notes_frame.pack(fill=tk.X, padx=5, pady=5)
@@ -369,7 +380,7 @@ class MathEditor:
         self.save_problem_button = ttk.Button(
             answer_container,
             text="Save Problem",
-            command=lambda: self.db_interface.save_problem_direct()
+            command=self.save_problem_and_types
         )
         self.save_problem_button.pack(side=tk.LEFT, padx=(0,5))
         
@@ -472,6 +483,14 @@ class MathEditor:
                     self.category_panel.highlight_category(cat, False)
                     if cat in self.category_panel.selected_categories:
                         self.category_panel.selected_categories.remove(cat)
+        # Set SAT types for this problem
+        if hasattr(self, 'sat_type_panel'):
+            sat_types = []
+            if 'problem_id' in problem and problem['problem_id'] is not None:
+                success, types = self.db.get_sat_types_for_problem(problem['problem_id'])
+                if success:
+                    sat_types = [t['name'] for t in types]
+            self.sat_type_panel.set_selected_types(sat_types)
         # Update preview
         self.update_preview()
     
@@ -485,8 +504,19 @@ class MathEditor:
         return self.file_manager.open_file()
     
     def save_file(self):
-        """Save the current file - delegate to FileManager"""
-        return self.file_manager.save_file()
+        # Save the current file - delegate to FileManager
+        result = self.file_manager.save_file()
+        # Save SAT types for this problem
+        if hasattr(self, 'sat_type_panel') and self.current_problem_id is not None:
+            # Remove all current associations
+            success, types = self.db.get_sat_types_for_problem(self.current_problem_id)
+            if success:
+                for t in types:
+                    self.db.remove_problem_from_sat_type(self.current_problem_id, t['type_id'])
+            # Add selected types
+            for t in self.sat_type_panel.get_selected_types():
+                self.db.add_problem_to_sat_type(self.current_problem_id, t)
+        return result
     
     def save_as(self):
         """Save the file with a new name - delegate to FileManager"""
@@ -816,12 +846,35 @@ x = 2
             f"Showing result 1 of {len(self.current_results)} (Problem ID: {self.current_results[0].get('problem_id', '?')})"
         )
 
-if __name__ == "__main__":
-    try:
-        root = tk.Tk()
-        app = MathEditor(root)
-        print("Before mainloop")
-        root.mainloop()
-        print("After mainloop")  # Should not print until window closes
-    except Exception as e:
-        print("Error during startup:", e)
+    def save_problem_and_types(self):
+        """
+        Save the current problem's content, answer, notes, and SAT types to the database.
+        """
+        if not hasattr(self, 'current_problem_id') or self.current_problem_id is None:
+            messagebox.showwarning("Warning", "No problem is currently loaded")
+            return
+        # Gather updated fields
+        content = self.editor.get_text()
+        answer = self.answer_text.get()
+        notes = self.notes_text.get("1.0", tk.END).strip()
+        # Update the problem in the database
+        success, msg = self.db.update_problem(
+            self.current_problem_id,
+            content=content,
+            answer=answer,
+            notes=notes
+        )
+        if not success:
+            messagebox.showerror("Error", f"Failed to save problem: {msg}")
+            return
+        # Update SAT types
+        if hasattr(self, 'sat_type_panel'):
+            # Remove all current associations
+            success, types = self.db.get_sat_types_for_problem(self.current_problem_id)
+            if success:
+                for t in types:
+                    self.db.remove_problem_from_sat_type(self.current_problem_id, t['type_id'])
+            # Add selected types
+            for t in self.sat_type_panel.get_selected_types():
+                self.db.add_problem_to_sat_type(self.current_problem_id, t)
+        self.status_var.set("Problem and SAT types saved.")

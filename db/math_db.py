@@ -88,6 +88,14 @@ class MathProblemDB:
             )
         ''')
         
+        # SAT problem types table
+        self.cur.execute('''
+            CREATE TABLE IF NOT EXISTS sat_problem_types (
+                type_id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL UNIQUE
+            )
+        ''')
+        
         # Junction table for problems and categories
         self.cur.execute('''
             CREATE TABLE IF NOT EXISTS problem_math_categories (
@@ -96,6 +104,17 @@ class MathProblemDB:
                 PRIMARY KEY (problem_id, category_id),
                 FOREIGN KEY (problem_id) REFERENCES problems(problem_id) ON DELETE CASCADE,
                 FOREIGN KEY (category_id) REFERENCES math_categories(category_id) ON DELETE CASCADE
+            )
+        ''')
+        
+        # Junction table for problems and SAT types
+        self.cur.execute('''
+            CREATE TABLE IF NOT EXISTS problem_sat_types (
+                problem_id INTEGER NOT NULL,
+                type_id INTEGER NOT NULL,
+                PRIMARY KEY (problem_id, type_id),
+                FOREIGN KEY (problem_id) REFERENCES problems(problem_id) ON DELETE CASCADE,
+                FOREIGN KEY (type_id) REFERENCES sat_problem_types(type_id) ON DELETE CASCADE
             )
         ''')
         
@@ -115,6 +134,12 @@ class MathProblemDB:
             ON problem_math_categories(category_id)
         ''')
         
+        self.conn.commit()
+        
+        # Pre-populate sat_problem_types with default types if not present
+        default_types = ["efficiency", "math_concept", "sat_problem"]
+        for t in default_types:
+            self.cur.execute("INSERT OR IGNORE INTO sat_problem_types (name) VALUES (?)", (t,))
         self.conn.commit()
     
     def add_problem(self, content, solution=None, has_latex_solution=0, 
@@ -882,3 +907,101 @@ class MathProblemDB:
         """Close the database connection"""
         if hasattr(self, 'conn') and self.conn:
             self.conn.close()
+
+    def add_problem_to_sat_type(self, problem_id, type_name):
+        """
+        Add a problem to a SAT type (creating the type if it doesn't exist)
+        Args:
+            problem_id (int): ID of the problem
+            type_name (str): Name of the SAT type
+        Returns:
+            tuple: (success, message)
+        """
+        try:
+            # Add or get the SAT type
+            self.cur.execute("SELECT type_id FROM sat_problem_types WHERE name = ?", (type_name,))
+            row = self.cur.fetchone()
+            if row:
+                type_id = row[0]
+            else:
+                self.cur.execute("INSERT INTO sat_problem_types (name) VALUES (?)", (type_name,))
+                type_id = self.cur.lastrowid
+
+            # Check if relationship already exists
+            self.cur.execute("""
+                SELECT 1 FROM problem_sat_types 
+                WHERE problem_id = ? AND type_id = ?
+            """, (problem_id, type_id))
+            if self.cur.fetchone():
+                return (True, f"Problem already in SAT type '{type_name}'")
+
+            # Add the relationship
+            self.cur.execute("""
+                INSERT INTO problem_sat_types (problem_id, type_id)
+                VALUES (?, ?)
+            """, (problem_id, type_id))
+            self.conn.commit()
+            return (True, f"Problem added to SAT type '{type_name}'")
+        except Exception as e:
+            self.conn.rollback()
+            return (False, str(e))
+
+    def remove_problem_from_sat_type(self, problem_id, type_id):
+        """
+        Remove a problem from a SAT type
+        Args:
+            problem_id (int): ID of the problem
+            type_id (int): ID of the SAT type
+        Returns:
+            tuple: (success, message)
+        """
+        try:
+            self.cur.execute("""
+                DELETE FROM problem_sat_types
+                WHERE problem_id = ? AND type_id = ?
+            """, (problem_id, type_id))
+            self.conn.commit()
+            return (True, "Problem removed from SAT type")
+        except Exception as e:
+            self.conn.rollback()
+            return (False, str(e))
+
+    def get_sat_types_for_problem(self, problem_id):
+        """
+        Get all SAT types associated with a problem
+        Args:
+            problem_id (int): ID of the problem
+        Returns:
+            tuple: (success, list_of_types or error_message)
+        """
+        try:
+            self.cur.execute("""
+                SELECT t.type_id, t.name
+                FROM sat_problem_types t
+                JOIN problem_sat_types pt ON t.type_id = pt.type_id
+                WHERE pt.problem_id = ?
+            """, (problem_id,))
+            types = [{"type_id": row[0], "name": row[1]} for row in self.cur.fetchall()]
+            return (True, types)
+        except Exception as e:
+            return (False, str(e))
+
+    def get_problems_for_sat_type(self, type_id):
+        """
+        Get all problems associated with a SAT type
+        Args:
+            type_id (int): ID of the SAT type
+        Returns:
+            tuple: (success, list_of_problems or error_message)
+        """
+        try:
+            self.cur.execute("""
+                SELECT p.problem_id, p.content
+                FROM problems p
+                JOIN problem_sat_types pt ON p.problem_id = pt.problem_id
+                WHERE pt.type_id = ?
+            """, (type_id,))
+            problems = [{"problem_id": row[0], "content": row[1]} for row in self.cur.fetchall()]
+            return (True, problems)
+        except Exception as e:
+            return (False, str(e))
