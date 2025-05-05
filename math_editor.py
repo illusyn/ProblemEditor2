@@ -11,6 +11,7 @@ import os
 from pathlib import Path
 import tempfile
 import re
+import customtkinter as ctk
 
 from editor import Editor
 from preview.latex_compiler import LaTeXCompiler
@@ -29,6 +30,27 @@ from ui.category_panel import CategoryPanel
 from db.math_db import MathProblemDB
 from ui.sat_type_panel import SatTypePanel
 
+# --- Color Variables ---
+LEFT_PANEL_BG = "#F3E7D3"
+MATH_DOMAINS_BG = "#D0BA96"
+MATH_DOMAINS_BTN_BG = "#FFFFFF"
+MATH_DOMAINS_BTN_HOVER = "#1976D2"
+MATH_DOMAINS_BTN_TEXT = "#664103"
+BUTTON_BG = "#D0BA96"
+BUTTON_HOVER = "#0336C0"
+BUTTON_TEXT = "#664103"
+HEADER_TEXT = "#664103"
+
+# --- Font Variables ---
+DEFAULT_FONT_FAMILY = "Segoe UI"
+DEFAULT_BOLD_FONT_FAMILY = "Segoe UI"
+DEFAULT_MONO_FONT_FAMILY = "Courier"
+
+DEFAULT_FONT_SIZE = 22
+DEFAULT_BOLD_FONT_SIZE = 22
+DEFAULT_HEADER_FONT_SIZE = 24
+DEFAULT_ENTRY_FONT_SIZE = 16
+DEFAULT_DOMAIN_BTN_FONT_SIZE = 22
 
 class MathEditor:
     """Main application class for the Simplified Math Editor"""
@@ -138,6 +160,10 @@ class MathEditor:
         root.lift()
         root.attributes('-topmost', True)
         root.after_idle(root.attributes, '-topmost', False)
+
+        # At the start of your main function or __init__:
+        ctk.set_appearance_mode("light")
+        ctk.set_default_color_theme("blue")
 
     def set_initial_pane_position(self):
         """Set the initial position of the paned window divider"""
@@ -274,119 +300,75 @@ class MathEditor:
         self.content_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
         
         # Left side panel containing categories, notes, and answer
-        self.left_panel = ttk.Frame(self.content_frame)
-        self.left_panel.pack(side=tk.LEFT, fill=tk.BOTH, padx=5, pady=5)
+        self.left_panel = ctk.CTkFrame(self.content_frame, fg_color=LEFT_PANEL_BG, corner_radius=8, width=800)
+        self.left_panel.pack_propagate(False)
+        self.left_panel.pack(side="left", fill="y", padx=20, pady=20)
+
+        # Larger fonts
+        bold_font = ctk.CTkFont(family=DEFAULT_BOLD_FONT_FAMILY, size=DEFAULT_BOLD_FONT_SIZE, weight="bold")
+        header_font = ctk.CTkFont(family=DEFAULT_FONT_FAMILY, size=DEFAULT_HEADER_FONT_SIZE, weight="bold")
+        entry_font = ctk.CTkFont(family=DEFAULT_FONT_FAMILY, size=DEFAULT_ENTRY_FONT_SIZE)
+
+        # First row of buttons
+        self.top_row = ctk.CTkFrame(self.left_panel, fg_color=LEFT_PANEL_BG)
+        self.top_row.pack(pady=5)
+        ctk.CTkButton(self.top_row, text="Reset", font=bold_font, fg_color=BUTTON_BG, hover_color=BUTTON_HOVER, text_color=BUTTON_TEXT, corner_radius=12, width=180, height=48, command=self.reset_form).pack(side="left", padx=8)
+        ctk.CTkButton(self.top_row, text="Save Problem", font=bold_font, fg_color=BUTTON_BG, hover_color=BUTTON_HOVER, text_color=BUTTON_TEXT, corner_radius=12, width=180, height=48, command=self.save_problem_and_types).pack(side="left", padx=8)
+        ctk.CTkButton(self.top_row, text="Delete Problem", font=bold_font, fg_color=BUTTON_BG, hover_color=BUTTON_HOVER, text_color=BUTTON_TEXT, corner_radius=12, width=180, height=48, command=self.delete_problem).pack(side="left", padx=8)
+
+        # Second row of buttons
+        self.bottom_row = ctk.CTkFrame(self.left_panel, fg_color=LEFT_PANEL_BG)
+        self.bottom_row.pack(pady=5)
+        ctk.CTkButton(self.bottom_row, text="Query", font=bold_font, fg_color=BUTTON_BG, hover_color=BUTTON_HOVER, text_color=BUTTON_TEXT, corner_radius=12, width=180, height=48, command=self.query_by_text).pack(side="left", padx=8)
+        ctk.CTkButton(self.bottom_row, text="Next Match", font=bold_font, fg_color=BUTTON_BG, hover_color=BUTTON_HOVER, text_color=BUTTON_TEXT, corner_radius=12, width=180, height=48, command=self.next_match).pack(side="left", padx=8)
+        ctk.CTkButton(self.bottom_row, text="Previous Match", font=bold_font, fg_color=BUTTON_BG, hover_color=BUTTON_HOVER, text_color=BUTTON_TEXT, corner_radius=12, width=180, height=48, command=self.previous_match).pack(side="left", padx=8)
         
-        # Query section
-        self.query_frame = ttk.LabelFrame(self.left_panel, text="Query")
-        self.query_frame.pack(fill=tk.X, padx=5, pady=5)
-        
-        # Problem ID query
-        id_frame = ttk.Frame(self.query_frame)
-        id_frame.pack(fill=tk.X, padx=5, pady=5)
-        ttk.Label(id_frame, text="Problem ID:").pack(side=tk.LEFT)
-        self.problem_id_entry = ttk.Entry(id_frame, width=10)
-        self.problem_id_entry.pack(side=tk.LEFT, padx=5)
-        
-        # Search text entry for querying by problem content
-        search_text_frame = ttk.Frame(self.query_frame)
-        search_text_frame.pack(fill=tk.X, padx=5, pady=2)
-        ttk.Label(search_text_frame, text="Search Text:").pack(side=tk.LEFT, padx=2)
-        self.search_text_entry = ttk.Entry(search_text_frame, width=20)
-        self.search_text_entry.pack(side=tk.LEFT, padx=2)
-        ttk.Button(
-            search_text_frame,
-            text="Query Text",
-            command=self.query_by_text
-        ).pack(side=tk.LEFT, padx=2)
-        
-        # Query buttons
-        button_frame = ttk.Frame(self.query_frame)
-        button_frame.pack(fill=tk.X, padx=5, pady=5)
-        
-        ttk.Button(
-            button_frame,
-            text="Load by ID",
-            command=self.load_problem_by_id
-        ).pack(side=tk.LEFT, padx=2)
-        
-        ttk.Button(
-            button_frame,
-            text="Query Categories",
-            command=self.query_by_categories
-        ).pack(side=tk.LEFT, padx=2)
-        
-        ttk.Button(
-            button_frame,
-            text="Next Match",
-            command=self.next_match
-        ).pack(side=tk.LEFT, padx=2)
-        
-        ttk.Button(
-            button_frame,
-            text="Previous Match",
-            command=self.previous_match
-        ).pack(side=tk.LEFT, padx=2)
-        
-        ttk.Button(
-            button_frame,
-            text="Reset",
-            command=self.reset_form
-        ).pack(side=tk.LEFT, padx=2)
-        
-        ttk.Button(
-            button_frame,
-            text="Delete Problem",
-            command=self.delete_problem
-        ).pack(side=tk.LEFT, padx=2)
-        
-        # Categories section
-        self.category_frame = ttk.LabelFrame(self.left_panel, text="Categories", width=550)
-        self.category_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
-        self.category_frame.pack_propagate(False)
-        
-        # Create the category panel
-        self.category_panel = CategoryPanel(self.category_frame)
-        self.category_panel.set_multi_select(True)
-        self.category_panel.set_on_category_click_callback(self.on_category_click)
-        
-        # SAT Problem Types section (below categories)
-        self.sat_type_frame = ttk.LabelFrame(self.left_panel, text="SAT Problem Types", width=550)
-        self.sat_type_frame.pack(fill=tk.X, padx=5, pady=5)
-        # Get SAT types from DB
-        self.db.cur.execute("SELECT name FROM sat_problem_types ORDER BY name")
-        sat_type_names = [row[0] for row in self.db.cur.fetchall()]
-        self.sat_type_panel = SatTypePanel(self.sat_type_frame, types=sat_type_names)
-        self.sat_type_panel.pack(fill=tk.X, padx=5, pady=5)
-        self.selected_sat_types = set()
-        
-        # Notes section
-        self.notes_frame = ttk.LabelFrame(self.left_panel, text="Notes")
-        self.notes_frame.pack(fill=tk.X, padx=5, pady=5)
-        
-        # Set fixed width and height for notes
-        self.notes_text = tk.Text(self.notes_frame, height=4, width=30, wrap=tk.WORD)
-        self.notes_text.pack(fill=tk.X, padx=5, pady=5)
-        
-        # Answer section with save button
-        self.answer_frame = ttk.LabelFrame(self.left_panel, text="Answer")
-        self.answer_frame.pack(fill=tk.X, padx=5, pady=5)
-        
-        # Create a frame for answer and save button
-        answer_container = ttk.Frame(self.answer_frame)
-        answer_container.pack(fill=tk.X, padx=5, pady=5)
-        
-        # Save Problem button (now to the left of answer field)
-        self.save_problem_button = ttk.Button(
-            answer_container,
-            text="Save Problem",
-            command=self.save_problem_and_types
-        )
-        self.save_problem_button.pack(side=tk.LEFT, padx=(0,5))
-        
-        # Answer entry with reduced width
-        self.answer_text = ttk.Entry(answer_container, width=20)
-        self.answer_text.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(5,0))
+        # Entry fields row
+        entry_row = ctk.CTkFrame(self.left_panel, fg_color=LEFT_PANEL_BG)
+        entry_row.pack(pady=(10, 5), fill="x")
+        ctk.CTkLabel(entry_row, text="Problem ID", font=bold_font, text_color=HEADER_TEXT).pack(side="left", padx=(0, 4))
+        self.problem_id_entry = ctk.CTkEntry(entry_row, width=70, font=entry_font)
+        self.problem_id_entry.pack(side="left", padx=(0, 14))
+        ctk.CTkLabel(entry_row, text="Search Text", font=bold_font, text_color=HEADER_TEXT).pack(side="left", padx=(0, 4))
+        self.search_text_entry = ctk.CTkEntry(entry_row, width=140, font=entry_font)
+        self.search_text_entry.pack(side="left", padx=(0, 14))
+        ctk.CTkLabel(entry_row, text="Answer", font=bold_font, text_color=HEADER_TEXT).pack(side="left", padx=(0, 4))
+        self.answer_text = ctk.CTkEntry(entry_row, width=180, font=entry_font)
+        self.answer_text.pack(side="left")
+
+        # SAT Problem Types
+        ctk.CTkLabel(self.left_panel, text="SAT Problem Types", font=header_font, text_color=HEADER_TEXT).pack(anchor="w", padx=10, pady=(15, 2))
+        sat_types_row = ctk.CTkFrame(self.left_panel, fg_color=LEFT_PANEL_BG)
+        sat_types_row.pack(anchor="w", padx=10, pady=(0, 10))
+        self.sat_type_vars = {}
+        for label in ["Efficiency", "Math Concept", "SAT Problem"]:
+            var = ctk.StringVar()
+            cb = ctk.CTkCheckBox(
+                sat_types_row,
+                text=label,
+                font=bold_font,
+                fg_color=BUTTON_BG,
+                border_color=BUTTON_HOVER,
+                text_color=HEADER_TEXT,
+                variable=var,
+                onvalue="1",
+                offvalue="0"
+            )
+            cb.pack(side="left", padx=16)
+            self.sat_type_vars[label] = var
+
+        # Math Domains (Categories) Section
+        ctk.CTkLabel(self.left_panel, text="Math Domains", font=header_font, text_color=HEADER_TEXT).pack(anchor="w", padx=10, pady=(10, 2))
+        domains_frame = ctk.CTkFrame(self.left_panel, fg_color=MATH_DOMAINS_BG, corner_radius=8, width=700, height=600)
+        domains_frame.pack(padx=10, pady=(0, 10))
+        domains_frame.pack_propagate(False)
+        self.category_panel = CategoryPanelCTk(domains_frame, on_category_click=self.on_category_click)
+        self.category_panel.pack(fill="x", padx=10, pady=10)
+
+        # Notes Section (moved below Math Domains)
+        ctk.CTkLabel(self.left_panel, text="Notes", font=header_font, text_color=HEADER_TEXT).pack(anchor="w", padx=10, pady=(10, 2))
+        self.notes_text = ctk.CTkTextbox(self.left_panel, width=660, height=140, font=(DEFAULT_FONT_FAMILY, DEFAULT_FONT_SIZE))
+        self.notes_text.pack(padx=10, pady=(0, 10), fill="x")
         
         # Create paned window for editor and preview
         self.paned_window = ttk.PanedWindow(self.content_frame, orient=tk.HORIZONTAL)
@@ -878,3 +860,57 @@ x = 2
             for t in self.sat_type_panel.get_selected_types():
                 self.db.add_problem_to_sat_type(self.current_problem_id, t)
         self.status_var.set("Problem and SAT types saved.")
+
+
+class CategoryPanelCTk(ctk.CTkFrame):
+    def __init__(self, parent, categories=None, on_category_click=None):
+        super().__init__(parent, fg_color=MATH_DOMAINS_BG)
+        self.categories = categories or []
+        self.on_category_click = on_category_click
+        self.buttons = {}
+        self.selected_categories = set()
+        self.build_panel()
+
+    def build_panel(self):
+        # Remove old buttons
+        for btn in self.buttons.values():
+            btn.destroy()
+        self.buttons.clear()
+        # Display as a grid, 2 columns
+        for idx, cat in enumerate(self.categories):
+            btn = ctk.CTkButton(
+                self,
+                text=cat,
+                font=(DEFAULT_BOLD_FONT_FAMILY, DEFAULT_DOMAIN_BTN_FONT_SIZE, "bold"),
+                fg_color=MATH_DOMAINS_BTN_BG,
+                hover_color=MATH_DOMAINS_BTN_HOVER,
+                text_color=MATH_DOMAINS_BTN_TEXT,
+                corner_radius=8,
+                width=220,
+                height=40,
+                command=lambda c=cat: self.toggle_category(c)
+            )
+            btn.grid(row=idx//2, column=idx%2, padx=8, pady=4, sticky="ew")
+            self.buttons[cat] = btn
+
+    def update_display(self, categories):
+        self.categories = categories
+        self.build_panel()
+
+    def toggle_category(self, cat):
+        if cat in self.selected_categories:
+            self.selected_categories.remove(cat)
+            self.buttons[cat].configure(fg_color=MATH_DOMAINS_BTN_BG)
+        else:
+            self.selected_categories.add(cat)
+            self.buttons[cat].configure(fg_color=MATH_DOMAINS_BTN_HOVER)
+        if self.on_category_click:
+            self.on_category_click(cat)
+
+    def highlight_category(self, cat, selected):
+        if cat in self.buttons:
+            self.buttons[cat].configure(fg_color=MATH_DOMAINS_BTN_HOVER if selected else MATH_DOMAINS_BTN_BG)
+            if selected:
+                self.selected_categories.add(cat)
+            else:
+                self.selected_categories.discard(cat)
