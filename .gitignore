@@ -11,6 +11,7 @@ __pycache__/
 /junkdir/
 /exports/
 /tests/
+/temp_scripts/
 
 # LaTeX temporary files - excluded at root level
 /*.aux
