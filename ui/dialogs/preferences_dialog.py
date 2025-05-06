@@ -10,6 +10,7 @@ from tkinter import ttk, messagebox
 import json
 import os
 from pathlib import Path
+import customtkinter as ctk
 
 class PreferencesDialog:
     """Dialog for editing application preferences"""
@@ -46,6 +47,31 @@ class PreferencesDialog:
         # Create notebook for different settings categories
         notebook = ttk.Notebook(main_frame)
         notebook.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        
+        # Appearance settings tab
+        appearance_frame = ttk.Frame(notebook, padding=10)
+        notebook.add(appearance_frame, text="Appearance")
+        
+        # Theme setting
+        ttk.Label(appearance_frame, text="Theme:").grid(
+            row=0, column=0, sticky=tk.W, padx=5, pady=5)
+        
+        theme = self.config.get("appearance", {}).get("theme", "light")
+        self.theme_var = tk.StringVar(value=theme)
+        
+        theme_options = ttk.Combobox(
+            appearance_frame, 
+            textvariable=self.theme_var,
+            values=["light", "dark"],
+            state="readonly",
+            width=15
+        )
+        theme_options.grid(row=0, column=1, sticky=tk.W, padx=5, pady=5)
+        
+        # Add explanation for theme options
+        ttk.Label(appearance_frame, text="Choose between light and dark theme.\n"
+                                   "Changes will take effect after restarting the application.").grid(
+            row=1, column=0, columnspan=2, sticky=tk.W, padx=5, pady=5)
         
         # Image settings tab
         image_frame = ttk.Frame(notebook, padding=10)
@@ -264,55 +290,30 @@ class PreferencesDialog:
         self.dialog.geometry(f"+{x}+{y}")
     
     def save_preferences(self):
-        """Save the preferences and close the dialog"""
+        """Save preferences to configuration"""
         try:
-            # Validate inputs
-            try:
-                # Validate image height
-                height = self.height_var.get()
-                if height < 50 or height > 5000:
-                    raise ValueError("Height must be between 50 and 5000 pixels")
-                
-                # Validate editor font size
-                font_size = self.font_size_var.get()
-                if font_size < 8 or font_size > 36:
-                    raise ValueError("Editor font size must be between 8 and 36")
-                
-                # Validate preview font size
-                preview_font_size = self.preview_font_size_var.get()
-                if preview_font_size < 8 or preview_font_size > 24:
-                    raise ValueError("Preview font size must be between 8 and 24")
-                
-                # Validate figure indentation
-                indent_points = self.indent_var.get()
-                if indent_points < 0 or indent_points > 144:
-                    raise ValueError("Figure indentation must be between 0 and 144 points")
-                
-            except tk.TclError:
-                messagebox.showerror("Invalid Input", "Please enter valid numeric values")
-                return
-            
-            # Update configuration
-            if "image" not in self.config:
-                self.config["image"] = {}
-            
-            if "editor" not in self.config:
-                self.config["editor"] = {}
-                
-            if "preview" not in self.config:
-                self.config["preview"] = {}
-            
             # Update image settings
-            self.config["image"]["default_max_height"] = height
-            self.config["image"]["caption_behavior"] = self.caption_var.get()
-            self.config["image"]["indent_points"] = self.indent_var.get()
+            self.config["image"] = {
+                "default_max_height": self.height_var.get(),
+                "caption_behavior": self.caption_var.get(),
+                "indent_points": self.indent_var.get()
+            }
             
             # Update editor settings
-            self.config["editor"]["font_size"] = font_size
+            self.config["editor"] = {
+                "font_size": self.font_size_var.get()
+            }
             
             # Update preview settings
-            self.config["preview"]["font_size"] = preview_font_size
-            self.config["preview"]["font_family"] = self.preview_font_family_var.get()
+            self.config["preview"] = {
+                "font_size": self.preview_font_size_var.get(),
+                "font_family": self.preview_font_family_var.get()
+            }
+            
+            # Update appearance settings
+            self.config["appearance"] = {
+                "theme": self.theme_var.get()
+            }
             
             # Call the save callback if provided
             if self.on_save:
@@ -330,11 +331,14 @@ class PreferencesDialog:
             # Reset image settings
             self.height_var.set(800)
             self.caption_var.set("none")
-            self.indent_var.set(48)  # Set to your preferred default
+            self.indent_var.set(48)
             
             # Reset editor settings
             self.font_size_var.set(12)
             
             # Reset preview settings
-            self.preview_font_size_var.set(16)  # Set to your preferred default
-            self.preview_font_family_var.set("Carlito")  # Set to your preferred default
+            self.preview_font_size_var.set(16)
+            self.preview_font_family_var.set("Carlito")
+            
+            # Reset appearance settings
+            self.theme_var.set("light")

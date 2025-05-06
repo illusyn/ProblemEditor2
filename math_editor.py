@@ -29,28 +29,15 @@ from ui.menu_manager import MenuManager
 from ui.category_panel import CategoryPanel
 from db.math_db import MathProblemDB
 from ui.sat_type_panel import SatTypePanel
+from ui_qt.style_config import (
+    DEFAULT_FONT_FAMILY, DEFAULT_BOLD_FONT_FAMILY, DEFAULT_MONO_FONT_FAMILY,
+    DEFAULT_FONT_SIZE, DEFAULT_BOLD_FONT_SIZE, DEFAULT_HEADER_FONT_SIZE,
+    DEFAULT_ENTRY_FONT_SIZE, DEFAULT_DOMAIN_BTN_FONT_SIZE,
+    LEFT_PANEL_BG, MATH_DOMAINS_BG, MATH_DOMAINS_BTN_BG, MATH_DOMAINS_BTN_HOVER,
+    MATH_DOMAINS_BTN_TEXT, BUTTON_BG, BUTTON_HOVER, BUTTON_TEXT, HEADER_TEXT
+)
 
-# --- Color Variables ---
-LEFT_PANEL_BG = "#F3E7D3"
-MATH_DOMAINS_BG = "#D0BA96"
-MATH_DOMAINS_BTN_BG = "#FFFFFF"
-MATH_DOMAINS_BTN_HOVER = "#1976D2"
-MATH_DOMAINS_BTN_TEXT = "#664103"
-BUTTON_BG = "#D0BA96"
-BUTTON_HOVER = "#0336C0"
-BUTTON_TEXT = "#664103"
-HEADER_TEXT = "#664103"
-
-# --- Font Variables ---
-DEFAULT_FONT_FAMILY = "Segoe UI"
-DEFAULT_BOLD_FONT_FAMILY = "Segoe UI"
-DEFAULT_MONO_FONT_FAMILY = "Courier"
-
-DEFAULT_FONT_SIZE = 22
-DEFAULT_BOLD_FONT_SIZE = 22
-DEFAULT_HEADER_FONT_SIZE = 24
-DEFAULT_ENTRY_FONT_SIZE = 16
-DEFAULT_DOMAIN_BTN_FONT_SIZE = 22
+print("DEBUG: math_editor.py loaded")
 
 class MathEditor:
     """Main application class for the Simplified Math Editor"""
@@ -62,6 +49,7 @@ class MathEditor:
         Args:
             root: The root Tkinter window
         """
+        print("DEBUG: MathEditor __init__ called")
         self.root = root
         self.root.title("Simplified Math Editor")
         # Open in full screen mode
@@ -75,6 +63,11 @@ class MathEditor:
         
         # Initialize configuration manager
         self.config_manager = ConfigManager()
+        
+        # Apply theme from configuration
+        theme = self.config_manager.get_value("appearance", "theme", "light")
+        ctk.set_appearance_mode(theme)
+        ctk.set_default_color_theme("blue")
         
         # Initialize working directory - use exports folder under dev root instead of temp
         dev_root = Path(__file__).parent
@@ -161,9 +154,11 @@ class MathEditor:
         root.attributes('-topmost', True)
         root.after_idle(root.attributes, '-topmost', False)
 
-        # At the start of your main function or __init__:
-        ctk.set_appearance_mode("light")
-        ctk.set_default_color_theme("blue")
+        print("DEBUG: About to create SAT Problem Types label")
+        header_font = ctk.CTkFont(family=DEFAULT_FONT_FAMILY, size=DEFAULT_HEADER_FONT_SIZE, weight="bold")
+        print("DEBUG: DEFAULT_HEADER_FONT_SIZE =", DEFAULT_HEADER_FONT_SIZE)
+        print("DEBUG: header_font actual size =", header_font.cget('size'))
+        ctk.CTkLabel(self.left_panel, text="SAT Problem Types", font=header_font, text_color=HEADER_TEXT).pack(anchor="w", padx=10, pady=(15, 2))
 
     def set_initial_pane_position(self):
         """Set the initial position of the paned window divider"""
@@ -309,34 +304,8 @@ class MathEditor:
         header_font = ctk.CTkFont(family=DEFAULT_FONT_FAMILY, size=DEFAULT_HEADER_FONT_SIZE, weight="bold")
         entry_font = ctk.CTkFont(family=DEFAULT_FONT_FAMILY, size=DEFAULT_ENTRY_FONT_SIZE)
 
-        # First row of buttons
-        self.top_row = ctk.CTkFrame(self.left_panel, fg_color=LEFT_PANEL_BG)
-        self.top_row.pack(pady=5)
-        ctk.CTkButton(self.top_row, text="Reset", font=bold_font, fg_color=BUTTON_BG, hover_color=BUTTON_HOVER, text_color=BUTTON_TEXT, corner_radius=12, width=180, height=48, command=self.reset_form).pack(side="left", padx=8)
-        ctk.CTkButton(self.top_row, text="Save Problem", font=bold_font, fg_color=BUTTON_BG, hover_color=BUTTON_HOVER, text_color=BUTTON_TEXT, corner_radius=12, width=180, height=48, command=self.save_problem_and_types).pack(side="left", padx=8)
-        ctk.CTkButton(self.top_row, text="Delete Problem", font=bold_font, fg_color=BUTTON_BG, hover_color=BUTTON_HOVER, text_color=BUTTON_TEXT, corner_radius=12, width=180, height=48, command=self.delete_problem).pack(side="left", padx=8)
-
-        # Second row of buttons
-        self.bottom_row = ctk.CTkFrame(self.left_panel, fg_color=LEFT_PANEL_BG)
-        self.bottom_row.pack(pady=5)
-        ctk.CTkButton(self.bottom_row, text="Query", font=bold_font, fg_color=BUTTON_BG, hover_color=BUTTON_HOVER, text_color=BUTTON_TEXT, corner_radius=12, width=180, height=48, command=self.query_by_text).pack(side="left", padx=8)
-        ctk.CTkButton(self.bottom_row, text="Next Match", font=bold_font, fg_color=BUTTON_BG, hover_color=BUTTON_HOVER, text_color=BUTTON_TEXT, corner_radius=12, width=180, height=48, command=self.next_match).pack(side="left", padx=8)
-        ctk.CTkButton(self.bottom_row, text="Previous Match", font=bold_font, fg_color=BUTTON_BG, hover_color=BUTTON_HOVER, text_color=BUTTON_TEXT, corner_radius=12, width=180, height=48, command=self.previous_match).pack(side="left", padx=8)
-        
-        # Entry fields row
-        entry_row = ctk.CTkFrame(self.left_panel, fg_color=LEFT_PANEL_BG)
-        entry_row.pack(pady=(10, 5), fill="x")
-        ctk.CTkLabel(entry_row, text="Problem ID", font=bold_font, text_color=HEADER_TEXT).pack(side="left", padx=(0, 4))
-        self.problem_id_entry = ctk.CTkEntry(entry_row, width=70, font=entry_font)
-        self.problem_id_entry.pack(side="left", padx=(0, 14))
-        ctk.CTkLabel(entry_row, text="Search Text", font=bold_font, text_color=HEADER_TEXT).pack(side="left", padx=(0, 4))
-        self.search_text_entry = ctk.CTkEntry(entry_row, width=140, font=entry_font)
-        self.search_text_entry.pack(side="left", padx=(0, 14))
-        ctk.CTkLabel(entry_row, text="Answer", font=bold_font, text_color=HEADER_TEXT).pack(side="left", padx=(0, 4))
-        self.answer_text = ctk.CTkEntry(entry_row, width=180, font=entry_font)
-        self.answer_text.pack(side="left")
-
-        # SAT Problem Types
+        print("DEBUG: DEFAULT_HEADER_FONT_SIZE =", DEFAULT_HEADER_FONT_SIZE)
+        print("DEBUG: header_font actual size =", header_font.cget('size'))
         ctk.CTkLabel(self.left_panel, text="SAT Problem Types", font=header_font, text_color=HEADER_TEXT).pack(anchor="w", padx=10, pady=(15, 2))
         sat_types_row = ctk.CTkFrame(self.left_panel, fg_color=LEFT_PANEL_BG)
         sat_types_row.pack(anchor="w", padx=10, pady=(0, 10))

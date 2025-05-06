@@ -29,13 +29,12 @@ class ConfigManager:
         
         self.config_file = Path(config_file)
         
-   
         # In the default_config dictionary:
         self.default_config = {
             "image": {
                 "default_max_height": 800,
                 "caption_behavior": "none",
-                "indent_points": 48  # Add this new option for figure indentation
+                "indent_points": 48
             },
             "editor": {
                 "font_size": 12
@@ -43,6 +42,9 @@ class ConfigManager:
             "preview": {
                 "font_size": 16,
                 "font_family": "Carlito"
+            },
+            "appearance": {
+                "theme": "light"
             }
         }
         

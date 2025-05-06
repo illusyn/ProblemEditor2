@@ -68,7 +68,7 @@ class DatabaseInterface:
         
         # Problem ID display (read-only, for existing problems)
         if hasattr(self.editor, 'current_problem_id') and self.editor.current_problem_id:
-            ttk.Label(frame, text="Problem ID:").grid(row=0, column=0, sticky=tk.W, padx=5, pady=5)
+            ttk.Label(frame, text="Prob ID").grid(row=0, column=0, sticky=tk.W, padx=5, pady=5)
             problem_id_label = ttk.Label(frame, text=str(self.editor.current_problem_id))
             problem_id_label.grid(row=0, column=1, sticky=tk.W, padx=5, pady=5)
         

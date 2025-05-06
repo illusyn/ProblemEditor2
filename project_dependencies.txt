@@ -1,6 +1,6 @@
+config_loader.py
 converters\image_converter.py
 core\commands.py
-core\parser.py
 core\preview_manager.py
 db\math_db.py
 db\math_image_db.py
@@ -11,6 +11,7 @@ managers\config_manager.py
 managers\file_manager.py
 managers\image_manager.py
 managers\template_manager.py
+markdown_parser.py
 math_editor.py
 preview\latex_compiler.py
 preview\pdf_viewer.py
@@ -19,3 +20,5 @@ ui\category_panel.py
 ui\dialogs\image_adjustbox_dialog.py
 ui\dialogs\preferences_dialog.py
 ui\menu_manager.py
+ui\sat_type_panel.py
+ui_qt\style_config.py
