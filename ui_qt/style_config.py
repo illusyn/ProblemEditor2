@@ -1,18 +1,19 @@
 # Centralized style configuration for the Math Editor UI
 
 # Font settings
-FONT_FAMILY = "Courier"  # Changed to Segoe UI for better readability
+FONT_FAMILY = "Courier"  # Base font family
+FONT_WEIGHT = "Bold"     # Base font weight
 LABEL_FONT_SIZE = 14
 SECTION_LABEL_FONT_SIZE = 17
 BUTTON_FONT_SIZE = 17
 ENTRY_FONT_SIZE = 16
 NOTES_FONT_SIZE = 16
 SAT_TYPE_FONT_SIZE = 18
-DOMAIN_BTN_FONT_SIZE = 15
+DOMAIN_BTN_FONT_SIZE = 16
 ENTRY_LABEL_FONT_SIZE = 17
 
 # Base colors
-BASE_FONT_COLOR = "#333333"  # Darker text for better contrast
+BASE_FONT_COLOR = "#664103"  # Darker text for better contrast
 LABEL_FONT_COLOR = BASE_FONT_COLOR
 SECTION_LABEL_FONT_COLOR = BASE_FONT_COLOR
 BUTTON_FONT_COLOR = BASE_FONT_COLOR
@@ -22,7 +23,7 @@ SAT_TYPE_FONT_COLOR = BASE_FONT_COLOR
 
 # Neumorphic theme variables
 NEUMORPH_BG_COLOR = "#f0f0f3"  # Main panel and widget background
-NEUMORPH_SHADOW_DARK = "#b8b9be"  # Shadow color for depth
+NEUMORPH_SHADOW_DARK = "#c4c2b8"  # Warmer shadow color for depth
 NEUMORPH_SHADOW_LIGHT = "#ffffff"  # Highlight color for raised effect
 NEUMORPH_TEXT_COLOR = BASE_FONT_COLOR
 NEUMORPH_GRADIENT_START = "#f7f7fa"
@@ -64,7 +65,7 @@ MATH_DOMAINS_BTN_HOVER = "#f2f2f2"
 MATH_DOMAINS_BTN_TEXT = BASE_FONT_COLOR
 
 # Left Panel specific
-LEFT_PANEL_WIDTH = 820
+LEFT_PANEL_WIDTH = 880
 LEFT_PANEL_BG = NEUMORPH_BG_COLOR
 LEFT_PANEL_PADDING = PADDING
 LEFT_PANEL_SPACING = SPACING

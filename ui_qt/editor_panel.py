@@ -14,4 +14,22 @@ class EditorPanel(QWidget):
         self.text_edit.setMinimumSize(400, 300)
         font = QFont(font_family, font_size)
         self.text_edit.setFont(font)
-        layout.addWidget(self.text_edit) 
+        layout.addWidget(self.text_edit)
+
+    def get_content(self):
+        """
+        Get the current content of the editor
+        
+        Returns:
+            str: The current text content
+        """
+        return self.text_edit.toPlainText()
+
+    def set_content(self, content):
+        """
+        Set the content of the editor
+        
+        Args:
+            content (str): The text content to set
+        """
+        self.text_edit.setPlainText(content) 

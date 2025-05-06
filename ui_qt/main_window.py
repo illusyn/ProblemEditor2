@@ -7,6 +7,7 @@ from ui_qt.left_panel import LeftPanel
 from ui_qt.editor_panel import EditorPanel
 from ui_qt.preview_panel import PreviewPanel
 from db.problem_database import ProblemDatabase
+from managers.file_manager_qt import FileManager
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -14,30 +15,32 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("Simplified Math Editor (PyQt5)")
         self.setGeometry(100, 100, 1200, 800)
 
+        # Initialize file manager
+        self.file_manager = FileManager(self)
+
         # Menu bar
         menubar = QMenuBar(self)
         file_menu = menubar.addMenu("File")
 
+        new_action = QAction("New", self)
+        new_action.triggered.connect(self.file_manager.new_file)
+        file_menu.addAction(new_action)
+
         open_action = QAction("Open", self)
-        open_action.triggered.connect(self.open_file)
+        open_action.triggered.connect(self.file_manager.open_file)
         file_menu.addAction(open_action)
 
+        save_action = QAction("Save", self)
+        save_action.triggered.connect(self.file_manager.save_file)
+        file_menu.addAction(save_action)
+
         saveas_action = QAction("Save As...", self)
-        saveas_action.triggered.connect(self.save_file_as)
+        saveas_action.triggered.connect(self.file_manager.save_as)
         file_menu.addAction(saveas_action)
 
-        # Additional message box demo actions
-        info_action = QAction("Show Info", self)
-        info_action.triggered.connect(self.show_info_box)
-        file_menu.addAction(info_action)
-
-        error_action = QAction("Show Error", self)
-        error_action.triggered.connect(self.show_error_box)
-        file_menu.addAction(error_action)
-
-        question_action = QAction("Ask Question", self)
-        question_action.triggered.connect(self.ask_question_box)
-        file_menu.addAction(question_action)
+        export_action = QAction("Export to PDF...", self)
+        export_action.triggered.connect(self.file_manager.export_to_pdf)
+        file_menu.addAction(export_action)
 
         self.setMenuBar(menubar)
 
@@ -81,44 +84,15 @@ class MainWindow(QMainWindow):
         self.current_results = []
         self.current_result_index = -1
 
-    def open_file(self):
-        filename, _ = QFileDialog.getOpenFileName(self, "Open File", "", "All Files (*);;Text Files (*.txt)")
-        if filename:
-            try:
-                with open(filename, "r", encoding="utf-8") as f:
-                    text = f.read()
-                self.editor_panel.text_edit.setPlainText(text)
-                QMessageBox.information(self, "File Opened", f"Loaded file: {filename}")
-            except Exception as e:
-                QMessageBox.critical(self, "Error", f"Failed to open file:\n{e}")
-
-    def save_file_as(self):
-        filename, _ = QFileDialog.getSaveFileName(self, "Save File As", "", "All Files (*);;Text Files (*.txt)")
-        if filename:
-            try:
-                text = self.editor_panel.text_edit.toPlainText()
-                with open(filename, "w", encoding="utf-8") as f:
-                    f.write(text)
-                QMessageBox.information(self, "File Saved", f"Saved to: {filename}")
-            except Exception as e:
-                QMessageBox.critical(self, "Error", f"Failed to save file:\n{e}")
+        # Status bar
+        self.status_bar = self.statusBar()
+        self.status_bar.showMessage("Ready")
 
     def update_preview(self):
+        """Update the preview with current editor content"""
         text = self.editor_panel.text_edit.toPlainText()
-        self.preview_panel.preview_label.setText(text)
-
-    def show_info_box(self):
-        QMessageBox.information(self, "Information", "This is an information message.")
-
-    def show_error_box(self):
-        QMessageBox.critical(self, "Error", "This is an error message.")
-
-    def ask_question_box(self):
-        result = QMessageBox.question(self, "Question", "Do you want to continue?")
-        if result == QMessageBox.Yes:
-            QMessageBox.information(self, "Result", "You chose Yes.")
-        else:
-            QMessageBox.information(self, "Result", "You chose No.")
+        self.preview_panel.update_preview(text)
+        self.status_bar.showMessage("Preview updated")
 
     def on_query(self):
         search_text = self.left_panel.get_search_text().strip().lower()

@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import QGraphicsDropShadowEffect
 from PyQt5.QtCore import Qt
 from ui_qt.category_panel import CategoryPanelQt
 from ui_qt.sat_type_panel import SatTypePanelQt
-from ui_qt.style_config import (FONT_FAMILY, LABEL_FONT_SIZE, SECTION_LABEL_FONT_SIZE, BUTTON_FONT_SIZE, ENTRY_FONT_SIZE, NOTES_FONT_SIZE, NEUMORPH_TEXT_COLOR, NEUMORPH_BG_COLOR, NEUMORPH_SHADOW_DARK, NEUMORPH_SHADOW_LIGHT, NEUMORPH_GRADIENT_START, NEUMORPH_GRADIENT_END, NEUMORPH_RADIUS, BUTTON_BORDER_RADIUS, BUTTON_BG_COLOR, BUTTON_FONT_COLOR, ENTRY_BORDER_RADIUS, ENTRY_BG_COLOR, ENTRY_FONT_COLOR, NOTES_BG_COLOR, NOTES_FONT_COLOR, NOTES_BORDER_RADIUS, SAT_TYPE_FONT_COLOR, SAT_TYPE_FONT_SIZE, DOMAIN_BTN_FONT_SIZE, CONTROL_BTN_WIDTH, ENTRY_LABEL_FONT_SIZE)
+from ui_qt.style_config import (FONT_FAMILY, FONT_WEIGHT, LABEL_FONT_SIZE, SECTION_LABEL_FONT_SIZE, BUTTON_FONT_SIZE, ENTRY_FONT_SIZE, NOTES_FONT_SIZE, NEUMORPH_TEXT_COLOR, NEUMORPH_BG_COLOR, NEUMORPH_SHADOW_DARK, NEUMORPH_SHADOW_LIGHT, NEUMORPH_GRADIENT_START, NEUMORPH_GRADIENT_END, NEUMORPH_RADIUS, BUTTON_BORDER_RADIUS, BUTTON_BG_COLOR, BUTTON_FONT_COLOR, ENTRY_BORDER_RADIUS, ENTRY_BG_COLOR, ENTRY_FONT_COLOR, NOTES_BG_COLOR, NOTES_FONT_COLOR, NOTES_BORDER_RADIUS, SAT_TYPE_FONT_COLOR, SAT_TYPE_FONT_SIZE, DOMAIN_BTN_FONT_SIZE, CONTROL_BTN_WIDTH, ENTRY_LABEL_FONT_SIZE)
 
 class NeumorphicButton(QPushButton):
     def __init__(self, text, parent=None, radius=NEUMORPH_RADIUS, bg_color=NEUMORPH_BG_COLOR, shadow_dark=NEUMORPH_SHADOW_DARK, shadow_light=NEUMORPH_SHADOW_LIGHT, font_family=FONT_FAMILY, font_size=BUTTON_FONT_SIZE, font_color=BUTTON_FONT_COLOR):
@@ -65,7 +65,7 @@ class NeumorphicEntry(QLineEdit):
         self.font_family = font_family
         self.font_size = font_size
         self.font_color = font_color
-        self.setFont(QFont(self.font_family, self.font_size))
+        self.setFont(QFont(self.font_family, self.font_size, QFont.Bold))
         self.setStyleSheet(f"background: transparent; border: none; color: {self.font_color}; padding-left: 14px;")
         self.setMinimumHeight(44)
 
@@ -139,9 +139,9 @@ class NeumorphicTextEdit(QTextEdit):
         self.font_family = font_family
         self.font_size = font_size
         self.font_color = font_color
-        self.setFont(QFont(self.font_family, self.font_size))
+        self.setFont(QFont(self.font_family, self.font_size, QFont.Bold))
         self.setStyleSheet(f"background: transparent; border: none; color: {self.font_color}; padding: 16px;")
-        self.setMinimumHeight(100)
+        self.setFixedHeight(75)  # Set both minimum and maximum height to 75 pixels
 
     def paintEvent(self, event):
         painter = QPainter(self.viewport())
@@ -185,9 +185,9 @@ class LeftPanel(QWidget):
             row1.addWidget(btn)
         main_layout.addLayout(row1)
 
-        # Reduce the space between row1 and row2 by 20%
-        # If the default spacing is 28 (from main_layout.setSpacing(28)), use 22
-        main_layout.addSpacing(-6)  # 28 * 0.2 = 5.6, so reduce by about 6px
+        # Reduce the space between row1 and row2 by 70% total
+        # If the default spacing is 28 (from main_layout.setSpacing(28)), reduce by 14px
+        main_layout.addSpacing(-14)  # Increased from -11 to -14 (30% more reduction)
 
         row2 = QHBoxLayout()
         for label in ["Query", "Next Match", "Previous Match"]:
@@ -218,7 +218,15 @@ class LeftPanel(QWidget):
             col.setSpacing(0)  # Remove spacing between label and entry
             lbl = QLabel(label)
             lbl.setFont(QFont(FONT_FAMILY, ENTRY_LABEL_FONT_SIZE, QFont.Bold))
-            lbl.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; padding-bottom: 4px;")
+            # Add padding-left based on the label
+            if label == "Search Text":
+                padding = "padding-left: 16px; padding-bottom: 4px;"
+            elif label == "Answer":
+                padding = "padding-left: 50px; padding-bottom: 4px;"
+            else:
+                padding = "padding-bottom: 4px;"
+            lbl.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; {padding}")
+            lbl.setAlignment(Qt.AlignCenter)  # Center the label horizontally
             col.addWidget(lbl)
             col.addWidget(entry)
             input_row.addLayout(col)
@@ -256,13 +264,13 @@ class LeftPanel(QWidget):
         domain_scroll.setWidgetResizable(True)
         domain_content = QWidget()
         domain_layout = QGridLayout(domain_content)
-        domain_layout.setSpacing(18)
+        domain_layout.setSpacing(13)  # Reduced from 18 to 13 (30% less)
         self.category_panel = CategoryPanelQt()
         for idx, cat in enumerate(self.category_panel.categories):
             btn = self.create_neumorphic_button(cat["name"], font_size=DOMAIN_BTN_FONT_SIZE)
             btn.setCheckable(True)
             btn.setMinimumWidth(220)
-            btn.setMinimumHeight(48)
+            btn.setMinimumHeight(58)
             btn.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR};")
             btn.clicked.connect(lambda checked, cid=cat["category_id"]: self.category_panel.toggle_category(cid))
             domain_layout.addWidget(btn, idx // 2, idx % 2)

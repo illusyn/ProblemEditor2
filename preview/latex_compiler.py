@@ -9,7 +9,16 @@ import os
 import subprocess
 import tempfile
 from pathlib import Path
-from editor import clean_pasted_text
+
+def clean_pasted_text(text):
+    """Clean text pasted from various sources"""
+    if not text:
+        return text
+    # Replace Windows line endings
+    text = text.replace('\r\n', '\n')
+    # Replace other line endings
+    text = text.replace('\r', '\n')
+    return text
 
 class LaTeXCompiler:
     """Handles compiling LaTeX documents to PDF"""
