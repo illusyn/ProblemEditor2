@@ -4,9 +4,10 @@ Editor panel for the Simplified Math Editor (PyQt5).
 
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QTextEdit
 from PyQt5.QtGui import QFont
+from ui_qt.style_config import EDITOR_FONT_FAMILY, EDITOR_FONT_SIZE
 
 class EditorPanel(QWidget):
-    def __init__(self, parent=None, font_family="Courier", font_size=14):
+    def __init__(self, parent=None, font_family=EDITOR_FONT_FAMILY, font_size=EDITOR_FONT_SIZE):
         super().__init__(parent)
         layout = QVBoxLayout(self)
         layout.addWidget(QLabel("Editor"))

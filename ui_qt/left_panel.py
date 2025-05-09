@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import QGraphicsDropShadowEffect
 from PyQt5.QtCore import Qt
 from ui_qt.category_panel import CategoryPanelQt
 from ui_qt.sat_type_panel import SatTypePanelQt
-from ui_qt.style_config import (FONT_FAMILY, FONT_WEIGHT, LABEL_FONT_SIZE, SECTION_LABEL_FONT_SIZE, BUTTON_FONT_SIZE, ENTRY_FONT_SIZE, NOTES_FONT_SIZE, NEUMORPH_TEXT_COLOR, NEUMORPH_BG_COLOR, NEUMORPH_SHADOW_DARK, NEUMORPH_SHADOW_LIGHT, NEUMORPH_GRADIENT_START, NEUMORPH_GRADIENT_END, NEUMORPH_RADIUS, BUTTON_BORDER_RADIUS, BUTTON_BG_COLOR, BUTTON_FONT_COLOR, ENTRY_BORDER_RADIUS, ENTRY_BG_COLOR, ENTRY_FONT_COLOR, NOTES_BG_COLOR, NOTES_FONT_COLOR, NOTES_BORDER_RADIUS, SAT_TYPE_FONT_COLOR, SAT_TYPE_FONT_SIZE, DOMAIN_BTN_FONT_SIZE, CONTROL_BTN_WIDTH, ENTRY_LABEL_FONT_SIZE)
+from ui_qt.style_config import (FONT_FAMILY, FONT_WEIGHT, LABEL_FONT_SIZE, SECTION_LABEL_FONT_SIZE, BUTTON_FONT_SIZE, ENTRY_FONT_SIZE, NOTES_FONT_SIZE, NEUMORPH_TEXT_COLOR, NEUMORPH_BG_COLOR, NEUMORPH_SHADOW_DARK, NEUMORPH_SHADOW_LIGHT, NEUMORPH_GRADIENT_START, NEUMORPH_GRADIENT_END, NEUMORPH_RADIUS, BUTTON_BORDER_RADIUS, BUTTON_BG_COLOR, BUTTON_FONT_COLOR, ENTRY_BORDER_RADIUS, ENTRY_BG_COLOR, ENTRY_FONT_COLOR, NOTES_BG_COLOR, NOTES_FONT_COLOR, NOTES_BORDER_RADIUS, SAT_TYPE_FONT_COLOR, SAT_TYPE_FONT_SIZE, DOMAIN_BTN_FONT_SIZE, CONTROL_BTN_WIDTH, ENTRY_LABEL_FONT_SIZE, PROB_ID_ENTRY_WIDTH, SEARCH_TEXT_ENTRY_WIDTH, ANSWER_ENTRY_WIDTH, SEARCH_TEXT_LABEL_PADDING, ANSWER_LABEL_PADDING, DEFAULT_LABEL_PADDING, ROW_SPACING_REDUCTION, NOTES_FIXED_HEIGHT, PADDING, SPACING, LEFT_PANEL_WIDTH, DOMAIN_GRID_SPACING, DOMAIN_BTN_WIDTH, DOMAIN_BTN_HEIGHT, SECTION_LABEL_PADDING_TOP, BUTTON_MIN_WIDTH, BUTTON_MIN_HEIGHT, ENTRY_MIN_HEIGHT, ENTRY_PADDING_LEFT, TEXTEDIT_PADDING, SHADOW_RECT_ADJUST, SHADOW_OFFSETS)
 
 class NeumorphicButton(QPushButton):
     def __init__(self, text, parent=None, radius=NEUMORPH_RADIUS, bg_color=NEUMORPH_BG_COLOR, shadow_dark=NEUMORPH_SHADOW_DARK, shadow_light=NEUMORPH_SHADOW_LIGHT, font_family=FONT_FAMILY, font_size=BUTTON_FONT_SIZE, font_color=BUTTON_FONT_COLOR):
@@ -24,22 +24,22 @@ class NeumorphicButton(QPushButton):
         self.font_color = font_color
         self.setFont(QFont(self.font_family, self.font_size, QFont.Bold))
         self.setStyleSheet("background: transparent; border: none;")
-        self.setMinimumHeight(56)
-        self.setMinimumWidth(140)
+        self.setMinimumHeight(BUTTON_MIN_HEIGHT)
+        self.setMinimumWidth(BUTTON_MIN_WIDTH)
 
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
-        rect = self.rect().adjusted(8, 8, -8, -8)
+        rect = self.rect().adjusted(SHADOW_RECT_ADJUST, SHADOW_RECT_ADJUST, -SHADOW_RECT_ADJUST, -SHADOW_RECT_ADJUST)
         # Multi-layered blurred shadow (bottom-right)
-        for i, alpha in zip([8, 6, 4], [40, 60, 90]):
+        for i, alpha in zip(SHADOW_OFFSETS, [40, 60, 90]):
             shadow = QColor(self.shadow_dark)
             shadow.setAlpha(alpha)
             painter.setBrush(QBrush(shadow))
             painter.setPen(Qt.NoPen)
             painter.drawRoundedRect(rect.translated(i, i), self.radius, self.radius)
         # Multi-layered highlight (top-left)
-        for i, alpha in zip([8, 6, 4], [30, 50, 80]):
+        for i, alpha in zip(SHADOW_OFFSETS, [30, 50, 80]):
             highlight = QColor(self.shadow_light)
             highlight.setAlpha(alpha)
             painter.setBrush(QBrush(highlight))
@@ -66,21 +66,21 @@ class NeumorphicEntry(QLineEdit):
         self.font_size = font_size
         self.font_color = font_color
         self.setFont(QFont(self.font_family, self.font_size, QFont.Bold))
-        self.setStyleSheet(f"background: transparent; border: none; color: {self.font_color}; padding-left: 14px;")
-        self.setMinimumHeight(44)
+        self.setStyleSheet(f"background: transparent; border: none; color: {self.font_color}; padding-left: {ENTRY_PADDING_LEFT}px;")
+        self.setMinimumHeight(ENTRY_MIN_HEIGHT)
 
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
-        rect = self.rect().adjusted(8, 8, -8, -8)
+        rect = self.rect().adjusted(SHADOW_RECT_ADJUST, SHADOW_RECT_ADJUST, -SHADOW_RECT_ADJUST, -SHADOW_RECT_ADJUST)
         # Sunken effect: shadow top-left, highlight bottom-right
-        for i, alpha in zip([8, 6, 4], [40, 60, 90]):
+        for i, alpha in zip(SHADOW_OFFSETS, [40, 60, 90]):
             shadow = QColor(self.shadow_dark)
             shadow.setAlpha(alpha)
             painter.setBrush(QBrush(shadow))
             painter.setPen(Qt.NoPen)
             painter.drawRoundedRect(rect.translated(-i, -i), self.radius, self.radius)
-        for i, alpha in zip([8, 6, 4], [30, 50, 80]):
+        for i, alpha in zip(SHADOW_OFFSETS, [30, 50, 80]):
             highlight = QColor(self.shadow_light)
             highlight.setAlpha(alpha)
             painter.setBrush(QBrush(highlight))
@@ -107,16 +107,16 @@ class NeumorphicScrollArea(QScrollArea):
     def paintEvent(self, event):
         painter = QPainter(self.viewport())
         painter.setRenderHint(QPainter.Antialiasing)
-        rect = self.rect().adjusted(8, 8, -8, -8)
+        rect = self.rect().adjusted(SHADOW_RECT_ADJUST, SHADOW_RECT_ADJUST, -SHADOW_RECT_ADJUST, -SHADOW_RECT_ADJUST)
         # Multi-layered blurred shadow (bottom-right)
-        for i, alpha in zip([8, 6, 4], [40, 60, 90]):
+        for i, alpha in zip(SHADOW_OFFSETS, [40, 60, 90]):
             shadow = QColor(self.shadow_dark)
             shadow.setAlpha(alpha)
             painter.setBrush(QBrush(shadow))
             painter.setPen(Qt.NoPen)
             painter.drawRoundedRect(rect.translated(i, i), self.radius, self.radius)
         # Multi-layered highlight (top-left)
-        for i, alpha in zip([8, 6, 4], [30, 50, 80]):
+        for i, alpha in zip(SHADOW_OFFSETS, [30, 50, 80]):
             highlight = QColor(self.shadow_light)
             highlight.setAlpha(alpha)
             painter.setBrush(QBrush(highlight))
@@ -140,22 +140,22 @@ class NeumorphicTextEdit(QTextEdit):
         self.font_size = font_size
         self.font_color = font_color
         self.setFont(QFont(self.font_family, self.font_size, QFont.Bold))
-        self.setStyleSheet(f"background: transparent; border: none; color: {self.font_color}; padding: 16px;")
-        self.setFixedHeight(75)  # Set both minimum and maximum height to 75 pixels
+        self.setStyleSheet(f"background: transparent; border: none; color: {self.font_color}; padding: {TEXTEDIT_PADDING}px;")
+        self.setFixedHeight(NOTES_FIXED_HEIGHT)  # Use centralized height
 
     def paintEvent(self, event):
         painter = QPainter(self.viewport())
         painter.setRenderHint(QPainter.Antialiasing)
-        rect = self.rect().adjusted(8, 8, -8, -8)
+        rect = self.rect().adjusted(SHADOW_RECT_ADJUST, SHADOW_RECT_ADJUST, -SHADOW_RECT_ADJUST, -SHADOW_RECT_ADJUST)
         # Multi-layered blurred shadow (bottom-right)
-        for i, alpha in zip([8, 6, 4], [40, 60, 90]):
+        for i, alpha in zip(SHADOW_OFFSETS, [40, 60, 90]):
             shadow = QColor(self.shadow_dark)
             shadow.setAlpha(alpha)
             painter.setBrush(QBrush(shadow))
             painter.setPen(Qt.NoPen)
             painter.drawRoundedRect(rect.translated(i, i), self.radius, self.radius)
         # Multi-layered highlight (top-left)
-        for i, alpha in zip([8, 6, 4], [30, 50, 80]):
+        for i, alpha in zip(SHADOW_OFFSETS, [30, 50, 80]):
             highlight = QColor(self.shadow_light)
             highlight.setAlpha(alpha)
             painter.setBrush(QBrush(highlight))
@@ -171,11 +171,11 @@ class NeumorphicTextEdit(QTextEdit):
 class LeftPanel(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setFixedWidth(820)
+        self.setFixedWidth(LEFT_PANEL_WIDTH)
         self.setStyleSheet(f"background-color: {NEUMORPH_BG_COLOR};")
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(40, 40, 40, 40)
-        main_layout.setSpacing(28)
+        main_layout.setContentsMargins(PADDING, PADDING, PADDING, PADDING)
+        main_layout.setSpacing(SPACING)
 
         # --- Top 2 Rows of Buttons ---
         row1 = QHBoxLayout()
@@ -185,9 +185,8 @@ class LeftPanel(QWidget):
             row1.addWidget(btn)
         main_layout.addLayout(row1)
 
-        # Reduce the space between row1 and row2 by 70% total
-        # If the default spacing is 28 (from main_layout.setSpacing(28)), reduce by 14px
-        main_layout.addSpacing(-14)  # Increased from -11 to -14 (30% more reduction)
+        # Reduce the space between row1 and row2
+        main_layout.addSpacing(ROW_SPACING_REDUCTION)
 
         row2 = QHBoxLayout()
         for label in ["Query", "Next Match", "Previous Match"]:
@@ -204,10 +203,10 @@ class LeftPanel(QWidget):
         self.search_text_entry = self.create_neumorphic_entry()
         self.answer_entry = self.create_neumorphic_entry()
         
-        # Set fixed widths for each entry field
-        self.problem_id_entry.setFixedWidth(120)  # Short width for Problem ID
-        self.search_text_entry.setFixedWidth(280)  # Medium width for Search Text
-        self.answer_entry.setFixedWidth(320)  # Longer width for Answer
+        # Set fixed widths for each entry field using centralized values
+        self.problem_id_entry.setFixedWidth(PROB_ID_ENTRY_WIDTH)
+        self.search_text_entry.setFixedWidth(SEARCH_TEXT_ENTRY_WIDTH)
+        self.answer_entry.setFixedWidth(ANSWER_ENTRY_WIDTH)
         
         # Create labels and entries with their respective widths
         labels = ["Prob ID", "Search Text", "Answer"]
@@ -218,13 +217,13 @@ class LeftPanel(QWidget):
             col.setSpacing(0)  # Remove spacing between label and entry
             lbl = QLabel(label)
             lbl.setFont(QFont(FONT_FAMILY, ENTRY_LABEL_FONT_SIZE, QFont.Bold))
-            # Add padding-left based on the label
+            # Use centralized padding values
             if label == "Search Text":
-                padding = "padding-left: 16px; padding-bottom: 4px;"
+                padding = SEARCH_TEXT_LABEL_PADDING
             elif label == "Answer":
-                padding = "padding-left: 50px; padding-bottom: 4px;"
+                padding = ANSWER_LABEL_PADDING
             else:
-                padding = "padding-bottom: 4px;"
+                padding = DEFAULT_LABEL_PADDING
             lbl.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; {padding}")
             lbl.setAlignment(Qt.AlignCenter)  # Center the label horizontally
             col.addWidget(lbl)
@@ -235,7 +234,7 @@ class LeftPanel(QWidget):
         # --- SAT Problem Types ---
         sat_label = QLabel("SAT Problem Types")
         sat_label.setFont(QFont(FONT_FAMILY, SECTION_LABEL_FONT_SIZE, QFont.Bold))
-        sat_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; padding-top: 10px;")
+        sat_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; {SECTION_LABEL_PADDING_TOP}")
         main_layout.addWidget(sat_label)
         sat_types = QHBoxLayout()
         self.sat_type_panel = SatTypePanelQt()
@@ -256,7 +255,7 @@ class LeftPanel(QWidget):
         # --- Math Domains ---
         domains_label = QLabel("Math Domains")
         domains_label.setFont(QFont(FONT_FAMILY, SECTION_LABEL_FONT_SIZE, QFont.Bold))
-        domains_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; padding-top: 10px;")
+        domains_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; {SECTION_LABEL_PADDING_TOP}")
         main_layout.addWidget(domains_label)
 
         # Scrollable domain grid with neumorphic background
@@ -264,13 +263,13 @@ class LeftPanel(QWidget):
         domain_scroll.setWidgetResizable(True)
         domain_content = QWidget()
         domain_layout = QGridLayout(domain_content)
-        domain_layout.setSpacing(13)  # Reduced from 18 to 13 (30% less)
+        domain_layout.setSpacing(DOMAIN_GRID_SPACING)
         self.category_panel = CategoryPanelQt()
         for idx, cat in enumerate(self.category_panel.categories):
             btn = self.create_neumorphic_button(cat["name"], font_size=DOMAIN_BTN_FONT_SIZE)
             btn.setCheckable(True)
-            btn.setMinimumWidth(220)
-            btn.setMinimumHeight(58)
+            btn.setMinimumWidth(DOMAIN_BTN_WIDTH)
+            btn.setMinimumHeight(DOMAIN_BTN_HEIGHT)
             btn.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR};")
             btn.clicked.connect(lambda checked, cid=cat["category_id"]: self.category_panel.toggle_category(cid))
             domain_layout.addWidget(btn, idx // 2, idx % 2)
@@ -282,7 +281,7 @@ class LeftPanel(QWidget):
         # --- Notes ---
         notes_label = QLabel("Notes")
         notes_label.setFont(QFont(FONT_FAMILY, SECTION_LABEL_FONT_SIZE, QFont.Bold))
-        notes_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; padding-top: 10px;")
+        notes_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; {SECTION_LABEL_PADDING_TOP}")
         main_layout.addWidget(notes_label)
         self.notes_text = NeumorphicTextEdit()
         main_layout.addWidget(self.notes_text)

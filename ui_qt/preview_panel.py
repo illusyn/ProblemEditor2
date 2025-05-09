@@ -8,6 +8,7 @@ from PyQt5.QtGui import QPixmap
 from managers.preview_manager_qt import PreviewManager
 import fitz  # PyMuPDF
 import os
+from ui_qt.style_config import PREVIEW_LABEL_MIN_WIDTH, PREVIEW_LABEL_MIN_HEIGHT
 
 class PreviewPanel(QWidget):
     def __init__(self, parent=None):
@@ -23,7 +24,7 @@ class PreviewPanel(QWidget):
         # Create preview label
         self.preview_label = QLabel("[Preview output will appear here]")
         self.preview_label.setAlignment(Qt.AlignCenter)
-        self.preview_label.setMinimumSize(400, 300)
+        self.preview_label.setMinimumSize(PREVIEW_LABEL_MIN_WIDTH, PREVIEW_LABEL_MIN_HEIGHT)
         
         # Add preview label to scroll area
         scroll_area.setWidget(self.preview_label)

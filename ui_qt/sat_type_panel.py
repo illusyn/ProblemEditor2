@@ -4,7 +4,7 @@ SAT Problem Type panel for the Simplified Math Editor (PyQt5).
 
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QCheckBox
 from PyQt5.QtGui import QFont
-from ui_qt.style_config import FONT_FAMILY, SAT_TYPE_FONT_SIZE, SAT_TYPE_FONT_COLOR
+from ui_qt.style_config import FONT_FAMILY, SAT_TYPE_FONT_SIZE, SAT_TYPE_FONT_COLOR, SAT_TYPE_PANEL_SPACING
 
 EXAMPLE_SAT_TYPES = [
     "Efficiency", "Math Concept", "SAT Problem"
@@ -16,7 +16,7 @@ class SatTypePanelQt(QWidget):
         self.types = types or EXAMPLE_SAT_TYPES
         self.checkboxes = {}
         layout = QVBoxLayout(self)
-        layout.setSpacing(6)
+        layout.setSpacing(SAT_TYPE_PANEL_SPACING)
         for t in self.types:
             cb = QCheckBox(t)
             cb.setFont(QFont(FONT_FAMILY, SAT_TYPE_FONT_SIZE, QFont.Bold))

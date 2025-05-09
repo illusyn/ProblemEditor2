@@ -5,6 +5,7 @@ Category panel for the Simplified Math Editor (PyQt5).
 from PyQt5.QtWidgets import QWidget, QGridLayout, QPushButton
 from PyQt5.QtCore import Qt
 from db.problem_database import ProblemDatabase
+from ui_qt.style_config import CATEGORY_BTN_WIDTH, CATEGORY_BTN_HEIGHT, CATEGORY_BTN_SELECTED_COLOR, CATEGORY_PANEL_SPACING
 
 class CategoryPanelQt(QWidget):
     def __init__(self, categories=None, parent=None):
@@ -17,12 +18,12 @@ class CategoryPanelQt(QWidget):
         self.selected = set()  # store category_id
         self.buttons = {}      # key: category_id, value: button
         layout = QGridLayout(self)
-        layout.setSpacing(8)
+        layout.setSpacing(CATEGORY_PANEL_SPACING)
         for idx, cat in enumerate(self.categories):
             btn = QPushButton(cat["name"])
             btn.setCheckable(True)
-            btn.setMinimumWidth(120)
-            btn.setMinimumHeight(32)
+            btn.setMinimumWidth(CATEGORY_BTN_WIDTH)
+            btn.setMinimumHeight(CATEGORY_BTN_HEIGHT)
             btn.clicked.connect(lambda checked, cid=cat["category_id"]: self.toggle_category(cid))
             layout.addWidget(btn, idx // 2, idx % 2)
             self.buttons[cat["category_id"]] = btn
@@ -31,7 +32,7 @@ class CategoryPanelQt(QWidget):
         btn = self.buttons[category_id]
         if btn.isChecked():
             self.selected.add(category_id)
-            btn.setStyleSheet("background-color: #cce5ff;")
+            btn.setStyleSheet(f"background-color: {CATEGORY_BTN_SELECTED_COLOR};")
         else:
             self.selected.discard(category_id)
             btn.setStyleSheet("")
