@@ -19,7 +19,7 @@ FONT_FAMILY = "Courier"  # Base font family
 FONT_WEIGHT = "Bold"     # Base font weight
 LABEL_FONT_SIZE = int(14 * _scale)
 SECTION_LABEL_FONT_SIZE = int(17 * _scale)
-BUTTON_FONT_SIZE = int(17 * _scale)
+BUTTON_FONT_SIZE = int(16 * _scale)
 ENTRY_FONT_SIZE = int(16 * _scale)
 NOTES_FONT_SIZE = int(16 * _scale)
 SAT_TYPE_FONT_SIZE = int(18 * _scale)
@@ -126,5 +126,7 @@ ENTRY_MIN_HEIGHT = int(44 * _scale)
 ENTRY_PADDING_LEFT = int(14 * _scale)
 TEXTEDIT_PADDING = int(16 * _scale)
 SHADOW_RECT_ADJUST = int(8 * _scale)  # Used for rect.adjusted(8, 8, -8, -8)
+
+CONTROL_BTN_FONT_SIZE = int(17 * _scale)
 
 # ... rest of the file remains unchanged ... 

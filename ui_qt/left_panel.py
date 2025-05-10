@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import QGraphicsDropShadowEffect
 from PyQt5.QtCore import Qt
 from ui_qt.category_panel import CategoryPanelQt
 from ui_qt.sat_type_panel import SatTypePanelQt
-from ui_qt.style_config import (FONT_FAMILY, FONT_WEIGHT, LABEL_FONT_SIZE, SECTION_LABEL_FONT_SIZE, BUTTON_FONT_SIZE, ENTRY_FONT_SIZE, NOTES_FONT_SIZE, NEUMORPH_TEXT_COLOR, NEUMORPH_BG_COLOR, NEUMORPH_SHADOW_DARK, NEUMORPH_SHADOW_LIGHT, NEUMORPH_GRADIENT_START, NEUMORPH_GRADIENT_END, NEUMORPH_RADIUS, BUTTON_BORDER_RADIUS, BUTTON_BG_COLOR, BUTTON_FONT_COLOR, ENTRY_BORDER_RADIUS, ENTRY_BG_COLOR, ENTRY_FONT_COLOR, NOTES_BG_COLOR, NOTES_FONT_COLOR, NOTES_BORDER_RADIUS, SAT_TYPE_FONT_COLOR, SAT_TYPE_FONT_SIZE, DOMAIN_BTN_FONT_SIZE, CONTROL_BTN_WIDTH, ENTRY_LABEL_FONT_SIZE, PROB_ID_ENTRY_WIDTH, SEARCH_TEXT_ENTRY_WIDTH, ANSWER_ENTRY_WIDTH, SEARCH_TEXT_LABEL_PADDING, ANSWER_LABEL_PADDING, DEFAULT_LABEL_PADDING, ROW_SPACING_REDUCTION, NOTES_FIXED_HEIGHT, PADDING, SPACING, LEFT_PANEL_WIDTH, DOMAIN_GRID_SPACING, DOMAIN_BTN_WIDTH, DOMAIN_BTN_HEIGHT, SECTION_LABEL_PADDING_TOP, BUTTON_MIN_WIDTH, BUTTON_MIN_HEIGHT, ENTRY_MIN_HEIGHT, ENTRY_PADDING_LEFT, TEXTEDIT_PADDING, SHADOW_RECT_ADJUST, SHADOW_OFFSETS)
+from ui_qt.style_config import (FONT_FAMILY, FONT_WEIGHT, LABEL_FONT_SIZE, SECTION_LABEL_FONT_SIZE, BUTTON_FONT_SIZE, CONTROL_BTN_FONT_SIZE, ENTRY_FONT_SIZE, NOTES_FONT_SIZE, NEUMORPH_TEXT_COLOR, NEUMORPH_BG_COLOR, NEUMORPH_SHADOW_DARK, NEUMORPH_SHADOW_LIGHT, NEUMORPH_GRADIENT_START, NEUMORPH_GRADIENT_END, NEUMORPH_RADIUS, BUTTON_BORDER_RADIUS, BUTTON_BG_COLOR, BUTTON_FONT_COLOR, ENTRY_BORDER_RADIUS, ENTRY_BG_COLOR, ENTRY_FONT_COLOR, NOTES_BG_COLOR, NOTES_FONT_COLOR, NOTES_BORDER_RADIUS, SAT_TYPE_FONT_COLOR, SAT_TYPE_FONT_SIZE, DOMAIN_BTN_FONT_SIZE, CONTROL_BTN_WIDTH, ENTRY_LABEL_FONT_SIZE, PROB_ID_ENTRY_WIDTH, SEARCH_TEXT_ENTRY_WIDTH, ANSWER_ENTRY_WIDTH, SEARCH_TEXT_LABEL_PADDING, ANSWER_LABEL_PADDING, DEFAULT_LABEL_PADDING, ROW_SPACING_REDUCTION, NOTES_FIXED_HEIGHT, PADDING, SPACING, LEFT_PANEL_WIDTH, DOMAIN_GRID_SPACING, DOMAIN_BTN_WIDTH, DOMAIN_BTN_HEIGHT, SECTION_LABEL_PADDING_TOP, BUTTON_MIN_WIDTH, BUTTON_MIN_HEIGHT, ENTRY_MIN_HEIGHT, ENTRY_PADDING_LEFT, TEXTEDIT_PADDING, SHADOW_RECT_ADJUST, SHADOW_OFFSETS)
 
 class NeumorphicButton(QPushButton):
     def __init__(self, text, parent=None, radius=NEUMORPH_RADIUS, bg_color=NEUMORPH_BG_COLOR, shadow_dark=NEUMORPH_SHADOW_DARK, shadow_light=NEUMORPH_SHADOW_LIGHT, font_family=FONT_FAMILY, font_size=BUTTON_FONT_SIZE, font_color=BUTTON_FONT_COLOR):
@@ -180,7 +180,7 @@ class LeftPanel(QWidget):
         # --- Top 2 Rows of Buttons ---
         row1 = QHBoxLayout()
         for label in ["Reset", "Save Problem", "Delete Problem"]:
-            btn = self.create_neumorphic_button(label)
+            btn = self.create_neumorphic_button(label, font_size=CONTROL_BTN_FONT_SIZE)
             btn.setMinimumWidth(CONTROL_BTN_WIDTH)
             row1.addWidget(btn)
         main_layout.addLayout(row1)
@@ -190,7 +190,7 @@ class LeftPanel(QWidget):
 
         row2 = QHBoxLayout()
         for label in ["Query", "Next Match", "Previous Match"]:
-            btn = self.create_neumorphic_button(label)
+            btn = self.create_neumorphic_button(label, font_size=CONTROL_BTN_FONT_SIZE)
             btn.setMinimumWidth(CONTROL_BTN_WIDTH)
             if label == "Query":
                 self.query_button = btn
@@ -258,25 +258,9 @@ class LeftPanel(QWidget):
         domains_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; {SECTION_LABEL_PADDING_TOP}")
         main_layout.addWidget(domains_label)
 
-        # Scrollable domain grid with neumorphic background
-        domain_scroll = NeumorphicScrollArea()
-        domain_scroll.setWidgetResizable(True)
-        domain_content = QWidget()
-        domain_layout = QGridLayout(domain_content)
-        domain_layout.setSpacing(DOMAIN_GRID_SPACING)
+        # Use CategoryPanelQt directly
         self.category_panel = CategoryPanelQt()
-        for idx, cat in enumerate(self.category_panel.categories):
-            btn = self.create_neumorphic_button(cat["name"], font_size=DOMAIN_BTN_FONT_SIZE)
-            btn.setCheckable(True)
-            btn.setMinimumWidth(DOMAIN_BTN_WIDTH)
-            btn.setMinimumHeight(DOMAIN_BTN_HEIGHT)
-            btn.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR};")
-            btn.clicked.connect(lambda checked, cid=cat["category_id"]: self.category_panel.toggle_category(cid))
-            domain_layout.addWidget(btn, idx // 2, idx % 2)
-            self.category_panel.buttons[cat["category_id"]] = btn
-        domain_content.setLayout(domain_layout)
-        domain_scroll.setWidget(domain_content)
-        main_layout.addWidget(domain_scroll)
+        main_layout.addWidget(self.category_panel)
 
         # --- Notes ---
         notes_label = QLabel("Notes")
