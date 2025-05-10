@@ -25,14 +25,13 @@ class ImageConverter:
         
         Args:
             working_dir (str, optional): Working directory for temporary image storage.
-                                       If None, a temporary directory will be used.
+                                       If None, './temp' will be used.
             config_manager: Configuration manager instance for accessing app settings
         """
         if working_dir:
             self.working_dir = Path(working_dir)
         else:
-            # Create a temporary directory for image storage
-            self.working_dir = Path(tempfile.gettempdir()) / "simplified_math_editor" / "images"
+            self.working_dir = Path("temp")
         
         # Create the images directory if it doesn't exist
         self.working_dir.mkdir(parents=True, exist_ok=True)

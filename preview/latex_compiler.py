@@ -29,14 +29,13 @@ class LaTeXCompiler:
         
         Args:
             working_dir (str, optional): Working directory for compilation.
-                                        If None, a temporary directory will be used.
+                                        If None, './temp' will be used.
         """
         if working_dir:
             self.working_dir = Path(working_dir)
         else:
-            # Create a temporary directory for compilation
-            self.working_dir = Path(tempfile.gettempdir()) / "simplified_math_editor"
-            self.working_dir.mkdir(parents=True, exist_ok=True)
+            self.working_dir = Path("temp")
+        self.working_dir.mkdir(parents=True, exist_ok=True)
     
     def compile_latex(self, latex_content, output_filename="preview"):
         """

@@ -22,7 +22,7 @@ SECTION_LABEL_FONT_SIZE = int(17 * _scale)
 BUTTON_FONT_SIZE = int(16 * _scale)
 ENTRY_FONT_SIZE = int(16 * _scale)
 NOTES_FONT_SIZE = int(16 * _scale)
-SAT_TYPE_FONT_SIZE = int(18 * _scale)
+SAT_TYPE_FONT_SIZE = int(16 * _scale)
 DOMAIN_BTN_FONT_SIZE = int(16 * _scale)
 ENTRY_LABEL_FONT_SIZE = int(17 * _scale)
 
