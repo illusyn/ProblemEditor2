@@ -160,9 +160,12 @@ class NeumorphicTextEdit(QTextEdit):
         super().paintEvent(event)
 
 class LeftPanel(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, laptop_mode=False):
         super().__init__(parent)
-        self.setFixedWidth(LEFT_PANEL_WIDTH)
+        if laptop_mode:
+            self.setFixedWidth(320)
+        else:
+            self.setFixedWidth(780)
         self.setStyleSheet(f"background-color: {WINDOW_BG_COLOR};")
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(PADDING, PADDING, PADDING, PADDING)
@@ -249,14 +252,14 @@ class LeftPanel(QWidget):
                 QCheckBox {{
                     background: transparent;
                     color: {SAT_TYPE_FONT_COLOR};
-                    padding: 0px 2px;
+                    padding: 2px 8px;
                     border-radius: 4px;
                     margin-top: 0px; margin-bottom: 0px;
                 }}
-                QCheckBox::indicator {{ width: 14px; height: 14px; }}
+                QCheckBox::indicator {{ width: 18px; height: 18px; }}
             """)
-            cb.setMinimumHeight(10)
-            cb.setMaximumHeight(14)
+            cb.setMinimumHeight(28)
+            cb.setMaximumHeight(40)
             sat_types.addWidget(cb)
         main_layout.addLayout(sat_types)
 
@@ -280,6 +283,9 @@ class LeftPanel(QWidget):
         main_layout.addWidget(notes_label)
         self.notes_text = NeumorphicTextEdit(bg_color=EDITOR_BG_COLOR)
         main_layout.addWidget(self.notes_text)
+
+        # Connect Reset button to reset_fields method
+        self.reset_button.clicked.connect(self.reset_fields)
 
     def create_neumorphic_button(self, text, parent=None, font_size=BUTTON_FONT_SIZE):
         return NeumorphicButton(
@@ -331,4 +337,17 @@ class LeftPanel(QWidget):
 
     def on_query_clicked(self):
         text = self.get_search_text()
-        QMessageBox.information(self, "Query", f"Search text: {text}") 
+        QMessageBox.information(self, "Query", f"Search text: {text}")
+
+    def reset_fields(self):
+        self.problem_id_entry.setText("")
+        self.search_text_entry.setText("")
+        self.answer_entry.setText("")
+        self.notes_text.setPlainText("")
+        # Uncheck all SAT type checkboxes
+        for cb in self.sat_type_panel.checkboxes.values():
+            cb.setChecked(False)
+        # Unselect all category buttons
+        for btn in self.category_panel.buttons.values():
+            btn.setChecked(False)
+        self.category_panel.selected.clear() 

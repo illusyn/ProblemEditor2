@@ -40,12 +40,16 @@ class PreviewManager:
             latex_content = self.app.markdown_parser.parse(content, context='preview')
             full_latex = self.app.template.replace("#CONTENT#", latex_content)
             
+            # Ensure no paragraph indent in preview
+            if "\\setlength{\\parindent}" not in full_latex:
+                full_latex = full_latex.replace("\\begin{document}", "\\begin{document}\n\\setlength{\\parindent}{0pt}")
+            
             # Check if graphicx package is in the template
             if "\\usepackage{graphicx}" not in full_latex:
                 print("WARNING: graphicx package missing from template!")
                 # Add it immediately before \begin{document}
                 full_latex = full_latex.replace("\\begin{document}", 
-                    "\\usepackage{graphicx}\n\\graphicspath{{./}{./images/}}\n\n\\begin{document}")
+                    "\\usepackage{graphicx}\n\\graphicspath{{./}}{{./images/}}\n\n\\begin{document}")
                 print("Added graphicx package to template")
             
             # Update status

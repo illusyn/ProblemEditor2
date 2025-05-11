@@ -88,6 +88,10 @@ class PreviewManager:
             # Insert content into template
             full_latex = latex_template.replace("#CONTENT#", latex_content)
             
+            # Ensure no paragraph indent in preview
+            if "\\setlength{\\parindent}" not in full_latex:
+                full_latex = full_latex.replace("\\begin{document}", "\\begin{document}\n\\setlength{\\parindent}{0pt}")
+            
             # --- Ensure all images are present in temp before compiling ---
             image_filenames = re.findall(r'\\includegraphics\\[.*?\\]\\{([^}}]+)\\}', full_latex)
             for image_filename in image_filenames:

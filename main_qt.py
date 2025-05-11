@@ -3,10 +3,12 @@ PyQt5 entry point for the Simplified Math Editor (migration skeleton).
 """
 
 import sys
+import re
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QLineEdit, QGraphicsDropShadowEffect
-from PyQt5.QtGui import QColor
+from PyQt5.QtGui import QColor, QGuiApplication
 from PyQt5.QtCore import Qt
 from ui_qt.main_window import MainWindow
+from ui_qt.style_config import set_scale_from_dpi, set_laptop_mode
 
 class NeumorphicButton(QPushButton):
     def __init__(self, text, parent=None):
@@ -66,6 +68,24 @@ class Demo(QWidget):
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
-    window = MainWindow()
+    # Get the primary screen's DPI
+    screen = QGuiApplication.primaryScreen()
+    dpi = screen.logicalDotsPerInch() if screen else 96
+    set_scale_from_dpi(dpi)
+    laptop_mode = any(arg == "--laptop" for arg in sys.argv)
+    set_laptop_mode(laptop_mode)
+    window = MainWindow(laptop_mode=laptop_mode)
+    # Print the minimum window size for debugging
+    print(f"Minimum window size: {window.minimumSize().width()} x {window.minimumSize().height()}")
+    print(f"Minimum size hint: {window.minimumSizeHint().width()} x {window.minimumSizeHint().height()}")
+    # Parse --resolution=WIDTHxHEIGHT from command line
+    res_match = None
+    for arg in sys.argv:
+        res_match = re.match(r"--resolution=(\d+)x(\d+)", arg)
+        if res_match:
+            break
+    if res_match:
+        width, height = int(res_match.group(1)), int(res_match.group(2))
+        window.resize(width, height)
     window.show()
     sys.exit(app.exec_()) 

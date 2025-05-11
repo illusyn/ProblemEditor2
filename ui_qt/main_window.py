@@ -18,7 +18,7 @@ from converters.image_converter import ImageConverter
 from ui_qt.style_config import active_palette, MultiShadowButton, WINDOW_BG_COLOR
 
 class MainWindow(QMainWindow):
-    def __init__(self):
+    def __init__(self, laptop_mode=False):
         super().__init__()
         self.setWindowTitle("Simplified Math Editor (PyQt5)")
         self.setGeometry(100, 100, 1200, 800)
@@ -65,8 +65,9 @@ class MainWindow(QMainWindow):
         layout = QHBoxLayout(central_widget)
 
         # Real panels
-        self.left_panel = LeftPanel()
-        self.left_panel.setFixedWidth(780)
+        self.left_panel = LeftPanel(laptop_mode=laptop_mode)
+        if not laptop_mode:
+            self.left_panel.setFixedWidth(500)
         layout.addWidget(self.left_panel)
         # Connect query button to filtering
         self.left_panel.query_button.clicked.connect(self.on_query)
@@ -102,8 +103,8 @@ class MainWindow(QMainWindow):
         nav_layout = QHBoxLayout()
         # Remove Previous and Next buttons, only add the new Delete Problem button
         delete_btn = MultiShadowButton("Delete Problem", active_palette)
-        delete_btn.setMinimumWidth(80)
-        delete_btn.setMaximumWidth(80)
+        delete_btn.setMinimumWidth(180)
+        delete_btn.setMaximumWidth(180)
         delete_btn.setMinimumHeight(36)
         delete_btn.setMaximumHeight(36)
         delete_btn.setStyleSheet(delete_btn.styleSheet() + "font-size: 13px;")

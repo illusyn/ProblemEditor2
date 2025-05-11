@@ -18,7 +18,7 @@
 	{
     "name": "DarkBlue",
     "window_bg_color": "#f0f0f0",
-	  "bg_color": "#ecedf9",
+	  "bg_color": "#f0f0f0",
     "entry_bg_color": "#f0f1f9",
     "editor_bg_color": "#f7f8fc",
     "shadow_dark": "#82A2ED",
@@ -38,7 +38,7 @@
       "editor_bg_color": "#ffffff",
       "shadow_dark": "#c4c2b8",
       "shadow_light": "#ffffff",
-      "text_color": "#3a2d1a",
+      "text_color": "#031282",
       "gradient_start": "#f7f7fa",
       "gradient_end": "#f0f0f3",
       "radius": 18,
