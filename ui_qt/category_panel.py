@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import QWidget, QGridLayout, QToolButton
 from PyQt5.QtGui import QPainter, QColor, QBrush, QFont, QLinearGradient
 from PyQt5.QtCore import Qt
 from db.problem_database import ProblemDatabase
-from ui_qt.style_config import CATEGORY_BTN_WIDTH, CATEGORY_BTN_HEIGHT, CATEGORY_BTN_SELECTED_COLOR, CATEGORY_PANEL_SPACING, FONT_FAMILY, BUTTON_FONT_SIZE, NEUMORPH_RADIUS, NEUMORPH_BG_COLOR, NEUMORPH_SHADOW_DARK, NEUMORPH_SHADOW_LIGHT, NEUMORPH_GRADIENT_START, NEUMORPH_GRADIENT_END
+from ui_qt.style_config import CATEGORY_BTN_WIDTH, CATEGORY_BTN_HEIGHT, CATEGORY_BTN_SELECTED_COLOR, CATEGORY_PANEL_SPACING, FONT_FAMILY, BUTTON_FONT_SIZE, NEUMORPH_RADIUS, NEUMORPH_BG_COLOR, NEUMORPH_SHADOW_DARK, NEUMORPH_SHADOW_LIGHT, NEUMORPH_GRADIENT_START, NEUMORPH_GRADIENT_END, NEUMORPH_TEXT_COLOR
 
 class NeumorphicToolButton(QToolButton):
     def __init__(self, text, parent=None, radius=NEUMORPH_RADIUS, font_family=FONT_FAMILY, font_size=BUTTON_FONT_SIZE):
@@ -19,12 +19,13 @@ class NeumorphicToolButton(QToolButton):
         self.setFont(QFont(self.font_family, self.font_size, QFont.Bold))
         self.setMinimumWidth(CATEGORY_BTN_WIDTH)
         self.setMinimumHeight(CATEGORY_BTN_HEIGHT)
-        self.setStyleSheet("color: #664103;")
+        self.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR};")
 
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
         rect = self.rect().adjusted(6, 6, -6, -6)
+        full_radius = min(rect.height(), rect.width()) // 2  # Pill-shaped
         if self.isChecked():
             # Inset effect for checked state
             for i, alpha in zip([8, 6, 4], [40, 60, 90]):
@@ -32,17 +33,15 @@ class NeumorphicToolButton(QToolButton):
                 shadow.setAlpha(alpha)
                 painter.setBrush(QBrush(shadow))
                 painter.setPen(Qt.NoPen)
-                painter.drawRoundedRect(rect.translated(-i, -i), self.radius, self.radius)
+                painter.drawRoundedRect(rect.translated(-i, -i), full_radius, full_radius)
             for i, alpha in zip([8, 6, 4], [30, 50, 80]):
                 highlight = QColor(NEUMORPH_SHADOW_LIGHT)
                 highlight.setAlpha(alpha)
                 painter.setBrush(QBrush(highlight))
-                painter.drawRoundedRect(rect.translated(i, i), self.radius, self.radius)
-            grad = QLinearGradient(rect.topLeft(), rect.bottomRight())
-            grad.setColorAt(0, QColor(NEUMORPH_GRADIENT_END))
-            grad.setColorAt(1, QColor(NEUMORPH_GRADIENT_START))
-            painter.setBrush(QBrush(grad))
-            painter.drawRoundedRect(rect, self.radius, self.radius)
+                painter.drawRoundedRect(rect.translated(i, i), full_radius, full_radius)
+            # Solid color for checked state
+            painter.setBrush(QBrush(QColor(CATEGORY_BTN_SELECTED_COLOR)))
+            painter.drawRoundedRect(rect, full_radius, full_radius)
         else:
             # Raised effect for normal state
             for i, alpha in zip([8, 6, 4], [40, 60, 90]):
@@ -50,19 +49,17 @@ class NeumorphicToolButton(QToolButton):
                 shadow.setAlpha(alpha)
                 painter.setBrush(QBrush(shadow))
                 painter.setPen(Qt.NoPen)
-                painter.drawRoundedRect(rect.translated(i, i), self.radius, self.radius)
+                painter.drawRoundedRect(rect.translated(i, i), full_radius, full_radius)
             for i, alpha in zip([8, 6, 4], [30, 50, 80]):
                 highlight = QColor(NEUMORPH_SHADOW_LIGHT)
                 highlight.setAlpha(alpha)
                 painter.setBrush(QBrush(highlight))
-                painter.drawRoundedRect(rect.translated(-i, -i), self.radius, self.radius)
-            grad = QLinearGradient(rect.topLeft(), rect.bottomRight())
-            grad.setColorAt(0, QColor(NEUMORPH_GRADIENT_START))
-            grad.setColorAt(1, QColor(NEUMORPH_BG_COLOR))
-            painter.setBrush(QBrush(grad))
-            painter.drawRoundedRect(rect, self.radius, self.radius)
+                painter.drawRoundedRect(rect.translated(-i, -i), full_radius, full_radius)
+            # Solid color for normal state
+            painter.setBrush(QBrush(QColor(NEUMORPH_BG_COLOR)))
+            painter.drawRoundedRect(rect, full_radius, full_radius)
         # Text
-        painter.setPen(QColor("#664103"))
+        painter.setPen(QColor(NEUMORPH_TEXT_COLOR))
         painter.setFont(QFont(self.font_family, self.font_size, QFont.Bold))
         painter.drawText(rect, Qt.AlignCenter, self.text())
 

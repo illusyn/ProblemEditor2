@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import QGraphicsDropShadowEffect
 from PyQt5.QtCore import Qt
 from ui_qt.category_panel import CategoryPanelQt
 from ui_qt.sat_type_panel import SatTypePanelQt
-from ui_qt.style_config import (FONT_FAMILY, FONT_WEIGHT, LABEL_FONT_SIZE, SECTION_LABEL_FONT_SIZE, BUTTON_FONT_SIZE, CONTROL_BTN_FONT_SIZE, ENTRY_FONT_SIZE, NOTES_FONT_SIZE, NEUMORPH_TEXT_COLOR, NEUMORPH_BG_COLOR, NEUMORPH_SHADOW_DARK, NEUMORPH_SHADOW_LIGHT, NEUMORPH_GRADIENT_START, NEUMORPH_GRADIENT_END, NEUMORPH_RADIUS, BUTTON_BORDER_RADIUS, BUTTON_BG_COLOR, BUTTON_FONT_COLOR, ENTRY_BORDER_RADIUS, ENTRY_BG_COLOR, ENTRY_FONT_COLOR, NOTES_BG_COLOR, NOTES_FONT_COLOR, NOTES_BORDER_RADIUS, SAT_TYPE_FONT_COLOR, SAT_TYPE_FONT_SIZE, DOMAIN_BTN_FONT_SIZE, CONTROL_BTN_WIDTH, ENTRY_LABEL_FONT_SIZE, PROB_ID_ENTRY_WIDTH, SEARCH_TEXT_ENTRY_WIDTH, ANSWER_ENTRY_WIDTH, SEARCH_TEXT_LABEL_PADDING, ANSWER_LABEL_PADDING, DEFAULT_LABEL_PADDING, ROW_SPACING_REDUCTION, NOTES_FIXED_HEIGHT, PADDING, SPACING, LEFT_PANEL_WIDTH, DOMAIN_GRID_SPACING, DOMAIN_BTN_WIDTH, DOMAIN_BTN_HEIGHT, SECTION_LABEL_PADDING_TOP, BUTTON_MIN_WIDTH, BUTTON_MIN_HEIGHT, ENTRY_MIN_HEIGHT, ENTRY_PADDING_LEFT, TEXTEDIT_PADDING, SHADOW_RECT_ADJUST, SHADOW_OFFSETS)
+from ui_qt.style_config import (FONT_FAMILY, FONT_WEIGHT, LABEL_FONT_SIZE, SECTION_LABEL_FONT_SIZE, BUTTON_FONT_SIZE, CONTROL_BTN_FONT_SIZE, ENTRY_FONT_SIZE, NOTES_FONT_SIZE, NEUMORPH_TEXT_COLOR, WINDOW_BG_COLOR, NEUMORPH_BG_COLOR, NEUMORPH_SHADOW_DARK, NEUMORPH_SHADOW_LIGHT, NEUMORPH_GRADIENT_START, NEUMORPH_GRADIENT_END, NEUMORPH_RADIUS, BUTTON_BORDER_RADIUS, BUTTON_BG_COLOR, BUTTON_FONT_COLOR, ENTRY_BORDER_RADIUS, ENTRY_BG_COLOR, ENTRY_FONT_COLOR, NOTES_BG_COLOR, NOTES_FONT_COLOR, NOTES_BORDER_RADIUS, SAT_TYPE_FONT_COLOR, SAT_TYPE_FONT_SIZE, DOMAIN_BTN_FONT_SIZE, CONTROL_BTN_WIDTH, ENTRY_LABEL_FONT_SIZE, PROB_ID_ENTRY_WIDTH, SEARCH_TEXT_ENTRY_WIDTH, ANSWER_ENTRY_WIDTH, SEARCH_TEXT_LABEL_PADDING, ANSWER_LABEL_PADDING, DEFAULT_LABEL_PADDING, ROW_SPACING_REDUCTION, NOTES_FIXED_HEIGHT, PADDING, SPACING, LEFT_PANEL_WIDTH, DOMAIN_GRID_SPACING, DOMAIN_BTN_WIDTH, DOMAIN_BTN_HEIGHT, SECTION_LABEL_PADDING_TOP, BUTTON_MIN_WIDTH, BUTTON_MIN_HEIGHT, ENTRY_MIN_HEIGHT, ENTRY_PADDING_LEFT, TEXTEDIT_PADDING, SHADOW_RECT_ADJUST, SHADOW_OFFSETS, EDITOR_BG_COLOR)
 
 class NeumorphicButton(QPushButton):
     def __init__(self, text, parent=None, radius=NEUMORPH_RADIUS, bg_color=NEUMORPH_BG_COLOR, shadow_dark=NEUMORPH_SHADOW_DARK, shadow_light=NEUMORPH_SHADOW_LIGHT, font_family=FONT_FAMILY, font_size=BUTTON_FONT_SIZE, font_color=BUTTON_FONT_COLOR):
@@ -44,11 +44,8 @@ class NeumorphicButton(QPushButton):
             highlight.setAlpha(alpha)
             painter.setBrush(QBrush(highlight))
             painter.drawRoundedRect(rect.translated(-i, -i), self.radius, self.radius)
-        # Main gradient background
-        grad = QLinearGradient(rect.topLeft(), rect.bottomRight())
-        grad.setColorAt(0, QColor(NEUMORPH_GRADIENT_START))
-        grad.setColorAt(1, QColor(self.bg_color))
-        painter.setBrush(QBrush(grad))
+        # Solid background (no gradient)
+        painter.setBrush(QBrush(QColor(self.bg_color)))
         painter.drawRoundedRect(rect, self.radius, self.radius)
         # Text
         painter.setPen(QColor(self.font_color))
@@ -85,11 +82,8 @@ class NeumorphicEntry(QLineEdit):
             highlight.setAlpha(alpha)
             painter.setBrush(QBrush(highlight))
             painter.drawRoundedRect(rect.translated(i, i), self.radius, self.radius)
-        # Main gradient background
-        grad = QLinearGradient(rect.topLeft(), rect.bottomRight())
-        grad.setColorAt(0, QColor(NEUMORPH_GRADIENT_START))
-        grad.setColorAt(1, QColor(self.bg_color))
-        painter.setBrush(QBrush(grad))
+        # Solid background (no gradient)
+        painter.setBrush(QBrush(QColor(self.bg_color)))
         painter.drawRoundedRect(rect, self.radius, self.radius)
         # Call base class paint for text/cursor
         super().paintEvent(event)
@@ -160,11 +154,8 @@ class NeumorphicTextEdit(QTextEdit):
             highlight.setAlpha(alpha)
             painter.setBrush(QBrush(highlight))
             painter.drawRoundedRect(rect.translated(-i, -i), self.radius, self.radius)
-        # Main gradient background
-        grad = QLinearGradient(rect.topLeft(), rect.bottomRight())
-        grad.setColorAt(0, QColor(NEUMORPH_GRADIENT_START))
-        grad.setColorAt(1, QColor(self.bg_color))
-        painter.setBrush(QBrush(grad))
+        # Solid background (no gradient)
+        painter.setBrush(QBrush(QColor(self.bg_color)))
         painter.drawRoundedRect(rect, self.radius, self.radius)
         super().paintEvent(event)
 
@@ -172,7 +163,7 @@ class LeftPanel(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setFixedWidth(LEFT_PANEL_WIDTH)
-        self.setStyleSheet(f"background-color: {NEUMORPH_BG_COLOR};")
+        self.setStyleSheet(f"background-color: {WINDOW_BG_COLOR};")
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(PADDING, PADDING, PADDING, PADDING)
         main_layout.setSpacing(SPACING)
@@ -234,7 +225,7 @@ class LeftPanel(QWidget):
                 padding = ANSWER_LABEL_PADDING
             else:
                 padding = DEFAULT_LABEL_PADDING
-            lbl.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; {padding}")
+            lbl.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; {padding} background: {WINDOW_BG_COLOR};")
             lbl.setAlignment(Qt.AlignCenter)  # Center the label horizontally
             col.addWidget(lbl)
             col.addWidget(entry)
@@ -245,7 +236,7 @@ class LeftPanel(QWidget):
         # --- SAT Problem Types ---
         sat_label = QLabel("SAT Problem Types")
         sat_label.setFont(QFont(FONT_FAMILY, SECTION_LABEL_FONT_SIZE, QFont.Bold))
-        sat_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; padding-top: 0px; padding-bottom: 0px; margin-top: 0px; margin-bottom: 0px;")
+        sat_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; padding-top: 0px; padding-bottom: 0px; margin-top: 0px; margin-bottom: 0px; background: {WINDOW_BG_COLOR};")
         sat_label.setMaximumHeight(18)
         sat_label.setAlignment(Qt.AlignCenter)
         main_layout.addWidget(sat_label)
@@ -273,7 +264,7 @@ class LeftPanel(QWidget):
         main_layout.addSpacing(30)
         domains_label = QLabel("Math Domains")
         domains_label.setFont(QFont(FONT_FAMILY, SECTION_LABEL_FONT_SIZE, QFont.Bold))
-        domains_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; padding-top: 0px; padding-bottom: 0px; margin-top: 0px; margin-bottom: 0px;")
+        domains_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; padding-top: 0px; padding-bottom: 0px; margin-top: 0px; margin-bottom: 0px; background: {WINDOW_BG_COLOR};")
         domains_label.setMaximumHeight(18)
         domains_label.setAlignment(Qt.AlignCenter)
         main_layout.addWidget(domains_label)
@@ -285,9 +276,9 @@ class LeftPanel(QWidget):
         # --- Notes ---
         notes_label = QLabel("Notes")
         notes_label.setFont(QFont(FONT_FAMILY, SECTION_LABEL_FONT_SIZE, QFont.Bold))
-        notes_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; {SECTION_LABEL_PADDING_TOP}")
+        notes_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; {SECTION_LABEL_PADDING_TOP} background: {WINDOW_BG_COLOR};")
         main_layout.addWidget(notes_label)
-        self.notes_text = NeumorphicTextEdit()
+        self.notes_text = NeumorphicTextEdit(bg_color=EDITOR_BG_COLOR)
         main_layout.addWidget(self.notes_text)
 
     def create_neumorphic_button(self, text, parent=None, font_size=BUTTON_FONT_SIZE):

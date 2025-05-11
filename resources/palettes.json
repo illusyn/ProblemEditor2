@@ -2,19 +2,40 @@
   "palettes": [
     {
       "name": "DarkRed",
+      "window_bg_color": "#f0f0f3",
       "bg_color": "#f0f0f3",
+      "entry_bg_color": "#e8e8e8",
+      "editor_bg_color": "#fff8f7",
       "shadow_dark": "#8b2e33",
       "shadow_light": "#ffffff",
       "text_color": "#3a2d1a",
       "gradient_start": "#ffaa7f",
       "gradient_end": "#ff5500",
       "radius": 18,
-      "button_radius": 12,
-      "button_padding": "10px 20px"
+      "button_radius": 60,
+      "button_padding": "20px 30px"
     },
+	{
+    "name": "DarkBlue",
+    "window_bg_color": "#f0f0f0",
+	  "bg_color": "#ecedf9",
+    "entry_bg_color": "#f0f1f9",
+    "editor_bg_color": "#f7f8fc",
+    "shadow_dark": "#82A2ED",
+    "shadow_light": "#ffffff",
+    "text_color": "#031282",
+    "gradient_start": "#f7f7fa",
+    "gradient_end": "#f0f0f3",
+    "radius": 60,
+    "button_radius": 60,
+    "button_padding": "20px 30px"
+	},
     {
       "name": "Light",
+      "window_bg_color": "#f0f0f3",
       "bg_color": "#f0f0f3",
+      "entry_bg_color": "#e8e8e8",
+      "editor_bg_color": "#ffffff",
       "shadow_dark": "#c4c2b8",
       "shadow_light": "#ffffff",
       "text_color": "#3a2d1a",

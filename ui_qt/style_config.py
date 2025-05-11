@@ -4,6 +4,9 @@ import sys
 import json
 import os
 import json as _json
+from PyQt5.QtWidgets import QPushButton
+from PyQt5.QtGui import QPainter, QColor, QBrush, QFont
+from PyQt5.QtCore import Qt
 
 # DPI scaling support
 _scale = 1.0
@@ -30,7 +33,7 @@ DOMAIN_BTN_FONT_SIZE = int(16 * _scale)
 ENTRY_LABEL_FONT_SIZE = int(17 * _scale)
 
 # Base colors
-BASE_FONT_COLOR = "#664103"  # Darker text for better contrast
+BASE_FONT_COLOR = "#031282"  # Darker text for better contrast
 LABEL_FONT_COLOR = BASE_FONT_COLOR
 SECTION_LABEL_FONT_COLOR = BASE_FONT_COLOR
 BUTTON_FONT_COLOR = BASE_FONT_COLOR
@@ -42,10 +45,13 @@ SAT_TYPE_FONT_COLOR = BASE_FONT_COLOR
 class NeumorphPalette:
     def __init__(self, d):
         self.name = d.get("name", "Unnamed")
+        self.window_bg_color = d.get("window_bg_color", d.get("bg_color", "#f0f0f3"))
         self.bg_color = d.get("bg_color", "#f0f0f3")
+        self.entry_bg_color = d.get("entry_bg_color", "#e8e8e8")
+        self.editor_bg_color = d.get("editor_bg_color", "#ffffff")
         self.shadow_dark = d.get("shadow_dark", "#c4c2b8")
         self.shadow_light = d.get("shadow_light", "#ffffff")
-        self.text_color = d.get("text_color", "#3a2d1a")
+        self.text_color = d.get("text_color", "#031282")
         self.gradient_start = d.get("gradient_start", "#f7f7fa")
         self.gradient_end = d.get("gradient_end", "#f0f0f3")
         self.radius = d.get("radius", 18)
@@ -53,13 +59,16 @@ class NeumorphPalette:
         self.button_padding = d.get("button_padding", "10px 20px")
 
 active_palette = None
+WINDOW_BG_COLOR = None
+ENTRY_BG_COLOR = "#e8e8e8"
+EDITOR_BG_COLOR = "#ffffff"
 
 def set_active_palette(palette: NeumorphPalette):
     global active_palette
     active_palette = palette
-    # Update global style variables for legacy code
     global NEUMORPH_BG_COLOR, NEUMORPH_SHADOW_DARK, NEUMORPH_SHADOW_LIGHT, NEUMORPH_TEXT_COLOR
     global NEUMORPH_GRADIENT_START, NEUMORPH_GRADIENT_END, NEUMORPH_RADIUS
+    global WINDOW_BG_COLOR, ENTRY_BG_COLOR, EDITOR_BG_COLOR
     NEUMORPH_BG_COLOR = palette.bg_color
     NEUMORPH_SHADOW_DARK = palette.shadow_dark
     NEUMORPH_SHADOW_LIGHT = palette.shadow_light
@@ -67,6 +76,9 @@ def set_active_palette(palette: NeumorphPalette):
     NEUMORPH_GRADIENT_START = palette.gradient_start
     NEUMORPH_GRADIENT_END = palette.gradient_end
     NEUMORPH_RADIUS = int(palette.radius * _scale)
+    WINDOW_BG_COLOR = palette.window_bg_color
+    ENTRY_BG_COLOR = palette.entry_bg_color
+    EDITOR_BG_COLOR = palette.editor_bg_color
 
 # Default palette (used if no palette is loaded)
 default_palette_dict = {
@@ -74,7 +86,7 @@ default_palette_dict = {
     "bg_color": "#f0f0f3",
     "shadow_dark": "#c4c2b8",
     "shadow_light": "#ffffff",
-    "text_color": "#3a2d1a",
+    "text_color": "#031282",
     "gradient_start": "#f7f7fa",
     "gradient_end": "#f0f0f3",
     "radius": 18,
@@ -89,7 +101,6 @@ BUTTON_HOVER_COLOR = "#f2f2f2"
 BUTTON_BORDER_RADIUS = NEUMORPH_RADIUS
 BUTTON_HIGHLIGHT_COLOR = "#cce5ff"
 
-ENTRY_BG_COLOR = "#e8e8e8"  # Slightly darker for contrast
 ENTRY_BORDER_RADIUS = int(14 * _scale)
 ENTRY_SHADOW_COLOR = "#c8c8c8"
 
@@ -144,7 +155,7 @@ CHECKBOX_BORDER_RADIUS = int(12 * _scale)
 
 # Category panel/button specific
 CATEGORY_BTN_WIDTH = int(120 * _scale)
-CATEGORY_BTN_HEIGHT = int(32 * _scale)
+CATEGORY_BTN_HEIGHT = int(48 * _scale)
 CATEGORY_BTN_SELECTED_COLOR = "#cce5ff"
 CATEGORY_PANEL_SPACING = int(8 * _scale)
 
@@ -196,5 +207,48 @@ _palette_name = _load_palette_name()
 _palettes = _load_palettes()
 _selected_palette = _choose_palette(_palettes, _palette_name)
 set_active_palette(_selected_palette)
+
+class MultiShadowButton(QPushButton):
+    def __init__(self, text, palette, parent=None):
+        super().__init__(text, parent)
+        self.palette = palette
+        self.setFont(QFont("Verdana", 10, QFont.Bold))
+        self.setStyleSheet(f"""
+            QPushButton {{
+                border-radius: {palette.button_radius}px;
+                color: {palette.text_color};
+                font-size: 16px;
+                padding: {palette.button_padding};
+                background: {palette.bg_color} !important;
+                background-color: {palette.bg_color} !important;
+            }}
+            QPushButton:hover {{
+                background-color: {palette.shadow_light} !important;
+            }}
+        """)
+        self.setMinimumHeight(40)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        rect = self.rect().adjusted(4, 4, -4, -4)
+        radius = self.palette.button_radius
+        # First shadow (shadow_dark, offset down/right)
+        shadow1_color = QColor(self.palette.shadow_dark)
+        shadow1_color.setAlpha(80)
+        painter.setBrush(QBrush(shadow1_color))
+        painter.setPen(Qt.NoPen)
+        painter.drawRoundedRect(rect.translated(3, 3), radius, radius)
+        # Second shadow (gradient_start, offset up/left)
+        shadow2_color = QColor(self.palette.gradient_start)
+        shadow2_color.setAlpha(50)
+        painter.setBrush(QBrush(shadow2_color))
+        painter.drawRoundedRect(rect.translated(-2, -2), radius, radius)
+        # Button background
+        painter.setBrush(QBrush(QColor(self.palette.bg_color)))
+        painter.setPen(Qt.NoPen)
+        painter.drawRoundedRect(rect, radius, radius)
+        # Draw the button text and icon as usual
+        super().paintEvent(event)
 
 # ... rest of the file remains unchanged ... 
