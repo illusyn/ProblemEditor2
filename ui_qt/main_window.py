@@ -15,6 +15,7 @@ import re
 from pathlib import Path
 import os
 from converters.image_converter import ImageConverter
+from ui_qt.style_config import active_palette, MultiShadowButton, WINDOW_BG_COLOR
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -60,6 +61,7 @@ class MainWindow(QMainWindow):
         # Central widget and layout
         central_widget = QWidget(self)
         self.setCentralWidget(central_widget)
+        central_widget.setStyleSheet(f"background-color: {WINDOW_BG_COLOR};")
         layout = QHBoxLayout(central_widget)
 
         # Real panels
@@ -74,6 +76,7 @@ class MainWindow(QMainWindow):
         # Connect preview and delete problem buttons
         self.left_panel.preview_button.clicked.connect(self.update_preview)
         # self.left_panel.delete_problem_button.clicked.connect(self.file_manager.delete_problem)  # Removed as requested
+        self.left_panel.save_problem_button.clicked.connect(self.save_current_problem)
 
         # Real database connection
         self.problem_db = ProblemDatabase()
@@ -98,7 +101,12 @@ class MainWindow(QMainWindow):
         editor_vlayout.addWidget(self.editor_panel)
         nav_layout = QHBoxLayout()
         # Remove Previous and Next buttons, only add the new Delete Problem button
-        delete_btn = QPushButton("Delete Problem")
+        delete_btn = MultiShadowButton("Delete Problem", active_palette)
+        delete_btn.setMinimumWidth(80)
+        delete_btn.setMaximumWidth(80)
+        delete_btn.setMinimumHeight(36)
+        delete_btn.setMaximumHeight(36)
+        delete_btn.setStyleSheet(delete_btn.styleSheet() + "font-size: 13px;")
         delete_btn.clicked.connect(self.delete_current_problem)
         nav_layout.addWidget(delete_btn)
         editor_vlayout.addLayout(nav_layout)
@@ -363,3 +371,83 @@ class MainWindow(QMainWindow):
             self.left_panel.set_notes("")
         else:
             QMessageBox.critical(self, "Delete Problem", "Failed to delete problem.") 
+
+    def save_current_problem(self):
+        """Save or update the current problem in the database."""
+        problem_id = self.left_panel.get_problem_id().strip()
+        content = self.editor_panel.text_edit.toPlainText()
+        answer = self.left_panel.get_answer().strip()
+        notes = self.left_panel.get_notes().strip()
+        categories = [cat["name"] for cat in self.left_panel.category_panel.get_selected_categories()]
+        sat_types = self.left_panel.sat_type_panel.get_selected_types()
+
+        # Open DB connection
+        import sqlite3
+        conn = sqlite3.connect(self.problem_db.db_path)
+        cur = conn.cursor()
+        try:
+            if problem_id:
+                # Update existing problem
+                cur.execute("SELECT problem_id FROM problems WHERE problem_id = ?", (problem_id,))
+                if cur.fetchone():
+                    cur.execute("""
+                        UPDATE problems SET content=?, answer=?, notes=?, last_modified=datetime('now') WHERE problem_id=?
+                    """, (content, answer, notes, problem_id))
+                    # Update categories: remove all, then add selected
+                    cur.execute("DELETE FROM problem_math_categories WHERE problem_id=?", (problem_id,))
+                    for cat_name in categories:
+                        cur.execute("SELECT category_id FROM math_categories WHERE name=?", (cat_name,))
+                        row = cur.fetchone()
+                        if row:
+                            cat_id = row[0]
+                        else:
+                            cur.execute("INSERT INTO math_categories (name) VALUES (?)", (cat_name,))
+                            cat_id = cur.lastrowid
+                        cur.execute("INSERT INTO problem_math_categories (problem_id, category_id) VALUES (?, ?)", (problem_id, cat_id))
+                    # Update SAT types: remove all, then add selected
+                    cur.execute("DELETE FROM problem_sat_types WHERE problem_id=?", (problem_id,))
+                    for t in sat_types:
+                        cur.execute("SELECT type_id FROM sat_problem_types WHERE name=?", (t,))
+                        row = cur.fetchone()
+                        if row:
+                            type_id = row[0]
+                        else:
+                            cur.execute("INSERT INTO sat_problem_types (name) VALUES (?)", (t,))
+                            type_id = cur.lastrowid
+                        cur.execute("INSERT INTO problem_sat_types (problem_id, type_id) VALUES (?, ?)", (problem_id, type_id))
+                    conn.commit()
+                    QMessageBox.information(self, "Save Problem", "Problem updated successfully.")
+                else:
+                    QMessageBox.warning(self, "Save Problem", f"Problem ID {problem_id} not found.")
+            else:
+                # Insert new problem
+                cur.execute("""
+                    INSERT INTO problems (content, answer, notes, creation_date, last_modified) VALUES (?, ?, ?, datetime('now'), datetime('now'))
+                """, (content, answer, notes))
+                new_id = cur.lastrowid
+                for cat_name in categories:
+                    cur.execute("SELECT category_id FROM math_categories WHERE name=?", (cat_name,))
+                    row = cur.fetchone()
+                    if row:
+                        cat_id = row[0]
+                    else:
+                        cur.execute("INSERT INTO math_categories (name) VALUES (?)", (cat_name,))
+                        cat_id = cur.lastrowid
+                    cur.execute("INSERT INTO problem_math_categories (problem_id, category_id) VALUES (?, ?)", (new_id, cat_id))
+                for t in sat_types:
+                    cur.execute("SELECT type_id FROM sat_problem_types WHERE name=?", (t,))
+                    row = cur.fetchone()
+                    if row:
+                        type_id = row[0]
+                    else:
+                        cur.execute("INSERT INTO sat_problem_types (name) VALUES (?)", (t,))
+                        type_id = cur.lastrowid
+                    cur.execute("INSERT INTO problem_sat_types (problem_id, type_id) VALUES (?, ?)", (new_id, type_id))
+                conn.commit()
+                self.left_panel.set_problem_id(str(new_id))
+                QMessageBox.information(self, "Save Problem", f"New problem added with ID {new_id}.")
+        except Exception as e:
+            conn.rollback()
+            QMessageBox.critical(self, "Save Problem", f"Failed to save problem: {e}")
+        finally:
+            conn.close() 
