@@ -1,6 +1,9 @@
 # Centralized style configuration for the Math Editor UI
 
 import sys
+import json
+import os
+import json as _json
 
 # DPI scaling support
 _scale = 1.0
@@ -35,14 +38,50 @@ ENTRY_FONT_COLOR = BASE_FONT_COLOR
 NOTES_FONT_COLOR = BASE_FONT_COLOR
 SAT_TYPE_FONT_COLOR = BASE_FONT_COLOR
 
-# Neumorphic theme variables
-NEUMORPH_BG_COLOR = "#f0f0f3"  # Main panel and widget background
-NEUMORPH_SHADOW_DARK = "#c4c2b8"  # Warmer shadow color for depth
-NEUMORPH_SHADOW_LIGHT = "#ffffff"  # Highlight color for raised effect
-NEUMORPH_TEXT_COLOR = BASE_FONT_COLOR
-NEUMORPH_GRADIENT_START = "#f7f7fa"
-NEUMORPH_GRADIENT_END = NEUMORPH_BG_COLOR
-NEUMORPH_RADIUS = int(18 * _scale)
+# --- Palette support ---
+class NeumorphPalette:
+    def __init__(self, d):
+        self.name = d.get("name", "Unnamed")
+        self.bg_color = d.get("bg_color", "#f0f0f3")
+        self.shadow_dark = d.get("shadow_dark", "#c4c2b8")
+        self.shadow_light = d.get("shadow_light", "#ffffff")
+        self.text_color = d.get("text_color", "#3a2d1a")
+        self.gradient_start = d.get("gradient_start", "#f7f7fa")
+        self.gradient_end = d.get("gradient_end", "#f0f0f3")
+        self.radius = d.get("radius", 18)
+        self.button_radius = d.get("button_radius", 12)
+        self.button_padding = d.get("button_padding", "10px 20px")
+
+active_palette = None
+
+def set_active_palette(palette: NeumorphPalette):
+    global active_palette
+    active_palette = palette
+    # Update global style variables for legacy code
+    global NEUMORPH_BG_COLOR, NEUMORPH_SHADOW_DARK, NEUMORPH_SHADOW_LIGHT, NEUMORPH_TEXT_COLOR
+    global NEUMORPH_GRADIENT_START, NEUMORPH_GRADIENT_END, NEUMORPH_RADIUS
+    NEUMORPH_BG_COLOR = palette.bg_color
+    NEUMORPH_SHADOW_DARK = palette.shadow_dark
+    NEUMORPH_SHADOW_LIGHT = palette.shadow_light
+    NEUMORPH_TEXT_COLOR = palette.text_color
+    NEUMORPH_GRADIENT_START = palette.gradient_start
+    NEUMORPH_GRADIENT_END = palette.gradient_end
+    NEUMORPH_RADIUS = int(palette.radius * _scale)
+
+# Default palette (used if no palette is loaded)
+default_palette_dict = {
+    "name": "Light",
+    "bg_color": "#f0f0f3",
+    "shadow_dark": "#c4c2b8",
+    "shadow_light": "#ffffff",
+    "text_color": "#3a2d1a",
+    "gradient_start": "#f7f7fa",
+    "gradient_end": "#f0f0f3",
+    "radius": 18,
+    "button_radius": 12,
+    "button_padding": "10px 20px"
+}
+set_active_palette(NeumorphPalette(default_palette_dict))
 
 # Component-specific colors
 BUTTON_BG_COLOR = NEUMORPH_BG_COLOR
@@ -128,5 +167,34 @@ TEXTEDIT_PADDING = int(16 * _scale)
 SHADOW_RECT_ADJUST = int(8 * _scale)  # Used for rect.adjusted(8, 8, -8, -8)
 
 CONTROL_BTN_FONT_SIZE = int(17 * _scale)
+
+def _load_palette_name():
+    config_path = os.path.join(os.getcwd(), "default_config.json")
+    if not os.path.exists(config_path):
+        return None
+    with open(config_path, "r") as f:
+        config = _json.load(f)
+    return config.get("palette_name", None)
+
+def _load_palettes():
+    palettes_path = os.path.join(os.getcwd(), "resources", "palettes.json")
+    if not os.path.exists(palettes_path):
+        return [NeumorphPalette(default_palette_dict)]
+    with open(palettes_path, "r") as f:
+        data = _json.load(f)
+    palettes_data = data["palettes"] if isinstance(data, dict) and "palettes" in data else data
+    return [NeumorphPalette(d) for d in palettes_data]
+
+def _choose_palette(palettes, name):
+    for p in palettes:
+        if getattr(p, "name", None) == name:
+            return p
+    return palettes[0] if palettes else NeumorphPalette(default_palette_dict)
+
+# Load and set the palette at import time
+_palette_name = _load_palette_name()
+_palettes = _load_palettes()
+_selected_palette = _choose_palette(_palettes, _palette_name)
+set_active_palette(_selected_palette)
 
 # ... rest of the file remains unchanged ... 

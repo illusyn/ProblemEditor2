@@ -1,0 +1,28 @@
+{
+  "palettes": [
+    {
+      "name": "DarkRed",
+      "bg_color": "#f0f0f3",
+      "shadow_dark": "#8b2e33",
+      "shadow_light": "#ffffff",
+      "text_color": "#3a2d1a",
+      "gradient_start": "#ffaa7f",
+      "gradient_end": "#ff5500",
+      "radius": 18,
+      "button_radius": 12,
+      "button_padding": "10px 20px"
+    },
+    {
+      "name": "Light",
+      "bg_color": "#f0f0f3",
+      "shadow_dark": "#c4c2b8",
+      "shadow_light": "#ffffff",
+      "text_color": "#3a2d1a",
+      "gradient_start": "#f7f7fa",
+      "gradient_end": "#f0f0f3",
+      "radius": 18,
+      "button_radius": 12,
+      "button_padding": "10px 20px"
+    }
+  ]
+}

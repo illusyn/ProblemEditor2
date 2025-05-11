@@ -1,4 +1,5 @@
 {
+    "palette_name": "DarkRed",
     "variables": {
       "default_format": "\\medskip\\mydefaultsize",
       "section_header": "\\section*{#CONTENT#}",
