@@ -2,7 +2,7 @@
 Preview panel for the Simplified Math Editor (PyQt5).
 """
 
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QScrollArea
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QScrollArea, QMenu
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap
 from managers.preview_manager_qt import PreviewManager
@@ -25,6 +25,8 @@ class PreviewPanel(QWidget):
         self.preview_label = QLabel("[Preview output will appear here]")
         self.preview_label.setAlignment(Qt.AlignCenter)
         self.preview_label.setMinimumSize(PREVIEW_LABEL_MIN_WIDTH, PREVIEW_LABEL_MIN_HEIGHT)
+        self.preview_label.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.preview_label.customContextMenuRequested.connect(self.show_context_menu)
         
         # Add preview label to scroll area
         scroll_area.setWidget(self.preview_label)
@@ -37,6 +39,25 @@ class PreviewPanel(QWidget):
         
         # Store current preview path
         self.current_preview = None
+        
+        # Store reference to main window for image adjustment
+        self.main_window = None
+    
+    def set_main_window(self, main_window):
+        """Set reference to main window for image adjustment"""
+        self.main_window = main_window
+    
+    def show_context_menu(self, pos):
+        """Show context menu for image adjustment"""
+        if not self.main_window:
+            return
+            
+        menu = QMenu(self)
+        adjust_action = menu.addAction("Adjust Image")
+        action = menu.exec_(self.preview_label.mapToGlobal(pos))
+        
+        if action == adjust_action:
+            self.main_window.adjust_image_size()
     
     def update_preview(self, markdown_text):
         """

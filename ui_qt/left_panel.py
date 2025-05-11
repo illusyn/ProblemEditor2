@@ -194,6 +194,10 @@ class LeftPanel(QWidget):
             btn.setMinimumWidth(CONTROL_BTN_WIDTH)
             if label == "Query":
                 self.query_button = btn
+            elif label == "Next Match":
+                self.next_match_button = btn
+            elif label == "Previous Match":
+                self.prev_match_button = btn
             row2.addWidget(btn)
         main_layout.addLayout(row2)
 

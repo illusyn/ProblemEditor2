@@ -11,6 +11,7 @@ from PIL import Image
 from PyQt5.QtWidgets import QFileDialog, QMessageBox, QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QDoubleSpinBox, QPushButton, QWidget
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPixmap, QImage
+from db.math_image_db import MathImageDB
 
 class ImageDetailsDialog(QDialog):
     """Dialog for getting image details"""
@@ -95,6 +96,7 @@ class ImageManagerQt:
             app: Reference to the MainWindow instance
         """
         self.app = app
+        self.image_db = MathImageDB()
     
     def paste_image(self):
         """
