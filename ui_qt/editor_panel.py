@@ -10,7 +10,9 @@ class EditorPanel(QWidget):
     def __init__(self, parent=None, font_family=EDITOR_FONT_FAMILY, font_size=EDITOR_FONT_SIZE):
         super().__init__(parent)
         layout = QVBoxLayout(self)
-        layout.addWidget(QLabel("Editor"))
+        label = QLabel("Editor")
+        label.setFont(QFont(font_family, font_size, QFont.Bold))
+        layout.addWidget(label)
         self.text_edit = QTextEdit()
         self.text_edit.setMinimumSize(400, 300)
         font = QFont(font_family, font_size)

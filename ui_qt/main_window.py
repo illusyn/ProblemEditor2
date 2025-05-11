@@ -15,7 +15,8 @@ import re
 from pathlib import Path
 import os
 from converters.image_converter import ImageConverter
-from ui_qt.style_config import active_palette, MultiShadowButton, WINDOW_BG_COLOR
+from ui_qt.style_config import active_palette, MultiShadowButton, WINDOW_BG_COLOR, FONT_FAMILY, BUTTON_FONT_SIZE, LABEL_FONT_SIZE, NOTES_FONT_SIZE
+from PyQt5.QtGui import QFont
 
 class MainWindow(QMainWindow):
     def __init__(self, laptop_mode=False):
@@ -67,7 +68,7 @@ class MainWindow(QMainWindow):
         # Real panels
         self.left_panel = LeftPanel(laptop_mode=laptop_mode)
         if not laptop_mode:
-            self.left_panel.setFixedWidth(500)
+            self.left_panel.setFixedWidth(780)
         layout.addWidget(self.left_panel)
         # Connect query button to filtering
         self.left_panel.query_button.clicked.connect(self.on_query)
@@ -109,6 +110,7 @@ class MainWindow(QMainWindow):
         delete_btn.setMaximumHeight(36)
         delete_btn.setStyleSheet(delete_btn.styleSheet() + "font-size: 13px;")
         delete_btn.clicked.connect(self.delete_current_problem)
+        delete_btn.setFont(QFont(FONT_FAMILY, BUTTON_FONT_SIZE, QFont.Bold))
         nav_layout.addWidget(delete_btn)
         editor_vlayout.addLayout(nav_layout)
         layout.addWidget(editor_container, stretch=2)

@@ -213,12 +213,11 @@ class MultiShadowButton(QPushButton):
     def __init__(self, text, palette, parent=None):
         super().__init__(text, parent)
         self.palette = palette
-        self.setFont(QFont("Verdana", 10, QFont.Bold))
+        self.setFont(QFont(FONT_FAMILY, BUTTON_FONT_SIZE, QFont.Bold))
         self.setStyleSheet(f"""
             QPushButton {{
                 border-radius: {palette.button_radius}px;
                 color: {palette.text_color};
-                font-size: 16px;
                 padding: {palette.button_padding};
                 background: {palette.bg_color} !important;
                 background-color: {palette.bg_color} !important;
@@ -250,18 +249,16 @@ class MultiShadowButton(QPushButton):
         painter.setPen(Qt.NoPen)
         painter.drawRoundedRect(rect, radius, radius)
         # Draw the button text and icon as usual
+        painter.setFont(QFont(FONT_FAMILY, BUTTON_FONT_SIZE, QFont.Bold))
         super().paintEvent(event)
 
 LAPTOP_MODE = False
 
-def set_laptop_mode(enabled):
+def set_laptop_mode(scale):
     global LAPTOP_MODE, _scale
-    LAPTOP_MODE = enabled
-    if enabled:
-        _scale = 0.1  # Extremely small scale for testing
-    else:
-        _scale = 1.0
-    global LABEL_FONT_SIZE, SECTION_LABEL_FONT_SIZE, BUTTON_FONT_SIZE, ENTRY_FONT_SIZE, NOTES_FONT_SIZE, SAT_TYPE_FONT_SIZE, DOMAIN_BTN_FONT_SIZE, ENTRY_LABEL_FONT_SIZE
+    _scale = scale
+    LAPTOP_MODE = scale < 1.0
+    global LABEL_FONT_SIZE, SECTION_LABEL_FONT_SIZE, BUTTON_FONT_SIZE, ENTRY_FONT_SIZE, NOTES_FONT_SIZE, SAT_TYPE_FONT_SIZE, DOMAIN_BTN_FONT_SIZE, ENTRY_LABEL_FONT_SIZE, CONTROL_BTN_FONT_SIZE
     LABEL_FONT_SIZE = int(14 * _scale)
     SECTION_LABEL_FONT_SIZE = int(17 * _scale)
     BUTTON_FONT_SIZE = int(16 * _scale)
@@ -270,6 +267,7 @@ def set_laptop_mode(enabled):
     SAT_TYPE_FONT_SIZE = int(16 * _scale)
     DOMAIN_BTN_FONT_SIZE = int(16 * _scale)
     ENTRY_LABEL_FONT_SIZE = int(17 * _scale)
+    CONTROL_BTN_FONT_SIZE = int(17 * _scale)
     print(f"_scale:{_scale}")
     print(f"LABEL_FONT_SIZE:{LABEL_FONT_SIZE}")
 

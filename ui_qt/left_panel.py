@@ -162,8 +162,9 @@ class NeumorphicTextEdit(QTextEdit):
 class LeftPanel(QWidget):
     def __init__(self, parent=None, laptop_mode=False):
         super().__init__(parent)
+        print(f"[DEBUG] LeftPanel: LABEL_FONT_SIZE={LABEL_FONT_SIZE}, BUTTON_FONT_SIZE={BUTTON_FONT_SIZE}, ENTRY_FONT_SIZE={ENTRY_FONT_SIZE}, NOTES_FONT_SIZE={NOTES_FONT_SIZE}")
         if laptop_mode:
-            self.setFixedWidth(320)
+            self.setFixedWidth(600)
         else:
             self.setFixedWidth(780)
         self.setStyleSheet(f"background-color: {WINDOW_BG_COLOR};")
@@ -264,7 +265,10 @@ class LeftPanel(QWidget):
         main_layout.addLayout(sat_types)
 
         # --- Math Domains ---
-        main_layout.addSpacing(30)
+        if laptop_mode:
+            main_layout.addSpacing(5)  # Minimal spacing for scaled mode
+        else:
+            main_layout.addSpacing(30)
         domains_label = QLabel("Math Domains")
         domains_label.setFont(QFont(FONT_FAMILY, SECTION_LABEL_FONT_SIZE, QFont.Bold))
         domains_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; padding-top: 0px; padding-bottom: 0px; margin-top: 0px; margin-bottom: 0px; background: {WINDOW_BG_COLOR};")
@@ -277,12 +281,14 @@ class LeftPanel(QWidget):
         main_layout.addWidget(self.category_panel)
 
         # --- Notes ---
-        notes_label = QLabel("Notes")
-        notes_label.setFont(QFont(FONT_FAMILY, SECTION_LABEL_FONT_SIZE, QFont.Bold))
-        notes_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; {SECTION_LABEL_PADDING_TOP} background: {WINDOW_BG_COLOR};")
-        main_layout.addWidget(notes_label)
-        self.notes_text = NeumorphicTextEdit(bg_color=EDITOR_BG_COLOR)
-        main_layout.addWidget(self.notes_text)
+        self.notes_text = None
+        if not laptop_mode:
+            notes_label = QLabel("Notes")
+            notes_label.setFont(QFont(FONT_FAMILY, SECTION_LABEL_FONT_SIZE, QFont.Bold))
+            notes_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; {SECTION_LABEL_PADDING_TOP} background: {WINDOW_BG_COLOR};")
+            main_layout.addWidget(notes_label)
+            self.notes_text = NeumorphicTextEdit(bg_color=EDITOR_BG_COLOR)
+            main_layout.addWidget(self.notes_text)
 
         # Connect Reset button to reset_fields method
         self.reset_button.clicked.connect(self.reset_fields)
@@ -330,10 +336,13 @@ class LeftPanel(QWidget):
         self.search_text_entry.setText(value)
 
     def get_notes(self):
-        return self.notes_text.toPlainText()
+        if self.notes_text is not None:
+            return self.notes_text.toPlainText()
+        return ""
 
     def set_notes(self, text):
-        self.notes_text.setPlainText(text)
+        if self.notes_text is not None:
+            self.notes_text.setPlainText(text)
 
     def on_query_clicked(self):
         text = self.get_search_text()
@@ -343,7 +352,8 @@ class LeftPanel(QWidget):
         self.problem_id_entry.setText("")
         self.search_text_entry.setText("")
         self.answer_entry.setText("")
-        self.notes_text.setPlainText("")
+        if self.notes_text is not None:
+            self.notes_text.setPlainText("")
         # Uncheck all SAT type checkboxes
         for cb in self.sat_type_panel.checkboxes.values():
             cb.setChecked(False)

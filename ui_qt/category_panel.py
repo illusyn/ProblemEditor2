@@ -24,8 +24,8 @@ class NeumorphicToolButton(QToolButton):
     def paintEvent(self, event):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
-        rect = self.rect().adjusted(6, 6, -6, -6)
-        full_radius = min(rect.height(), rect.width()) // 2  # Pill-shaped
+        rect = self.rect().adjusted(4, 4, -4, -4)
+        full_radius = self.radius
         if self.isChecked():
             # Inset effect for checked state
             for i, alpha in zip([8, 6, 4], [40, 60, 90]):
