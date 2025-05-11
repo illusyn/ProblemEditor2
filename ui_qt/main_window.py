@@ -256,23 +256,36 @@ class MainWindow(QMainWindow):
                 image_path = image_filename
             # Define the apply callback
             def apply_callback(height_cm):
-                # Update image in editor (but do not close dialog)
-                new_content = self._update_latex_image_height(content, image_filename, height_cm)
+                margin_vals = dialog.get_margin_values()
+                new_content = self._update_latex_image_margins_and_height(
+                    content, image_filename, height_cm,
+                    margin_left=margin_vals['left'],
+                    margin_bottom=margin_vals['bottom'],
+                    margin_top=margin_vals['top']
+                )
                 self.editor_panel.text_edit.setPlainText(new_content)
                 self.update_preview()
 
-            # Show adjustment dialog
+            # Show adjustment dialog, passing margin values
             dialog = ImageSizeAdjustDialog(
                 self,
                 image_path=image_path,
                 current_height_cm=height_cm,
-                apply_callback=apply_callback
+                apply_callback=apply_callback,
+                margin_top=top,
+                margin_left=left,
+                margin_bottom=bottom
             )
             if dialog.exec_() == QDialog.Accepted:
                 height_cm = dialog.get_result()
                 if height_cm:
-                    # Update image in editor
-                    new_content = self._update_latex_image_height(content, image_filename, height_cm)
+                    margin_vals = dialog.get_margin_values()
+                    new_content = self._update_latex_image_margins_and_height(
+                        content, image_filename, height_cm,
+                        margin_left=margin_vals['left'],
+                        margin_bottom=margin_vals['bottom'],
+                        margin_top=margin_vals['top']
+                    )
                     self.editor_panel.text_edit.setPlainText(new_content)
                     self.update_preview()
         except Exception as e:
@@ -314,24 +327,26 @@ class MainWindow(QMainWindow):
                     break
         return width, left, top, bottom, align 
 
-    def _update_latex_image_height(self, content, image_filename, height_cm):
+    def _update_latex_image_margins_and_height(self, content, image_filename, height_cm, margin_left, margin_bottom, margin_top):
         """
-        Update the height=...cm in the adjustbox that directly wraps the includegraphics for the given image.
+        Update the height=...cm and margin=... in the adjustbox that directly wraps the includegraphics for the given image.
         """
         import re
-        # Pattern to match only the adjustbox that wraps the includegraphics for the image
+        # Pattern to match the adjustbox that wraps the includegraphics for the image
         pattern = (
-            r'(\\adjustbox\{[^}]*?)height=[0-9.]+(cm[^}]*\}\{\\includegraphics[^\{]*\{' +
+            r'(\\adjustbox\{[^}]*?)height=[0-9.]+cm([^}]*)margin=([^,}}]+)([^}]*)\}(\{\\includegraphics[^\{]*\{' +
             re.escape(image_filename) + r'\}[^}]*\})'
         )
-
         def repl(match):
             before = match.group(1)
-            after = match.group(2)
-            return f'{before}height={height_cm:.2f}{after}'
-        # Only update the first matching block (the correct image)
+            between = match.group(2)
+            old_margin = match.group(3)
+            after_margin = match.group(4)
+            rest = match.group(5)
+            new_margin = f"{margin_left:.2f}cm {margin_bottom:.2f}cm 0cm {margin_top:.2f}cm"
+            return f'{before}height={height_cm:.2f}cm{between}margin={new_margin}{after_margin}}}{rest}'
         new_content, n = re.subn(pattern, repl, content, count=1)
-        return new_content if n else content 
+        return new_content if n else content
 
     def delete_current_problem(self):
         problem_id = self.left_panel.get_problem_id()
