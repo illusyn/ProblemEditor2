@@ -179,9 +179,15 @@ class LeftPanel(QWidget):
 
         # --- Top 2 Rows of Buttons ---
         row1 = QHBoxLayout()
-        for label in ["Reset", "Save Problem", "Delete Problem"]:
+        for label in ["Reset", "Save Problem", "Preview"]:
             btn = self.create_neumorphic_button(label, font_size=CONTROL_BTN_FONT_SIZE)
             btn.setMinimumWidth(CONTROL_BTN_WIDTH)
+            if label == "Save Problem":
+                self.save_problem_button = btn
+            elif label == "Reset":
+                self.reset_button = btn
+            elif label == "Preview":
+                self.preview_button = btn
             row1.addWidget(btn)
         main_layout.addLayout(row1)
 
@@ -234,13 +240,17 @@ class LeftPanel(QWidget):
             col.addWidget(entry)
             input_row.addLayout(col)
         main_layout.addLayout(input_row)
-
+        # Remove or minimize vertical space before SAT Problem Types
+        main_layout.addSpacing(0)
         # --- SAT Problem Types ---
         sat_label = QLabel("SAT Problem Types")
         sat_label.setFont(QFont(FONT_FAMILY, SECTION_LABEL_FONT_SIZE, QFont.Bold))
-        sat_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; {SECTION_LABEL_PADDING_TOP}")
+        sat_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; padding-top: 0px; padding-bottom: 0px; margin-top: 0px; margin-bottom: 0px;")
+        sat_label.setMaximumHeight(18)
+        sat_label.setAlignment(Qt.AlignCenter)
         main_layout.addWidget(sat_label)
         sat_types = QHBoxLayout()
+        sat_types.setSpacing(0)
         self.sat_type_panel = SatTypePanelQt()
         for t, cb in self.sat_type_panel.checkboxes.items():
             cb.setFont(QFont(FONT_FAMILY, SAT_TYPE_FONT_SIZE, QFont.Bold))
@@ -248,18 +258,24 @@ class LeftPanel(QWidget):
                 QCheckBox {{
                     background: transparent;
                     color: {SAT_TYPE_FONT_COLOR};
-                    padding: 8px 18px;
-                    border-radius: 12px;
+                    padding: 0px 2px;
+                    border-radius: 4px;
+                    margin-top: 0px; margin-bottom: 0px;
                 }}
-                QCheckBox::indicator {{ width: 22px; height: 22px; }}
+                QCheckBox::indicator {{ width: 14px; height: 14px; }}
             """)
+            cb.setMinimumHeight(10)
+            cb.setMaximumHeight(14)
             sat_types.addWidget(cb)
         main_layout.addLayout(sat_types)
 
         # --- Math Domains ---
+        main_layout.addSpacing(30)
         domains_label = QLabel("Math Domains")
         domains_label.setFont(QFont(FONT_FAMILY, SECTION_LABEL_FONT_SIZE, QFont.Bold))
-        domains_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; {SECTION_LABEL_PADDING_TOP}")
+        domains_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; padding-top: 0px; padding-bottom: 0px; margin-top: 0px; margin-bottom: 0px;")
+        domains_label.setMaximumHeight(18)
+        domains_label.setAlignment(Qt.AlignCenter)
         main_layout.addWidget(domains_label)
 
         # Use CategoryPanelQt directly

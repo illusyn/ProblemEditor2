@@ -71,9 +71,25 @@ class MainWindow(QMainWindow):
         # Connect navigation buttons
         self.left_panel.next_match_button.clicked.connect(self.show_next_problem)
         self.left_panel.prev_match_button.clicked.connect(self.show_previous_problem)
+        # Connect preview and delete problem buttons
+        self.left_panel.preview_button.clicked.connect(self.update_preview)
+        # self.left_panel.delete_problem_button.clicked.connect(self.file_manager.delete_problem)  # Removed as requested
 
         # Real database connection
         self.problem_db = ProblemDatabase()
+
+        # --- Top 2 Rows of Buttons ---
+        """
+        row1 = QHBoxLayout()
+        for label in ["Reset", "Save Problem", "Delete Problem"]:
+            btn = self.left_panel.buttons[label]
+            if label == "Delete Problem":
+                btn.setText("Preview")
+                btn.clicked.disconnect()
+                btn.clicked.connect(self.update_preview)
+            row1.addWidget(btn)
+        layout.addLayout(row1)
+        """
 
         # Editor panel with preview and navigation buttons
         editor_container = QWidget()
@@ -81,15 +97,10 @@ class MainWindow(QMainWindow):
         self.editor_panel = EditorPanel()
         editor_vlayout.addWidget(self.editor_panel)
         nav_layout = QHBoxLayout()
-        self.prev_btn = QPushButton("Previous")
-        self.prev_btn.clicked.connect(self.show_previous_problem)
-        nav_layout.addWidget(self.prev_btn)
-        preview_btn = QPushButton("Preview")
-        preview_btn.clicked.connect(self.update_preview)
-        nav_layout.addWidget(preview_btn)
-        self.next_btn = QPushButton("Next")
-        self.next_btn.clicked.connect(self.show_next_problem)
-        nav_layout.addWidget(self.next_btn)
+        # Remove Previous and Next buttons, only add the new Delete Problem button
+        delete_btn = QPushButton("Delete Problem")
+        delete_btn.clicked.connect(self.delete_current_problem)
+        nav_layout.addWidget(delete_btn)
         editor_vlayout.addLayout(nav_layout)
         layout.addWidget(editor_container, stretch=2)
 
@@ -108,8 +119,23 @@ class MainWindow(QMainWindow):
         self.status_bar.showMessage("Ready")
 
     def update_preview(self):
-        """Update the preview with current editor content"""
+        """Update the preview with current editor content, ensuring all images are available for LaTeX."""
         text = self.editor_panel.text_edit.toPlainText()
+        # --- Ensure all images referenced in LaTeX are present in temp/images ---
+        image_pattern = r'\\includegraphics(?:\[.*?\])?\{([^{}]+)\}'
+        image_filenames = set(re.findall(image_pattern, text))
+        image_dir = os.path.join(os.getcwd(), "temp", "images")
+        os.makedirs(image_dir, exist_ok=True)
+        for filename in image_filenames:
+            image_path = os.path.join(image_dir, filename)
+            if not os.path.exists(image_path):
+                # Try to export from database
+                success, result = self.image_manager.image_db.export_to_file(filename, image_path)
+                if not success:
+                    QMessageBox.critical(self, "Image Error", f"Could not extract image '{filename}' from database: {result}")
+                    self.status_bar.showMessage(f"Image missing: {filename}")
+                    return  # Abort preview if any image is missing
+        # --- Proceed with preview ---
         self.preview_panel.update_preview(text)
         self.status_bar.showMessage("Preview updated")
 
@@ -306,3 +332,19 @@ class MainWindow(QMainWindow):
         # Only update the first matching block (the correct image)
         new_content, n = re.subn(pattern, repl, content, count=1)
         return new_content if n else content 
+
+    def delete_current_problem(self):
+        problem_id = self.left_panel.get_problem_id()
+        if not problem_id:
+            QMessageBox.warning(self, "Delete Problem", "No problem selected.")
+            return
+        success = self.problem_db.delete_problem(problem_id)
+        if success:
+            QMessageBox.information(self, "Delete Problem", "Problem deleted.")
+            # Optionally clear UI or refresh list
+            self.editor_panel.text_edit.clear()
+            self.left_panel.set_problem_id("")
+            self.left_panel.set_answer("")
+            self.left_panel.set_notes("")
+        else:
+            QMessageBox.critical(self, "Delete Problem", "Failed to delete problem.") 

@@ -55,6 +55,7 @@ class PreviewManager:
 \usepackage{amsmath}
 \usepackage{amssymb}
 \usepackage{graphicx}
+\graphicspath{{images/}}
 \usepackage{booktabs}
 \usepackage{enumitem}
 \usepackage{fontspec}
