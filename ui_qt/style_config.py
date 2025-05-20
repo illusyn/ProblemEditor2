@@ -28,9 +28,6 @@ SECTION_LABEL_FONT_SIZE = int(17 * _scale)
 BUTTON_FONT_SIZE = int(16 * _scale)
 ENTRY_FONT_SIZE = int(16 * _scale)
 NOTES_FONT_SIZE = int(16 * _scale)
-SAT_TYPE_FONT_SIZE = int(16 * _scale)
-DOMAIN_BTN_FONT_SIZE = int(16 * _scale)
-ENTRY_LABEL_FONT_SIZE = int(17 * _scale)
 
 # Base colors
 BASE_FONT_COLOR = "#031282"  # Darker text for better contrast
@@ -39,7 +36,6 @@ SECTION_LABEL_FONT_COLOR = BASE_FONT_COLOR
 BUTTON_FONT_COLOR = BASE_FONT_COLOR
 ENTRY_FONT_COLOR = BASE_FONT_COLOR
 NOTES_FONT_COLOR = BASE_FONT_COLOR
-SAT_TYPE_FONT_COLOR = BASE_FONT_COLOR
 
 
 # --- Palette support ---
@@ -258,15 +254,12 @@ def set_laptop_mode(scale):
     global LAPTOP_MODE, _scale
     _scale = scale
     LAPTOP_MODE = scale < 1.0
-    global LABEL_FONT_SIZE, SECTION_LABEL_FONT_SIZE, BUTTON_FONT_SIZE, ENTRY_FONT_SIZE, NOTES_FONT_SIZE, SAT_TYPE_FONT_SIZE, DOMAIN_BTN_FONT_SIZE, ENTRY_LABEL_FONT_SIZE, CONTROL_BTN_FONT_SIZE
+    global LABEL_FONT_SIZE, SECTION_LABEL_FONT_SIZE, BUTTON_FONT_SIZE, ENTRY_FONT_SIZE, NOTES_FONT_SIZE, CONTROL_BTN_FONT_SIZE
     LABEL_FONT_SIZE = int(14 * _scale)
     SECTION_LABEL_FONT_SIZE = int(17 * _scale)
     BUTTON_FONT_SIZE = int(16 * _scale)
     ENTRY_FONT_SIZE = int(16 * _scale)
     NOTES_FONT_SIZE = int(16 * _scale)
-    SAT_TYPE_FONT_SIZE = int(16 * _scale)
-    DOMAIN_BTN_FONT_SIZE = int(16 * _scale)
-    ENTRY_LABEL_FONT_SIZE = int(17 * _scale)
     CONTROL_BTN_FONT_SIZE = int(17 * _scale)
     print(f"_scale:{_scale}")
     print(f"LABEL_FONT_SIZE:{LABEL_FONT_SIZE}")

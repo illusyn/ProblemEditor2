@@ -15,7 +15,7 @@ class ProblemDatabase:
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
-        cur.execute("SELECT problem_id, content, answer, notes FROM problems")
+        cur.execute("SELECT problem_id, content, answer, notes, earmark FROM problems")
         rows = cur.fetchall()
         for row in rows:
             if row["problem_id"] == 4:
@@ -29,13 +29,6 @@ class ProblemDatabase:
                 WHERE pc.problem_id = ?
             """, (p['problem_id'],))
             p['categories'] = [{"category_id": row[0], "name": row[1]} for row in cur.fetchall()]
-            # Fetch SAT types for each problem
-            cur.execute("""
-                SELECT s.name FROM sat_problem_types s
-                JOIN problem_sat_types ps ON s.type_id = ps.type_id
-                WHERE ps.problem_id = ?
-            """, (p['problem_id'],))
-            p['sat_types'] = [row['name'] for row in cur.fetchall()]
         conn.close()
         # Rename keys for UI compatibility
         for p in problems:

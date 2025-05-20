@@ -53,6 +53,7 @@ class MathProblemDB:
                 has_latex_solution INTEGER DEFAULT 0,
                 answer TEXT,
                 notes TEXT,
+                earmark INTEGER DEFAULT 0,
                 creation_date TEXT NOT NULL,
                 last_modified TEXT NOT NULL
             )
@@ -88,33 +89,23 @@ class MathProblemDB:
             )
         ''')
         
-        # SAT problem types table
+        # Problem sets table
         self.cur.execute('''
-            CREATE TABLE IF NOT EXISTS sat_problem_types (
-                type_id INTEGER PRIMARY KEY,
-                name TEXT NOT NULL UNIQUE
+            CREATE TABLE IF NOT EXISTS problem_sets (
+                set_id INTEGER PRIMARY KEY AUTOINCREMENT,
+                name TEXT NOT NULL,
+                description TEXT,
+                is_ordered INTEGER DEFAULT 0
             )
         ''')
         
-        # Junction table for problems and categories
+        # Problem set members table
         self.cur.execute('''
-            CREATE TABLE IF NOT EXISTS problem_math_categories (
-                problem_id INTEGER NOT NULL,
-                category_id INTEGER NOT NULL,
-                PRIMARY KEY (problem_id, category_id),
-                FOREIGN KEY (problem_id) REFERENCES problems(problem_id) ON DELETE CASCADE,
-                FOREIGN KEY (category_id) REFERENCES math_categories(category_id) ON DELETE CASCADE
-            )
-        ''')
-        
-        # Junction table for problems and SAT types
-        self.cur.execute('''
-            CREATE TABLE IF NOT EXISTS problem_sat_types (
-                problem_id INTEGER NOT NULL,
-                type_id INTEGER NOT NULL,
-                PRIMARY KEY (problem_id, type_id),
-                FOREIGN KEY (problem_id) REFERENCES problems(problem_id) ON DELETE CASCADE,
-                FOREIGN KEY (type_id) REFERENCES sat_problem_types(type_id) ON DELETE CASCADE
+            CREATE TABLE IF NOT EXISTS problem_set_members (
+                set_id INTEGER NOT NULL REFERENCES problem_sets(set_id) ON DELETE CASCADE,
+                problem_id INTEGER NOT NULL REFERENCES problems(problem_id) ON DELETE CASCADE,
+                order_index INTEGER,
+                PRIMARY KEY (set_id, problem_id)
             )
         ''')
         
@@ -135,15 +126,9 @@ class MathProblemDB:
         ''')
         
         self.conn.commit()
-        
-        # Pre-populate sat_problem_types with default types if not present
-        default_types = ["efficiency", "math_concept", "sat_problem"]
-        for t in default_types:
-            self.cur.execute("INSERT OR IGNORE INTO sat_problem_types (name) VALUES (?)", (t,))
-        self.conn.commit()
     
     def add_problem(self, content, solution=None, has_latex_solution=0, 
-                   answer=None, notes=None, categories=None):
+                   answer=None, notes=None, earmark=0, categories=None):
         """
         Add a new math problem to the database
         
@@ -153,6 +138,7 @@ class MathProblemDB:
             has_latex_solution (int, optional): 1 if solution contains LaTeX, 0 otherwise
             answer (str, optional): Plain text answer (no LaTeX)
             notes (str, optional): Additional notes about the problem
+            earmark (int, optional): Earmark value for the problem
             categories (list, optional): List of category names to associate with the problem
             
         Returns:
@@ -165,9 +151,9 @@ class MathProblemDB:
             # Insert problem
             self.cur.execute('''
                 INSERT INTO problems 
-                (content, solution, has_latex_solution, answer, notes, creation_date, last_modified)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
-            ''', (content, solution, has_latex_solution, answer, notes, now, now))
+                (content, solution, has_latex_solution, answer, notes, earmark, creation_date, last_modified)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            ''', (content, solution, has_latex_solution, answer, notes, earmark, now, now))
             
             # Get the problem_id of the inserted problem
             problem_id = self.cur.lastrowid
@@ -185,7 +171,7 @@ class MathProblemDB:
             return (False, str(e))
     
     def update_problem(self, problem_id, content=None, solution=None, 
-                      has_latex_solution=None, answer=None, notes=None):
+                      has_latex_solution=None, answer=None, notes=None, earmark=None):
         """
         Update an existing math problem
         
@@ -196,6 +182,7 @@ class MathProblemDB:
             has_latex_solution (int, optional): Updated solution type flag
             answer (str, optional): Updated plain text answer
             notes (str, optional): Updated notes
+            earmark (int, optional): Updated earmark value
             
         Returns:
             tuple: (success, message)
@@ -232,6 +219,10 @@ class MathProblemDB:
             if notes is not None:
                 columns.append("notes = ?")
                 values.append(notes)
+            
+            if earmark is not None:
+                columns.append("earmark = ?")
+                values.append(earmark)
             
             # Add last modified timestamp
             columns.append("last_modified = ?")
@@ -297,7 +288,7 @@ class MathProblemDB:
             # Get problem data
             self.cur.execute("""
                 SELECT problem_id, content, solution, has_latex_solution, 
-                       answer, notes, creation_date, last_modified 
+                       answer, notes, earmark, creation_date, last_modified 
                 FROM problems WHERE problem_id = ?
             """, (problem_id,))
             
@@ -313,8 +304,9 @@ class MathProblemDB:
                 "has_latex_solution": problem[3],
                 "answer": problem[4],
                 "notes": problem[5],
-                "creation_date": problem[6],
-                "last_modified": problem[7]
+                "earmark": problem[6],
+                "creation_date": problem[7],
+                "last_modified": problem[8]
             }
             
             # Get associated images
@@ -908,100 +900,116 @@ class MathProblemDB:
         if hasattr(self, 'conn') and self.conn:
             self.conn.close()
 
-    def add_problem_to_sat_type(self, problem_id, type_name):
-        """
-        Add a problem to a SAT type (creating the type if it doesn't exist)
-        Args:
-            problem_id (int): ID of the problem
-            type_name (str): Name of the SAT type
-        Returns:
-            tuple: (success, message)
-        """
+    def create_problem_set(self, name, description=None, is_ordered=0):
+        """Create a new problem set."""
         try:
-            # Add or get the SAT type
-            self.cur.execute("SELECT type_id FROM sat_problem_types WHERE name = ?", (type_name,))
-            row = self.cur.fetchone()
-            if row:
-                type_id = row[0]
-            else:
-                self.cur.execute("INSERT INTO sat_problem_types (name) VALUES (?)", (type_name,))
-                type_id = self.cur.lastrowid
-
-            # Check if relationship already exists
-            self.cur.execute("""
-                SELECT 1 FROM problem_sat_types 
-                WHERE problem_id = ? AND type_id = ?
-            """, (problem_id, type_id))
-            if self.cur.fetchone():
-                return (True, f"Problem already in SAT type '{type_name}'")
-
-            # Add the relationship
-            self.cur.execute("""
-                INSERT INTO problem_sat_types (problem_id, type_id)
-                VALUES (?, ?)
-            """, (problem_id, type_id))
+            self.cur.execute('''
+                INSERT INTO problem_sets (name, description, is_ordered)
+                VALUES (?, ?, ?)
+            ''', (name, description, is_ordered))
             self.conn.commit()
-            return (True, f"Problem added to SAT type '{type_name}'")
+            return (True, self.cur.lastrowid)
         except Exception as e:
             self.conn.rollback()
             return (False, str(e))
 
-    def remove_problem_from_sat_type(self, problem_id, type_id):
-        """
-        Remove a problem from a SAT type
-        Args:
-            problem_id (int): ID of the problem
-            type_id (int): ID of the SAT type
-        Returns:
-            tuple: (success, message)
-        """
+    def update_problem_set(self, set_id, name=None, description=None, is_ordered=None):
+        """Update an existing problem set."""
         try:
-            self.cur.execute("""
-                DELETE FROM problem_sat_types
-                WHERE problem_id = ? AND type_id = ?
-            """, (problem_id, type_id))
+            columns = []
+            values = []
+            if name is not None:
+                columns.append("name = ?")
+                values.append(name)
+            if description is not None:
+                columns.append("description = ?")
+                values.append(description)
+            if is_ordered is not None:
+                columns.append("is_ordered = ?")
+                values.append(is_ordered)
+            if not columns:
+                return (True, "No changes to update")
+            values.append(set_id)
+            query = f"UPDATE problem_sets SET {', '.join(columns)} WHERE set_id = ?"
+            self.cur.execute(query, values)
             self.conn.commit()
-            return (True, "Problem removed from SAT type")
+            return (True, "Problem set updated successfully")
         except Exception as e:
             self.conn.rollback()
             return (False, str(e))
 
-    def get_sat_types_for_problem(self, problem_id):
-        """
-        Get all SAT types associated with a problem
-        Args:
-            problem_id (int): ID of the problem
-        Returns:
-            tuple: (success, list_of_types or error_message)
-        """
+    def delete_problem_set(self, set_id):
+        """Delete a problem set and its members."""
         try:
-            self.cur.execute("""
-                SELECT t.type_id, t.name
-                FROM sat_problem_types t
-                JOIN problem_sat_types pt ON t.type_id = pt.type_id
-                WHERE pt.problem_id = ?
-            """, (problem_id,))
-            types = [{"type_id": row[0], "name": row[1]} for row in self.cur.fetchall()]
-            return (True, types)
+            self.cur.execute("DELETE FROM problem_sets WHERE set_id = ?", (set_id,))
+            self.conn.commit()
+            return (True, f"Problem set {set_id} deleted")
         except Exception as e:
+            self.conn.rollback()
             return (False, str(e))
 
-    def get_problems_for_sat_type(self, type_id):
-        """
-        Get all problems associated with a SAT type
-        Args:
-            type_id (int): ID of the SAT type
-        Returns:
-            tuple: (success, list_of_problems or error_message)
-        """
+    def list_problem_sets(self):
+        """List all problem sets."""
+        self.cur.execute("SELECT set_id, name, description, is_ordered FROM problem_sets ORDER BY name")
+        return self.cur.fetchall()
+
+    def add_problem_to_set(self, set_id, problem_id, order_index=None):
+        """Add a problem to a set, optionally with order."""
         try:
-            self.cur.execute("""
-                SELECT p.problem_id, p.content
-                FROM problems p
-                JOIN problem_sat_types pt ON p.problem_id = pt.problem_id
-                WHERE pt.type_id = ?
-            """, (type_id,))
-            problems = [{"problem_id": row[0], "content": row[1]} for row in self.cur.fetchall()]
-            return (True, problems)
+            self.cur.execute('''
+                INSERT OR REPLACE INTO problem_set_members (set_id, problem_id, order_index)
+                VALUES (?, ?, ?)
+            ''', (set_id, problem_id, order_index))
+            self.conn.commit()
+            return (True, "Problem added to set")
         except Exception as e:
+            self.conn.rollback()
             return (False, str(e))
+
+    def remove_problem_from_set(self, set_id, problem_id):
+        """Remove a problem from a set."""
+        try:
+            self.cur.execute('''
+                DELETE FROM problem_set_members WHERE set_id = ? AND problem_id = ?
+            ''', (set_id, problem_id))
+            self.conn.commit()
+            return (True, "Problem removed from set")
+        except Exception as e:
+            self.conn.rollback()
+            return (False, str(e))
+
+    def list_problems_in_set(self, set_id, ordered=True):
+        """List all problems in a set, ordered if requested."""
+        if ordered:
+            self.cur.execute('''
+                SELECT p.* FROM problems p
+                JOIN problem_set_members m ON p.problem_id = m.problem_id
+                WHERE m.set_id = ?
+                ORDER BY m.order_index ASC
+            ''', (set_id,))
+        else:
+            self.cur.execute('''
+                SELECT p.* FROM problems p
+                JOIN problem_set_members m ON p.problem_id = m.problem_id
+                WHERE m.set_id = ?
+            ''', (set_id,))
+        return self.cur.fetchall()
+
+    def get_all_problems(self):
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        cur = conn.cursor()
+        cur.execute("SELECT problem_id, content, answer, notes, earmark FROM problems")
+        rows = cur.fetchall()
+        problems = [dict(row) for row in rows]
+        for p in problems:
+            cur.execute("""
+                SELECT c.category_id, c.name FROM math_categories c
+                JOIN problem_math_categories pc ON c.category_id = pc.category_id
+                WHERE pc.problem_id = ?
+            """, (p['problem_id'],))
+            p['categories'] = [{"category_id": row[0], "name": row[1]} for row in cur.fetchall()]
+        conn.close()
+        for p in problems:
+            p['id'] = p.pop('problem_id')
+        return problems

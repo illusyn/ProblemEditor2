@@ -9,8 +9,7 @@ from PyQt5.QtGui import QFont, QColor, QPainter, QBrush, QLinearGradient
 from PyQt5.QtWidgets import QGraphicsDropShadowEffect
 from PyQt5.QtCore import Qt
 from ui_qt.category_panel import CategoryPanelQt
-from ui_qt.sat_type_panel import SatTypePanelQt
-from ui_qt.style_config import (FONT_FAMILY, FONT_WEIGHT, LABEL_FONT_SIZE, SECTION_LABEL_FONT_SIZE, BUTTON_FONT_SIZE, CONTROL_BTN_FONT_SIZE, ENTRY_FONT_SIZE, NOTES_FONT_SIZE, NEUMORPH_TEXT_COLOR, WINDOW_BG_COLOR, NEUMORPH_BG_COLOR, NEUMORPH_SHADOW_DARK, NEUMORPH_SHADOW_LIGHT, NEUMORPH_GRADIENT_START, NEUMORPH_GRADIENT_END, NEUMORPH_RADIUS, BUTTON_BORDER_RADIUS, BUTTON_BG_COLOR, BUTTON_FONT_COLOR, ENTRY_BORDER_RADIUS, ENTRY_BG_COLOR, ENTRY_FONT_COLOR, NOTES_BG_COLOR, NOTES_FONT_COLOR, NOTES_BORDER_RADIUS, SAT_TYPE_FONT_COLOR, SAT_TYPE_FONT_SIZE, DOMAIN_BTN_FONT_SIZE, CONTROL_BTN_WIDTH, ENTRY_LABEL_FONT_SIZE, PROB_ID_ENTRY_WIDTH, SEARCH_TEXT_ENTRY_WIDTH, ANSWER_ENTRY_WIDTH, SEARCH_TEXT_LABEL_PADDING, ANSWER_LABEL_PADDING, DEFAULT_LABEL_PADDING, ROW_SPACING_REDUCTION, NOTES_FIXED_HEIGHT, PADDING, SPACING, LEFT_PANEL_WIDTH, DOMAIN_GRID_SPACING, DOMAIN_BTN_WIDTH, DOMAIN_BTN_HEIGHT, SECTION_LABEL_PADDING_TOP, BUTTON_MIN_WIDTH, BUTTON_MIN_HEIGHT, ENTRY_MIN_HEIGHT, ENTRY_PADDING_LEFT, TEXTEDIT_PADDING, SHADOW_RECT_ADJUST, SHADOW_OFFSETS, EDITOR_BG_COLOR)
+from ui_qt.style_config import (FONT_FAMILY, FONT_WEIGHT, LABEL_FONT_SIZE, SECTION_LABEL_FONT_SIZE, BUTTON_FONT_SIZE, CONTROL_BTN_FONT_SIZE, ENTRY_FONT_SIZE, NOTES_FONT_SIZE, NEUMORPH_TEXT_COLOR, WINDOW_BG_COLOR, NEUMORPH_BG_COLOR, NEUMORPH_SHADOW_DARK, NEUMORPH_SHADOW_LIGHT, NEUMORPH_GRADIENT_START, NEUMORPH_GRADIENT_END, NEUMORPH_RADIUS, BUTTON_BORDER_RADIUS, BUTTON_BG_COLOR, BUTTON_FONT_COLOR, ENTRY_BORDER_RADIUS, ENTRY_BG_COLOR, ENTRY_FONT_COLOR, NOTES_BG_COLOR, NOTES_FONT_COLOR, NOTES_BORDER_RADIUS, CONTROL_BTN_WIDTH, PROB_ID_ENTRY_WIDTH, SEARCH_TEXT_ENTRY_WIDTH, ANSWER_ENTRY_WIDTH, SEARCH_TEXT_LABEL_PADDING, ANSWER_LABEL_PADDING, DEFAULT_LABEL_PADDING, ROW_SPACING_REDUCTION, NOTES_FIXED_HEIGHT, PADDING, SPACING, LEFT_PANEL_WIDTH, DOMAIN_GRID_SPACING, DOMAIN_BTN_WIDTH, DOMAIN_BTN_HEIGHT, SECTION_LABEL_PADDING_TOP, BUTTON_MIN_WIDTH, BUTTON_MIN_HEIGHT, ENTRY_MIN_HEIGHT, ENTRY_PADDING_LEFT, TEXTEDIT_PADDING, SHADOW_RECT_ADJUST, SHADOW_OFFSETS, EDITOR_BG_COLOR)
 
 class NeumorphicButton(QPushButton):
     def __init__(self, text, parent=None, radius=NEUMORPH_RADIUS, bg_color=NEUMORPH_BG_COLOR, shadow_dark=NEUMORPH_SHADOW_DARK, shadow_light=NEUMORPH_SHADOW_LIGHT, font_family=FONT_FAMILY, font_size=BUTTON_FONT_SIZE, font_color=BUTTON_FONT_COLOR):
@@ -172,6 +171,13 @@ class LeftPanel(QWidget):
         main_layout.setContentsMargins(PADDING, PADDING, PADDING, PADDING)
         main_layout.setSpacing(SPACING)
 
+        # --- New Top Row: Problem Browser Button ---
+        browser_row = QHBoxLayout()
+        self.problem_browser_button = self.create_neumorphic_button("Problem Browser", font_size=CONTROL_BTN_FONT_SIZE)
+        self.problem_browser_button.setMinimumWidth(CONTROL_BTN_WIDTH)
+        browser_row.addWidget(self.problem_browser_button)
+        main_layout.addLayout(browser_row)
+
         # --- Top 2 Rows of Buttons ---
         row1 = QHBoxLayout()
         for label in ["Reset", "Save Problem", "Preview"]:
@@ -221,7 +227,7 @@ class LeftPanel(QWidget):
             col = QVBoxLayout()
             col.setSpacing(0)  # Remove spacing between label and entry
             lbl = QLabel(label)
-            lbl.setFont(QFont(FONT_FAMILY, ENTRY_LABEL_FONT_SIZE, QFont.Bold))
+            lbl.setFont(QFont(FONT_FAMILY, LABEL_FONT_SIZE, QFont.Bold))
             # Use centralized padding values
             if label == "Search Text":
                 padding = SEARCH_TEXT_LABEL_PADDING
@@ -235,38 +241,15 @@ class LeftPanel(QWidget):
             col.addWidget(entry)
             input_row.addLayout(col)
         main_layout.addLayout(input_row)
-        # Remove or minimize vertical space before SAT Problem Types
-        main_layout.addSpacing(0)
-        # --- SAT Problem Types ---
-        sat_label = QLabel("SAT Problem Types")
-        sat_label.setFont(QFont(FONT_FAMILY, SECTION_LABEL_FONT_SIZE, QFont.Bold))
-        sat_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; padding-top: 0px; padding-bottom: 0px; margin-top: 0px; margin-bottom: 0px; background: {WINDOW_BG_COLOR};")
-        sat_label.setMaximumHeight(18)
-        sat_label.setAlignment(Qt.AlignCenter)
-        main_layout.addWidget(sat_label)
-        sat_types = QHBoxLayout()
-        sat_types.setSpacing(0)
-        self.sat_type_panel = SatTypePanelQt()
-        for t, cb in self.sat_type_panel.checkboxes.items():
-            cb.setFont(QFont(FONT_FAMILY, SAT_TYPE_FONT_SIZE, QFont.Bold))
-            cb.setStyleSheet(f"""
-                QCheckBox {{
-                    background: transparent;
-                    color: {SAT_TYPE_FONT_COLOR};
-                    padding: 2px 8px;
-                    border-radius: 4px;
-                    margin-top: 0px; margin-bottom: 0px;
-                }}
-                QCheckBox::indicator {{ width: 18px; height: 18px; }}
-            """)
-            cb.setMinimumHeight(28)
-            cb.setMaximumHeight(40)
-            sat_types.addWidget(cb)
-        main_layout.addLayout(sat_types)
-
+        # Add Earmark checkbox below answer entry
+        self.earmark_checkbox = QCheckBox("Earmark")
+        self.earmark_checkbox.setFont(QFont(FONT_FAMILY, LABEL_FONT_SIZE, QFont.Bold))
+        self.earmark_checkbox.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; margin-left: 10px;")
+        main_layout.addWidget(self.earmark_checkbox)
+        # Remove SAT Problem Types section
         # --- Math Domains ---
         if laptop_mode:
-            main_layout.addSpacing(5)  # Minimal spacing for scaled mode
+            main_layout.addSpacing(5)
         else:
             main_layout.addSpacing(30)
         domains_label = QLabel("Math Domains")
@@ -275,11 +258,8 @@ class LeftPanel(QWidget):
         domains_label.setMaximumHeight(18)
         domains_label.setAlignment(Qt.AlignCenter)
         main_layout.addWidget(domains_label)
-
-        # Use CategoryPanelQt directly
         self.category_panel = CategoryPanelQt()
         main_layout.addWidget(self.category_panel)
-
         # --- Notes ---
         self.notes_text = None
         if not laptop_mode:
@@ -348,16 +328,19 @@ class LeftPanel(QWidget):
         text = self.get_search_text()
         QMessageBox.information(self, "Query", f"Search text: {text}")
 
+    def get_earmark(self):
+        return self.earmark_checkbox.isChecked()
+
+    def set_earmark(self, value):
+        self.earmark_checkbox.setChecked(bool(value))
+
     def reset_fields(self):
         self.problem_id_entry.setText("")
         self.search_text_entry.setText("")
         self.answer_entry.setText("")
         if self.notes_text is not None:
             self.notes_text.setPlainText("")
-        # Uncheck all SAT type checkboxes
-        for cb in self.sat_type_panel.checkboxes.values():
-            cb.setChecked(False)
-        # Unselect all category buttons
+        self.earmark_checkbox.setChecked(False)
         for btn in self.category_panel.buttons.values():
             btn.setChecked(False)
         self.category_panel.selected.clear() 

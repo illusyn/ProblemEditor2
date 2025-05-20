@@ -2,7 +2,7 @@
 Main PyQt5 window for the Simplified Math Editor (migration skeleton).
 """
 
-from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QMenuBar, QAction, QFileDialog, QMessageBox, QPushButton, QVBoxLayout, QDialog
+from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QMenuBar, QAction, QFileDialog, QMessageBox, QPushButton, QVBoxLayout, QDialog, QToolBar, QStackedWidget
 from ui_qt.left_panel import LeftPanel
 from ui_qt.editor_panel import EditorPanel
 from ui_qt.preview_panel import PreviewPanel
@@ -17,6 +17,8 @@ import os
 from converters.image_converter import ImageConverter
 from ui_qt.style_config import active_palette, MultiShadowButton, WINDOW_BG_COLOR, FONT_FAMILY, BUTTON_FONT_SIZE, LABEL_FONT_SIZE, NOTES_FONT_SIZE
 from PyQt5.QtGui import QFont
+from ui_qt.problem_browser import ProblemBrowser
+from PyQt5.QtCore import Qt
 
 class MainWindow(QMainWindow):
     def __init__(self, laptop_mode=False):
@@ -57,58 +59,39 @@ class MainWindow(QMainWindow):
         export_action.triggered.connect(self.file_manager.export_to_pdf)
         file_menu.addAction(export_action)
 
+        # Add Problem Browser menu
+        # tools_menu = menubar.addMenu("Tools")
+        # browser_action = QAction("Problem Browser", self)
+        # browser_action.triggered.connect(self.show_problem_browser)
+        # tools_menu.addAction(browser_action)
+
         self.setMenuBar(menubar)
 
         # Central widget and layout
-        central_widget = QWidget(self)
-        self.setCentralWidget(central_widget)
-        central_widget.setStyleSheet(f"background-color: {WINDOW_BG_COLOR};")
-        layout = QHBoxLayout(central_widget)
-
-        # Real panels
+        self.stacked_widget = QStackedWidget(self)
+        self.setCentralWidget(self.stacked_widget)
+        # --- Main Editor UI ---
+        self.editor_container = QWidget(self)
+        editor_layout = QHBoxLayout(self.editor_container)
         self.left_panel = LeftPanel(laptop_mode=laptop_mode)
         if not laptop_mode:
             self.left_panel.setFixedWidth(780)
-        layout.addWidget(self.left_panel)
-        # Connect query button to filtering
+        editor_layout.addWidget(self.left_panel)
         self.left_panel.query_button.clicked.connect(self.on_query)
-        # Connect navigation buttons
         self.left_panel.next_match_button.clicked.connect(self.show_next_problem)
         self.left_panel.prev_match_button.clicked.connect(self.show_previous_problem)
-        # Connect preview and delete problem buttons
         self.left_panel.preview_button.clicked.connect(self.update_preview)
-        # self.left_panel.delete_problem_button.clicked.connect(self.file_manager.delete_problem)  # Removed as requested
         self.left_panel.save_problem_button.clicked.connect(self.save_current_problem)
-        # Connect Reset button to MainWindow.reset_fields
         try:
             self.left_panel.reset_button.clicked.disconnect()
         except TypeError:
             pass
         self.left_panel.reset_button.clicked.connect(self.reset_fields)
-
-        # Real database connection
         self.problem_db = ProblemDatabase()
-
-        # --- Top 2 Rows of Buttons ---
-        """
-        row1 = QHBoxLayout()
-        for label in ["Reset", "Save Problem", "Delete Problem"]:
-            btn = self.left_panel.buttons[label]
-            if label == "Delete Problem":
-                btn.setText("Preview")
-                btn.clicked.disconnect()
-                btn.clicked.connect(self.update_preview)
-            row1.addWidget(btn)
-        layout.addLayout(row1)
-        """
-
-        # Editor panel with preview and navigation buttons
-        editor_container = QWidget()
-        editor_vlayout = QVBoxLayout(editor_container)
         self.editor_panel = EditorPanel()
+        editor_vlayout = QVBoxLayout()
         editor_vlayout.addWidget(self.editor_panel)
         nav_layout = QHBoxLayout()
-        # Remove Previous and Next buttons, only add the new Delete Problem button
         delete_btn = MultiShadowButton("Delete Problem", active_palette)
         delete_btn.setMinimumWidth(180)
         delete_btn.setMaximumWidth(180)
@@ -119,21 +102,29 @@ class MainWindow(QMainWindow):
         delete_btn.setFont(QFont(FONT_FAMILY, BUTTON_FONT_SIZE, QFont.Bold))
         nav_layout.addWidget(delete_btn)
         editor_vlayout.addLayout(nav_layout)
-        layout.addWidget(editor_container, stretch=2)
-
+        editor_panel_container = QWidget()
+        editor_panel_container.setLayout(editor_vlayout)
+        editor_layout.addWidget(editor_panel_container, stretch=2)
         self.preview_panel = PreviewPanel()
-        layout.addWidget(self.preview_panel, stretch=3)
-        
-        # Connect preview panel to main window for image adjustment
+        editor_layout.addWidget(self.preview_panel, stretch=3)
         self.preview_panel.set_main_window(self)
-
-        # For result navigation
         self.current_results = []
         self.current_result_index = -1
-
-        # Status bar
         self.status_bar = self.statusBar()
         self.status_bar.showMessage("Ready")
+        self.stacked_widget.addWidget(self.editor_container)
+        # --- Problem Browser ---
+        self.problem_browser = ProblemBrowser(db_path=self.problem_db.db_path, parent=self)
+        self.stacked_widget.addWidget(self.problem_browser)
+        # Toolbar for Problem Browser
+        self.browser_toolbar = QToolBar("Problem Browser Toolbar", self)
+        return_action = QAction("Return to Editor", self)
+        return_action.triggered.connect(self.show_editor_screen)
+        self.browser_toolbar.addAction(return_action)
+        self.left_panel.problem_browser_button.clicked.connect(self.show_problem_browser)
+        # Show editor by default
+        self.stacked_widget.setCurrentWidget(self.editor_container)
+        self.menuBar().setVisible(True)
 
     def update_preview(self):
         """Update the preview with current editor content, ensuring all images are available for LaTeX."""
@@ -158,6 +149,7 @@ class MainWindow(QMainWindow):
 
     def on_query(self):
         problem_id = self.left_panel.get_problem_id().strip()
+        earmark_filter = self.left_panel.get_earmark()
         if problem_id:
             problems = self.problem_db.get_all_problems()
             for p in problems:
@@ -170,26 +162,19 @@ class MainWindow(QMainWindow):
             self.current_results = []
             self.current_result_index = -1
             return
-        # Existing search logic for text, categories, SAT types
         search_text = self.left_panel.get_search_text().strip().lower()
         selected_cats = {cat["name"] for cat in self.left_panel.category_panel.get_selected_categories()}
-        selected_types = set(self.left_panel.sat_type_panel.get_selected_types())
-
         problems = self.problem_db.get_all_problems()
         results = []
         for p in problems:
-            # Filter by search text
             if search_text and search_text not in (p.get('content','').lower()) and search_text not in (p.get('title','').lower()):
                 continue
-            # Filter by categories (must include all selected)
             problem_cat_names = {c["name"] for c in p.get('categories', [])}
             if selected_cats and not selected_cats.issubset(problem_cat_names):
                 continue
-            # Filter by SAT types (must include all selected)
-            if selected_types and not selected_types.issubset(set(p.get('sat_types', []))):
+            if earmark_filter and not p.get('earmark', 0):
                 continue
             results.append(p)
-
         if not results:
             self.current_results = []
             self.current_result_index = -1
@@ -199,16 +184,11 @@ class MainWindow(QMainWindow):
             self.load_problem_into_ui(self.current_results[0])
 
     def load_problem_into_ui(self, problem):
-        # Editor content
         self.editor_panel.text_edit.setPlainText(problem.get("content", ""))
-        # Problem ID
         self.left_panel.set_problem_id(str(problem.get("id", "")))
-        # Answer
         print(f"[DEBUG] Setting answer: {repr(problem.get('answer', ''))}")
         self.left_panel.set_answer(problem.get("answer", ""))
-        # Notes
         self.left_panel.set_notes(problem.get("notes", ""))
-        # Categories
         selected_cat_names = {c["name"] for c in problem.get("categories", [])}
         for cat in self.left_panel.category_panel.categories:
             btn = self.left_panel.category_panel.buttons[cat["category_id"]]
@@ -220,11 +200,8 @@ class MainWindow(QMainWindow):
                 btn.setChecked(False)
                 btn.setStyleSheet("")
                 self.left_panel.category_panel.selected.discard(cat["category_id"])
-        # SAT types
-        selected_types = set(problem.get("sat_types", []))
-        for t, cb in self.left_panel.sat_type_panel.checkboxes.items():
-            cb.setChecked(t in selected_types)
-        # Automatically update preview
+        # Remove SAT types logic
+        self.left_panel.set_earmark(problem.get("earmark", 0))
         self.update_preview()
 
     def show_next_problem(self):
@@ -399,27 +376,22 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Delete Problem", "Failed to delete problem.") 
 
     def save_current_problem(self):
-        """Save or update the current problem in the database."""
         problem_id = self.left_panel.get_problem_id().strip()
         content = self.editor_panel.text_edit.toPlainText()
         answer = self.left_panel.get_answer().strip()
         notes = self.left_panel.get_notes().strip()
         categories = [cat["name"] for cat in self.left_panel.category_panel.get_selected_categories()]
-        sat_types = self.left_panel.sat_type_panel.get_selected_types()
-
-        # Open DB connection
+        earmark = 1 if self.left_panel.get_earmark() else 0
         import sqlite3
         conn = sqlite3.connect(self.problem_db.db_path)
         cur = conn.cursor()
         try:
             if problem_id:
-                # Update existing problem
                 cur.execute("SELECT problem_id FROM problems WHERE problem_id = ?", (problem_id,))
                 if cur.fetchone():
                     cur.execute("""
-                        UPDATE problems SET content=?, answer=?, notes=?, last_modified=datetime('now') WHERE problem_id=?
-                    """, (content, answer, notes, problem_id))
-                    # Update categories: remove all, then add selected
+                        UPDATE problems SET content=?, answer=?, notes=?, earmark=?, last_modified=datetime('now') WHERE problem_id=?
+                    """, (content, answer, notes, earmark, problem_id))
                     cur.execute("DELETE FROM problem_math_categories WHERE problem_id=?", (problem_id,))
                     for cat_name in categories:
                         cur.execute("SELECT category_id FROM math_categories WHERE name=?", (cat_name,))
@@ -430,26 +402,14 @@ class MainWindow(QMainWindow):
                             cur.execute("INSERT INTO math_categories (name) VALUES (?)", (cat_name,))
                             cat_id = cur.lastrowid
                         cur.execute("INSERT INTO problem_math_categories (problem_id, category_id) VALUES (?, ?)", (problem_id, cat_id))
-                    # Update SAT types: remove all, then add selected
-                    cur.execute("DELETE FROM problem_sat_types WHERE problem_id=?", (problem_id,))
-                    for t in sat_types:
-                        cur.execute("SELECT type_id FROM sat_problem_types WHERE name=?", (t,))
-                        row = cur.fetchone()
-                        if row:
-                            type_id = row[0]
-                        else:
-                            cur.execute("INSERT INTO sat_problem_types (name) VALUES (?)", (t,))
-                            type_id = cur.lastrowid
-                        cur.execute("INSERT INTO problem_sat_types (problem_id, type_id) VALUES (?, ?)", (problem_id, type_id))
                     conn.commit()
                     QMessageBox.information(self, "Save Problem", "Problem updated successfully.")
                 else:
                     QMessageBox.warning(self, "Save Problem", f"Problem ID {problem_id} not found.")
             else:
-                # Insert new problem
                 cur.execute("""
-                    INSERT INTO problems (content, answer, notes, creation_date, last_modified) VALUES (?, ?, ?, datetime('now'), datetime('now'))
-                """, (content, answer, notes))
+                    INSERT INTO problems (content, answer, notes, earmark, creation_date, last_modified) VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
+                """, (content, answer, notes, earmark))
                 new_id = cur.lastrowid
                 for cat_name in categories:
                     cur.execute("SELECT category_id FROM math_categories WHERE name=?", (cat_name,))
@@ -460,15 +420,6 @@ class MainWindow(QMainWindow):
                         cur.execute("INSERT INTO math_categories (name) VALUES (?)", (cat_name,))
                         cat_id = cur.lastrowid
                     cur.execute("INSERT INTO problem_math_categories (problem_id, category_id) VALUES (?, ?)", (new_id, cat_id))
-                for t in sat_types:
-                    cur.execute("SELECT type_id FROM sat_problem_types WHERE name=?", (t,))
-                    row = cur.fetchone()
-                    if row:
-                        type_id = row[0]
-                    else:
-                        cur.execute("INSERT INTO sat_problem_types (name) VALUES (?)", (t,))
-                        type_id = cur.lastrowid
-                    cur.execute("INSERT INTO problem_sat_types (problem_id, type_id) VALUES (?, ?)", (new_id, type_id))
                 conn.commit()
                 self.left_panel.set_problem_id(str(new_id))
                 QMessageBox.information(self, "Save Problem", f"New problem added with ID {new_id}.")
@@ -482,3 +433,15 @@ class MainWindow(QMainWindow):
         self.left_panel.reset_fields()
         self.editor_panel.text_edit.clear()
         self.preview_panel.clear() 
+
+    def show_problem_browser(self):
+        self.stacked_widget.setCurrentWidget(self.problem_browser)
+        self.addToolBar(Qt.TopToolBarArea, self.browser_toolbar)
+        self.browser_toolbar.show()
+        self.menuBar().setVisible(False)
+
+    def show_editor_screen(self):
+        self.stacked_widget.setCurrentWidget(self.editor_container)
+        if hasattr(self, 'browser_toolbar'):
+            self.browser_toolbar.hide()
+        self.menuBar().setVisible(True) 
