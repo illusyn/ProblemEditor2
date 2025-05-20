@@ -79,6 +79,12 @@ class MainWindow(QMainWindow):
         self.left_panel.preview_button.clicked.connect(self.update_preview)
         # self.left_panel.delete_problem_button.clicked.connect(self.file_manager.delete_problem)  # Removed as requested
         self.left_panel.save_problem_button.clicked.connect(self.save_current_problem)
+        # Connect Reset button to MainWindow.reset_fields
+        try:
+            self.left_panel.reset_button.clicked.disconnect()
+        except TypeError:
+            pass
+        self.left_panel.reset_button.clicked.connect(self.reset_fields)
 
         # Real database connection
         self.problem_db = ProblemDatabase()
@@ -151,6 +157,20 @@ class MainWindow(QMainWindow):
         self.status_bar.showMessage("Preview updated")
 
     def on_query(self):
+        problem_id = self.left_panel.get_problem_id().strip()
+        if problem_id:
+            problems = self.problem_db.get_all_problems()
+            for p in problems:
+                if str(p.get("id", "")) == problem_id:
+                    self.current_results = [p]
+                    self.current_result_index = 0
+                    self.load_problem_into_ui(p)
+                    return
+            QMessageBox.information(self, "Query", f"No problem found with ID {problem_id}")
+            self.current_results = []
+            self.current_result_index = -1
+            return
+        # Existing search logic for text, categories, SAT types
         search_text = self.left_panel.get_search_text().strip().lower()
         selected_cats = {cat["name"] for cat in self.left_panel.category_panel.get_selected_categories()}
         selected_types = set(self.left_panel.sat_type_panel.get_selected_types())
@@ -184,6 +204,7 @@ class MainWindow(QMainWindow):
         # Problem ID
         self.left_panel.set_problem_id(str(problem.get("id", "")))
         # Answer
+        print(f"[DEBUG] Setting answer: {repr(problem.get('answer', ''))}")
         self.left_panel.set_answer(problem.get("answer", ""))
         # Notes
         self.left_panel.set_notes(problem.get("notes", ""))
@@ -203,6 +224,8 @@ class MainWindow(QMainWindow):
         selected_types = set(problem.get("sat_types", []))
         for t, cb in self.left_panel.sat_type_panel.checkboxes.items():
             cb.setChecked(t in selected_types)
+        # Automatically update preview
+        self.update_preview()
 
     def show_next_problem(self):
         if not self.current_results:
@@ -454,3 +477,8 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Save Problem", f"Failed to save problem: {e}")
         finally:
             conn.close() 
+
+    def reset_fields(self):
+        self.left_panel.reset_fields()
+        self.editor_panel.text_edit.clear()
+        self.preview_panel.clear() 

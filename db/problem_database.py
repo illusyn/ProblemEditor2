@@ -15,9 +15,12 @@ class ProblemDatabase:
         conn = sqlite3.connect(self.db_path)
         conn.row_factory = sqlite3.Row
         cur = conn.cursor()
-        # Fetch all problems
-        cur.execute("SELECT problem_id, content FROM problems")
-        problems = [dict(row) for row in cur.fetchall()]
+        cur.execute("SELECT problem_id, content, answer, notes FROM problems")
+        rows = cur.fetchall()
+        for row in rows:
+            if row["problem_id"] == 4:
+                print("[DEBUG] Row for problem_id=4:", dict(row))
+        problems = [dict(row) for row in rows]
         # Fetch categories for each problem
         for p in problems:
             cur.execute("""

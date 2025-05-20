@@ -291,7 +291,7 @@ class LeftPanel(QWidget):
             main_layout.addWidget(self.notes_text)
 
         # Connect Reset button to reset_fields method
-        self.reset_button.clicked.connect(self.reset_fields)
+        # self.reset_button.clicked.connect(self.reset_fields)
 
     def create_neumorphic_button(self, text, parent=None, font_size=BUTTON_FONT_SIZE):
         return NeumorphicButton(

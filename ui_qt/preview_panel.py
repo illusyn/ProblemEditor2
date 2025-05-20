@@ -135,3 +135,8 @@ class PreviewPanel(QWidget):
                     pass
             except:
                 pass  # Ignore errors during resize 
+
+    def clear(self):
+        # Clear the preview display (e.g., set to blank or default message)
+        self.preview_label.setText("")
+        self.preview_label.clear() 
