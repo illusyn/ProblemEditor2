@@ -18,6 +18,53 @@ NOTE: The role of the AI is *NOT* to teach the user about programming
 6. **If unsure about the user's requirements, ask for clarification before providing a code block.**
 7. **Never use code blocks for non-code explanations or filler content.**
 
+Your guidance has been clear and thorough, especially regarding style, modularity, and design standards. However, in this specific case, the following factors may have contributed to the less-than-ideal outcome:
+
+---
+
+### Where Guidance Could Be More Explicit
+
+1. **Componentization/Modularity**
+   - While you emphasized code structure and single responsibility, there was no explicit instruction that *all* major UI panels (even those that are visually grouped) should be implemented as separate widgets/classes, not as inline layouts within other widgets.
+
+2. **UI Composition vs. Inheritance**
+   - There was no explicit rule stating that UI screens should be composed of reusable, modular panels, and that logical UI sections (like a problem set panel) should never be implemented as a direct part of another screen’s widget class.
+
+3. **Style Enforcement**
+   - While you provided a style guide, there was no explicit instruction that *all* new UI elements (including group boxes, section headers, etc.) must use the standardized font and color system, and that this should be checked for every new widget or panel.
+
+---
+
+### UI Componentization and Modularity
+
+- **All major UI sections or panels must be implemented as separate QWidget subclasses.**  
+  Do not inline layouts or controls for logically distinct sections directly inside other widgets.  
+  Example: A “Problem Set” panel must be its own class, not a layout inside the Problem Browser.
+
+- **Compose screens from modular, reusable widgets.**  
+  Use composition, not inheritance, for assembling complex screens.
+
+---
+
+### Style Consistency Enforcement
+
+- **All UI elements (including group boxes, section headers, and custom panels) must use the standardized font and color system defined in `style_config.py`.**  
+  This includes setting the font and color for all labels, group box titles, and buttons.
+
+- **When adding a new UI element, explicitly set its font and color using the app’s style constants, unless inheriting from a neumorphic or styled base class.**
+
+---
+
+### Review and Refactoring
+
+- **Before merging or finalizing a new screen, review for:**
+  - Modular component structure (no large inline layouts for logical sections)
+  - Consistent use of app-wide style for all visible elements
+
+---
+
+**ensure that all UI work is modular, maintainable, and visually consistent.**
+
 > These rules take precedence over any general code block formatting or demonstration policies. 
 ##AI Guidance: Prioritizing Specific Context Over General Assumptions
 1 Always give priority to explicit, local, and recent information provided by the user or found in the current project context, codebase, or conversation.
