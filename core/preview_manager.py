@@ -38,7 +38,7 @@ class PreviewManager:
             
             # Parse the markdown to LaTeX
             latex_content = self.app.markdown_parser.parse(content, context='preview')
-            full_latex = self.app.template.replace("#CONTENT#", latex_content)
+            full_latex = self.app.markdown_parser.create_latex_document(latex_content)
             
             # Ensure no paragraph indent in preview
             if "\\setlength{\\parindent}" not in full_latex:

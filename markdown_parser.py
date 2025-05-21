@@ -839,17 +839,12 @@ class MarkdownParser:
         Returns:
             str: Complete LaTeX document
         """
-        # Get font size from configuration if available
         font_size = 14  # Default font size
         if self.config_manager:
             font_size = self.config_manager.get_value("preview", "font_size", 14)
-        
-        # Get font family from configuration
         font_family = "Computer Modern"  # Default LaTeX font
         if self.config_manager:
             font_family = self.config_manager.get_value("preview", "font_family", "Computer Modern")
-        
-        # Map font size to standard LaTeX font size commands
         font_size_cmd = ""
         if font_size <= 8:
             font_size_cmd = "\\small"
@@ -865,44 +860,44 @@ class MarkdownParser:
             font_size_cmd = "\\huge"
         else:
             font_size_cmd = "\\Huge"
-        
-        # Font package and command based on selected font
-        font_packages = ""
-        font_command = ""
-        
+        # List of standard fonts that do not require fontspec or setmainfont
+        standard_fonts = ["Computer Modern", "Times New Roman", "Helvetica", "Courier", "Palatino", "Bookman", "Carlito"]
+        font_packages = []
+        # Font package for standard fonts
         if font_family == "Times New Roman":
-            font_packages = "\\usepackage{times}"
-            font_command = "\\rmfamily"
+            font_packages.append("\\usepackage{times}")
         elif font_family == "Helvetica":
-            font_packages = "\\usepackage{helvet}\n\\renewcommand{\\familydefault}{\\sfdefault}"
-            font_command = ""
+            font_packages.append("\\usepackage{helvet}")
+            font_packages.append("\\renewcommand{\\familydefault}{\\sfdefault}")
         elif font_family == "Courier":
-            font_packages = "\\usepackage{courier}"
-            font_command = "\\ttfamily"
+            font_packages.append("\\usepackage{courier}")
         elif font_family == "Palatino":
-            font_packages = "\\usepackage{palatino}"
-            font_command = ""
+            font_packages.append("\\usepackage{palatino}")
         elif font_family == "Bookman":
-            font_packages = "\\usepackage{bookman}"
-            font_command = ""
+            font_packages.append("\\usepackage{bookman}")
         elif font_family == "Carlito":
-            font_packages = "\\usepackage{carlito}"
-            font_command = ""
-        # Add fontspec for custom fonts (e.g., Calibri)
-        if font_family not in ["Computer Modern", "Times New Roman", "Helvetica", "Courier", "Palatino", "Bookman", "Carlito"]:
-            font_packages = "\\usepackage{fontspec}\n" + font_packages
-        
-        # Create a LaTeX document with necessary packages for math and images
-        template = r"""\documentclass{article}
+            font_packages.append("\\usepackage{carlito}")
+        # Fontspec for non-standard fonts
+        setmainfont_cmd = ""
+        if font_family not in standard_fonts:
+            font_packages.append("\\usepackage{fontspec}")
+            setmainfont_cmd = f"\\setmainfont{{{font_family}}}"
+        # Add adjustbox if needed
+        if "\\adjustbox" in content:
+            font_packages.append("\\usepackage{adjustbox}")
+        # Remove duplicates
+        font_packages = list(dict.fromkeys(font_packages))
+        # Build preamble
+        preamble = r"""\documentclass{article}
     \usepackage{amsmath}
     \usepackage{amssymb}
     \usepackage{graphicx}
-    \graphicspath{{./}{./images/}}
+    \graphicspath{{./images/}} 
     \usepackage{geometry}
     \usepackage{xcolor}
     \usepackage{mdframed}
     \usepackage{enumitem}
-    """ + font_packages + r"""
+    """ + "\n".join(font_packages) + r"""
 
     % Set margins
     \geometry{margin=1in}
@@ -911,13 +906,13 @@ class MarkdownParser:
     \setlength{\parindent}{0pt}
     
     \newcommand{\mydefaultsize}{\fontsize{14pt}{16pt}\selectfont}
-    \begin{document}
-
-    """ + font_size_cmd + font_command + r"""
-
-    """ + content + r"""
+    """
+        # Add setmainfont only in preamble, not in body
+        if setmainfont_cmd:
+            preamble += "\n" + setmainfont_cmd + "\n"
+        preamble += "\n\\begin{document}\n\n" + font_size_cmd + "\n\n"
+        template = preamble + content + r"""
 
     \end{document}
     """
-        
         return template

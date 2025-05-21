@@ -17,11 +17,6 @@ import re
 import os
 import shutil
 
-# --- Load the centralized LaTeX template ---
-template_path = os.path.join(os.path.dirname(__file__), "resources", "default_template.tex")
-with open(template_path, "r", encoding="utf-8") as f:
-    latex_template = f.read()
-
 def main():
     os.makedirs("temp_images", exist_ok=True)
     print("Created temp_images directory (or it already existed).")
@@ -92,23 +87,16 @@ def main():
     for idx, prob in enumerate(problems):
         content = prob['content']
         problem_number = prob['problem_id']
-        # Replace the first #problem with #problem{number:problem_number}
         content, n_subs = re.subn(r'(#problem)(\s*\n)', fr'\1{{number:{problem_number}}}\2', content, count=1)
         latex = md_parser.parse(content, context='export')
-        # Replace all figure environments to use [H] placement
-        latex = latex.replace(r"\begin{figure}[htbp]", r"\begin{figure}[H]")
-        # Wrap each problem in a samepage environment
+        latex = latex.replace(r"\\begin{figure}[htbp]", r"\\begin{figure}[H]")
         all_problems_latex += "\\begin{samepage}\n" + latex + "\n\\end{samepage}\n"
-        # Add extra vertical space between problems on the same page
         if not ((idx + 1) % 2 == 0 and (idx + 1) != len(problems)):
             all_problems_latex += "\\vspace{1cm}\n"
-        # Insert a page break after every two problems, except after the last one
         if (idx + 1) % 2 == 0 and (idx + 1) != len(problems):
             all_problems_latex += "\\clearpage\n"
-
-    # --- Fill the template ---
-    full_latex = latex_template.replace("#CONTENT#", all_problems_latex)
-
+    # --- Use create_latex_document to assemble the full document ---
+    full_latex = md_parser.create_latex_document(all_problems_latex)
     # Write to file
     with open(args.output, "w", encoding="utf-8") as f:
         f.write(full_latex)

@@ -106,15 +106,12 @@ class TextCommand(ContentCommand):
             font_size_pt = FONT_SIZES.get(context, {}).get("text", 12)
         else:
             font_size_pt = params.get('font_size_pt', FONT_SIZES.get(context, {}).get("text", 12))
-        font_name = params.get('font_name', self._parameters.get('font_name', {}).get('default', 'Calibri'))
         line_spacing = params.get('line_spacing', None)
         if line_spacing is None:
             line_spacing = self.get_default_line_spacing(font_size_pt)
         font_cmd = ""
         if font_size_pt and font_size_pt > 0:
             font_cmd += f"\\fontsize{{{font_size_pt}pt}}{{{line_spacing}pt}}\\selectfont "
-        if font_name:
-            font_cmd += f"\\setmainfont{{{font_name}}} "
         if indent > 0:
             return f"\\vspace{{{spacing}em}}\n\\hspace{{{indent}em}}{font_cmd}{content}\\par\n\\vspace{{{spacing}em}}\n"
         return f"\\vspace{{{spacing}em}}\n{font_cmd}{content}\\par\n\\vspace{{{spacing}em}}\n"
@@ -189,21 +186,16 @@ class ProblemCommand(ContentCommand):
             font_size_pt = FONT_SIZES.get(context, {}).get("problem", 12)
         else:
             font_size_pt = params.get('font_size_pt', FONT_SIZES.get(context, {}).get("problem", 12))
-        font_name = params.get('font_name', self._parameters.get('font_name', {}).get('default', ''))
         line_spacing = params.get('line_spacing', None)
         if line_spacing is None:
             line_spacing = self.get_default_line_spacing(font_size_pt)
         font_cmd = ""
         if font_size_pt and font_size_pt > 0:
             font_cmd += f"\\fontsize{{{font_size_pt}pt}}{{{line_spacing}pt}}\\selectfont "
-        if font_name:
-            font_cmd += f"\\setmainfont{{{font_name}}} "
         # Prepend problem number if provided
         number = params.get('number', None)
-        if number is not None:
-            content = f"{number}. {content}"
-        # Add spacing above and below content
-        return f"\\vspace{{{spacing}em}}\n{font_cmd}{content}\\par\n\\vspace{{{spacing}em}}\n"
+        prefix = f"\\textbf{{Problem {number}. }}" if number is not None else ""
+        return f"\\vspace{{{vspace}em}}\n{prefix}{font_cmd}{content}\\par\n\\vspace{{{vspace}em}}\n"
 
 def parse_latex_settings(self):
     """

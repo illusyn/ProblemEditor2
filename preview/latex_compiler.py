@@ -70,7 +70,8 @@ class LaTeXCompiler:
             os.chdir(self.working_dir)
             
             # Check if we need to use XeLaTeX (based on fontspec being in the document)
-            use_xelatex = "fontspec" in latex_content
+            lower_content = latex_content.lower()
+            use_xelatex = ("\\usepackage{fontspec}" in lower_content) or ("\\setmainfont" in latex_content)
             
             # Determine which LaTeX engine to use
             latex_engine = "xelatex" if use_xelatex else "pdflatex"

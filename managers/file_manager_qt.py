@@ -119,8 +119,10 @@ class FileManager(QObject):
             # Get the editor content
             content = self.app.editor.get_content()
             
-            # Parse the markdown to LaTeX
-            latex_document = self.app.markdown_parser.parse(content)
+            # Parse the markdown to LaTeX content only
+            latex_content = self.app.markdown_parser.parse(content)
+            # Assemble full LaTeX document using the parser's method
+            latex_document = self.app.markdown_parser.create_latex_document(latex_content)
             
             # Ensure graphicx package is included
             if "\\usepackage{graphicx}" not in latex_document:
