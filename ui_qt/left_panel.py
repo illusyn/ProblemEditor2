@@ -9,7 +9,7 @@ from PyQt5.QtGui import QFont, QColor, QPainter, QBrush, QLinearGradient
 from PyQt5.QtWidgets import QGraphicsDropShadowEffect
 from PyQt5.QtCore import Qt
 from ui_qt.category_panel import CategoryPanelQt
-from ui_qt.style_config import (FONT_FAMILY, FONT_WEIGHT, LABEL_FONT_SIZE, SECTION_LABEL_FONT_SIZE, BUTTON_FONT_SIZE, CONTROL_BTN_FONT_SIZE, ENTRY_FONT_SIZE, NOTES_FONT_SIZE, NEUMORPH_TEXT_COLOR, WINDOW_BG_COLOR, NEUMORPH_BG_COLOR, NEUMORPH_SHADOW_DARK, NEUMORPH_SHADOW_LIGHT, NEUMORPH_GRADIENT_START, NEUMORPH_GRADIENT_END, NEUMORPH_RADIUS, BUTTON_BORDER_RADIUS, BUTTON_BG_COLOR, BUTTON_FONT_COLOR, ENTRY_BORDER_RADIUS, ENTRY_BG_COLOR, ENTRY_FONT_COLOR, NOTES_BG_COLOR, NOTES_FONT_COLOR, NOTES_BORDER_RADIUS, CONTROL_BTN_WIDTH, PROB_ID_ENTRY_WIDTH, SEARCH_TEXT_ENTRY_WIDTH, ANSWER_ENTRY_WIDTH, SEARCH_TEXT_LABEL_PADDING, ANSWER_LABEL_PADDING, DEFAULT_LABEL_PADDING, ROW_SPACING_REDUCTION, NOTES_FIXED_HEIGHT, PADDING, SPACING, LEFT_PANEL_WIDTH, DOMAIN_GRID_SPACING, DOMAIN_BTN_WIDTH, DOMAIN_BTN_HEIGHT, SECTION_LABEL_PADDING_TOP, BUTTON_MIN_WIDTH, BUTTON_MIN_HEIGHT, ENTRY_MIN_HEIGHT, ENTRY_PADDING_LEFT, TEXTEDIT_PADDING, SHADOW_RECT_ADJUST, SHADOW_OFFSETS, EDITOR_BG_COLOR)
+from ui_qt.style_config import (FONT_FAMILY, FONT_WEIGHT, LABEL_FONT_SIZE, SECTION_LABEL_FONT_SIZE, BUTTON_FONT_SIZE, CONTROL_BTN_FONT_SIZE, ENTRY_FONT_SIZE, NOTES_FONT_SIZE, NEUMORPH_TEXT_COLOR, WINDOW_BG_COLOR, NEUMORPH_BG_COLOR, NEUMORPH_SHADOW_DARK, NEUMORPH_SHADOW_LIGHT, NEUMORPH_GRADIENT_START, NEUMORPH_GRADIENT_END, NEUMORPH_RADIUS, BUTTON_BORDER_RADIUS, BUTTON_BG_COLOR, BUTTON_FONT_COLOR, ENTRY_BORDER_RADIUS, ENTRY_BG_COLOR, ENTRY_FONT_COLOR, NOTES_BG_COLOR, NOTES_FONT_COLOR, NOTES_BORDER_RADIUS, CONTROL_BTN_WIDTH, PROB_ID_ENTRY_WIDTH, SEARCH_TEXT_ENTRY_WIDTH, ANSWER_ENTRY_WIDTH, SEARCH_TEXT_LABEL_PADDING, ANSWER_LABEL_PADDING, DEFAULT_LABEL_PADDING, ROW_SPACING_REDUCTION, NOTES_FIXED_HEIGHT, PADDING, SPACING, LEFT_PANEL_WIDTH, DOMAIN_GRID_SPACING, DOMAIN_BTN_WIDTH, DOMAIN_BTN_HEIGHT, SECTION_LABEL_PADDING_TOP, BUTTON_MIN_WIDTH, BUTTON_MIN_HEIGHT, ENTRY_MIN_HEIGHT, ENTRY_PADDING_LEFT, TEXTEDIT_PADDING, SHADOW_RECT_ADJUST, SHADOW_OFFSETS, EDITOR_BG_COLOR, CATEGORY_BTN_SELECTED_COLOR)
 
 class NeumorphicButton(QPushButton):
     def __init__(self, text, parent=None, radius=NEUMORPH_RADIUS, bg_color=NEUMORPH_BG_COLOR, shadow_dark=NEUMORPH_SHADOW_DARK, shadow_light=NEUMORPH_SHADOW_LIGHT, font_family=FONT_FAMILY, font_size=BUTTON_FONT_SIZE, font_color=BUTTON_FONT_COLOR):
@@ -43,8 +43,11 @@ class NeumorphicButton(QPushButton):
             highlight.setAlpha(alpha)
             painter.setBrush(QBrush(highlight))
             painter.drawRoundedRect(rect.translated(-i, -i), self.radius, self.radius)
-        # Solid background (no gradient)
-        painter.setBrush(QBrush(QColor(self.bg_color)))
+        # Solid background (highlight if checked)
+        if self.isCheckable() and self.isChecked():
+            painter.setBrush(QBrush(QColor(CATEGORY_BTN_SELECTED_COLOR)))
+        else:
+            painter.setBrush(QBrush(QColor(self.bg_color)))
         painter.drawRoundedRect(rect, self.radius, self.radius)
         # Text
         painter.setPen(QColor(self.font_color))
@@ -158,6 +161,41 @@ class NeumorphicTextEdit(QTextEdit):
         painter.drawRoundedRect(rect, self.radius, self.radius)
         super().paintEvent(event)
 
+class ProblemTypePanelQt(QWidget):
+    def __init__(self, parent=None, types=None):
+        super().__init__(parent)
+        self.types = types or ["Intro", "Efficiency", "SAT_Problem"]
+        self.selected = set()
+        self.buttons = {}
+        layout = QHBoxLayout(self)
+        layout.setSpacing(10)
+        for t in self.types:
+            btn = NeumorphicButton(t, font_size=BUTTON_FONT_SIZE)
+            btn.setCheckable(True)
+            btn.clicked.connect(lambda checked, name=t: self.toggle_type(name))
+            layout.addWidget(btn)
+            self.buttons[t] = btn
+        layout.addStretch()
+        self.setLayout(layout)
+
+    def toggle_type(self, type_name):
+        btn = self.buttons[type_name]
+        if btn.isChecked():
+            self.selected.add(type_name)
+        else:
+            self.selected.discard(type_name)
+
+    def get_selected_types(self):
+        return list(self.selected)
+
+    def set_selected_types(self, type_names):
+        for t, btn in self.buttons.items():
+            btn.setChecked(t in type_names)
+            if t in type_names:
+                self.selected.add(t)
+            else:
+                self.selected.discard(t)
+
 class LeftPanel(QWidget):
     def __init__(self, parent=None, laptop_mode=False):
         super().__init__(parent)
@@ -246,7 +284,9 @@ class LeftPanel(QWidget):
         self.earmark_checkbox.setFont(QFont(FONT_FAMILY, LABEL_FONT_SIZE, QFont.Bold))
         self.earmark_checkbox.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; margin-left: 10px;")
         main_layout.addWidget(self.earmark_checkbox)
-        # Remove SAT Problem Types section
+        # Add Problem Type multiselect panel
+        self.problem_type_panel = ProblemTypePanelQt()
+        main_layout.addWidget(self.problem_type_panel)
         # --- Math Domains ---
         if laptop_mode:
             main_layout.addSpacing(5)
@@ -333,6 +373,12 @@ class LeftPanel(QWidget):
 
     def set_earmark(self, value):
         self.earmark_checkbox.setChecked(bool(value))
+
+    def get_selected_types(self):
+        return self.problem_type_panel.get_selected_types()
+
+    def set_selected_types(self, type_names):
+        self.problem_type_panel.set_selected_types(type_names)
 
     def reset_fields(self):
         self.problem_id_entry.setText("")

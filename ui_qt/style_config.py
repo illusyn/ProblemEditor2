@@ -156,7 +156,6 @@ CATEGORY_BTN_HEIGHT = int(48 * _scale)
 CATEGORY_BTN_SELECTED_COLOR = "#cce5ff"
 CATEGORY_PANEL_SPACING = int(8 * _scale)
 
-SAT_TYPE_PANEL_SPACING = int(6 * _scale)
 DOMAIN_GRID_SPACING = int(13 * _scale)
 DOMAIN_BTN_WIDTH = int(220 * _scale)
 DOMAIN_BTN_HEIGHT = int(58 * _scale)

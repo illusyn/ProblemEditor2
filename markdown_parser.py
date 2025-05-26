@@ -906,13 +906,43 @@ class MarkdownParser:
     \setlength{\parindent}{0pt}
     
     \newcommand{\mydefaultsize}{\fontsize{14pt}{16pt}\selectfont}
+    \everymath{\displaystyle}
     """
         # Add setmainfont only in preamble, not in body
         if setmainfont_cmd:
             preamble += "\n" + setmainfont_cmd + "\n"
+        # Add unicode-math and setmathfont if math_font_family is set
+        math_font_family = None
+        if self.config_manager:
+            math_font_family = self.config_manager.get_value("preview", "math_font_family", None)
+        if math_font_family:
+            preamble += "\n\\usepackage{unicode-math}\n"
+            preamble += f"\\setmathfont{{{math_font_family}}}\n"
+            # Set math font size if configured
+            math_font_size = 14
+            if self.config_manager:
+                math_font_size = self.config_manager.get_value("preview", "math_font_size", 14)
+            if math_font_size:
+                # Set math font size for inline and display math
+                preamble += f"\\everymath{{\\displaystyle\\fontsize{{{math_font_size}pt}}{{{int(math_font_size*1.5)}pt}}\\selectfont}}\n"
+                preamble += f"\\everydisplay{{\\displaystyle\\fontsize{{{math_font_size}pt}}{{{int(math_font_size*1.5)}pt}}\\selectfont}}\n"
         preamble += "\n\\begin{document}\n\n" + font_size_cmd + "\n\n"
         template = preamble + content + r"""
 
     \end{document}
     """
+        # --- Automatic unit spacing: $1cm$ -> $1\,\mathrm{cm}$ ---
+        def fix_unit_spacing(latex):
+            # Only replace in math mode: $...$
+            def replacer(match):
+                expr = match.group(1)
+                # Replace {expr}unit or )unit or digitunit with {expr}\,\mathrm{unit}
+                expr = re.sub(
+                    r'([0-9\}\)])\s*([a-zA-Z]{1,4}(?:\^\d+)?)',
+                    r'\1\\,\\mathrm{\2}',
+                    expr
+                )
+                return f'${expr}$'
+            return re.sub(r'\$(.+?)\$', replacer, latex)
+        template = fix_unit_spacing(template)
         return template

@@ -15,9 +15,9 @@ from pathlib import Path
 class PreviewManager:
     """Manages preview generation and display for the Simplified Math Editor"""
     
-    def __init__(self):
+    def __init__(self, config_manager=None):
         """Initialize the preview manager"""
-        self.parser = MarkdownParser()
+        self.parser = MarkdownParser(config_manager=config_manager)
         self.compiler = LaTeXCompiler()
         self.current_preview_file = None
     

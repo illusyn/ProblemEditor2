@@ -16,10 +16,10 @@ from markdown_parser import MarkdownParser
 import re
 import os
 import shutil
+from db.math_image_db import MathImageDB
 
 def main():
-    os.makedirs("temp_images", exist_ok=True)
-    print("Created temp_images directory (or it already existed).")
+
     parser = argparse.ArgumentParser(description="Export math problems to LaTeX.")
     parser.add_argument('--category', type=str, help='Export only problems in this category')
     parser.add_argument('--output', type=str, default='exports/problems_export.tex', help='Output LaTeX file')
@@ -27,8 +27,9 @@ def main():
 
     db = MathProblemDB()
     md_parser = MarkdownParser()
+    image_db = MathImageDB()
 
-    # Get all problems (optionally filter by category)
+    # Export all problems (optionally filter by category)
     if args.category:
         success, categories = db.get_categories()
         if not success:
@@ -41,46 +42,26 @@ def main():
         success, problems = db.get_problems_list(category_id=cat_id, limit=10000)
     else:
         success, problems = db.get_problems_list(limit=10000)
-
     if not success:
         print("Failed to get problems:", problems)
         return
 
-    # For each problem, export all associated images from the DB
-    for prob in problems:
-        problem_id = prob['problem_id']
-        db.cur.execute("""
-            SELECT image_name FROM problem_images WHERE problem_id = ?
-        """, (problem_id,))
-        image_rows = db.cur.fetchall()
-        for (image_name,) in image_rows:
-            print(f"Attempting to export image: {image_name} for problem {problem_id}")
-            success, msg = db.export_image(image_name=image_name)
-            if success:
-                print(f"Successfully exported {image_name}")
-            else:
-                print(f"Failed to export {image_name}: {msg}")
-
-    # Ensure all images are copied to an 'images' folder next to the .tex file
+    # Ensure all images are exported from the DB to the export images directory
     output_dir = os.path.dirname(args.output)
+    print(f"=====================output_dir: {output_dir}")
     images_dir = os.path.join(output_dir, 'images')
     os.makedirs(images_dir, exist_ok=True)
     for prob in problems:
-        problem_id = prob['problem_id']
-        db.cur.execute("""
-            SELECT image_name FROM problem_images WHERE problem_id = ?
-        """, (problem_id,))
-        image_rows = db.cur.fetchall()
-        for (image_name,) in image_rows:
-            found = False
-            for src_dir in ["exports/images", "temp_images"]:
-                src_path = os.path.join(src_dir, image_name)
-                if os.path.exists(src_path):
-                    shutil.copy2(src_path, images_dir)
-                    found = True
-                    break
-            if not found:
-                print(f"Warning: Could not find image {image_name} to copy to images folder.")
+        content = prob['content']
+        # Find all image names in the LaTeX content
+        image_names = re.findall(r'\\includegraphics(?:\[.*?\])?\{([^\}]+)\}', content)
+        print(f"Image names found in content: {image_names}")
+        for image_name in image_names:
+            output_path = os.path.join(images_dir, image_name)
+            print(f"[SCRIPT DEBUG] About to export image: {image_name} to {output_path}")
+            success, msg = image_db.export_to_file(image_name, output_path)
+            if not success:
+                print(f"Warning: Could not export image {image_name} to {images_dir}: {msg}")
 
     # --- Build all problems as a single LaTeX string ---
     all_problems_latex = ""

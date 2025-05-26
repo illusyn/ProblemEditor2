@@ -41,4 +41,6 @@ class ProblemDatabase:
         cur.execute("SELECT category_id, name FROM math_categories ORDER BY name ASC")
         categories = [{"category_id": row[0], "name": row[1]} for row in cur.fetchall()]
         conn.close()
-        return categories 
+        return categories
+
+    # Removed delete_problem method. Use MathProblemDB.delete_problem instead. 

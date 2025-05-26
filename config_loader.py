@@ -450,28 +450,3 @@ class ConfigLoader:
             dict: Dictionary of all variables
         """
         return self.config["variables"]
-    
-    def export_config(self, file_path=None):
-        """
-        Export the current configuration to a JSON file
-        
-        Args:
-            file_path (str, optional): Path to save the configuration file
-                If None, returns the configuration as a string
-                
-        Returns:
-            str or bool: JSON string if file_path is None, otherwise True if saved successfully
-        """
-        try:
-            config_json = json.dumps(self.config, indent=2)
-            
-            if file_path:
-                with open(file_path, 'w', encoding='utf-8') as f:
-                    f.write(config_json)
-                return True
-            else:
-                return config_json
-                
-        except Exception as e:
-            print(f"Error exporting configuration: {str(e)}")
-            return False

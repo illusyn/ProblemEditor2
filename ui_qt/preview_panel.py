@@ -11,7 +11,7 @@ import os
 from ui_qt.style_config import PREVIEW_LABEL_MIN_WIDTH, PREVIEW_LABEL_MIN_HEIGHT
 
 class PreviewPanel(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, config_manager=None):
         super().__init__(parent)
         layout = QVBoxLayout(self)
         
@@ -35,7 +35,7 @@ class PreviewPanel(QWidget):
         layout.addWidget(scroll_area)
         
         # Initialize preview manager
-        self.preview_manager = PreviewManager()
+        self.preview_manager = PreviewManager(config_manager=config_manager)
         
         # Store current preview path
         self.current_preview = None

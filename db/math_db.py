@@ -109,6 +109,25 @@ class MathProblemDB:
             )
         ''')
         
+        # Problem types table
+        self.cur.execute('''
+            CREATE TABLE IF NOT EXISTS problem_types (
+                type_id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL UNIQUE
+            )
+        ''')
+        
+        # Problem-problem_types join table
+        self.cur.execute('''
+            CREATE TABLE IF NOT EXISTS problem_problem_types (
+                problem_id INTEGER NOT NULL,
+                type_id INTEGER NOT NULL,
+                PRIMARY KEY (problem_id, type_id),
+                FOREIGN KEY (problem_id) REFERENCES problems(problem_id) ON DELETE CASCADE,
+                FOREIGN KEY (type_id) REFERENCES problem_types(type_id) ON DELETE CASCADE
+            )
+        ''')
+        
         # Create indices for faster querying
         self.cur.execute('''
             CREATE INDEX IF NOT EXISTS idx_problem_images_problem_id 
@@ -567,62 +586,31 @@ class MathProblemDB:
             tuple: (success, file_path or error_message)
         """
         try:
-            # Get the image from the database
+            print(f"[DEBUG] Attempting to get image: {image_name}")
             success, result = self.get_image(image_id, image_name, problem_id)
-            
+            print(f"[DEBUG] get_image success: {success}, result: {result}")
             if not success:
                 return (False, result)
-            
             image = result["image"]
             format = result["format"]
-            
             # If no output path provided, create one in temp_images directory
             if not output_path:
                 temp_dir = Path("temp_images")
                 temp_dir.mkdir(parents=True, exist_ok=True)
-                
                 # Use image name or create one from ID
                 filename = result["name"] or f"image_{image_id}.{format.lower() if format else 'png'}"
                 output_path = temp_dir / filename
-            
             # Ensure parent directory exists
             output_dir = os.path.dirname(output_path)
             if output_dir:
                 os.makedirs(output_dir, exist_ok=True)
-            
+            print(f"[DEBUG] Saving image {image_name} to {output_path}")
             # Save image to file
             format_to_use = format or image.format or 'PNG'
             image.save(output_path, format=format_to_use)
-            
             return (True, str(output_path))
             
         except Exception as e:
-            return (False, str(e))
-    
-    def delete_image(self, image_id):
-        """
-        Delete an image from the database
-        
-        Args:
-            image_id (int): ID of the image to delete
-            
-        Returns:
-            tuple: (success, message)
-        """
-        try:
-            # Check if image exists
-            self.cur.execute("SELECT image_id FROM problem_images WHERE image_id = ?", (image_id,))
-            if not self.cur.fetchone():
-                return (False, f"Image with ID {image_id} not found")
-            
-            # Delete the image
-            self.cur.execute("DELETE FROM problem_images WHERE image_id = ?", (image_id,))
-            
-            self.conn.commit()
-            return (True, f"Image with ID {image_id} deleted successfully")
-            
-        except Exception as e:
-            self.conn.rollback()
             return (False, str(e))
     
     def add_category(self, name):
@@ -1013,3 +1001,90 @@ class MathProblemDB:
         for p in problems:
             p['id'] = p.pop('problem_id')
         return problems
+
+    def add_type(self, name):
+        """
+        Add a new problem type
+        Args:
+            name (str): Type name
+        Returns:
+            tuple: (success, type_id or error_message)
+        """
+        try:
+            self.cur.execute("SELECT type_id FROM problem_types WHERE name = ?", (name,))
+            existing = self.cur.fetchone()
+            if existing:
+                return (True, existing[0])
+            self.cur.execute("INSERT INTO problem_types (name) VALUES (?)", (name,))
+            type_id = self.cur.lastrowid
+            self.conn.commit()
+            return (True, type_id)
+        except Exception as e:
+            self.conn.rollback()
+            return (False, str(e))
+
+    def add_problem_to_type(self, problem_id, type_name):
+        """
+        Add a problem to a type (creating the type if it doesn't exist)
+        Args:
+            problem_id (int): ID of the problem
+            type_name (str): Name of the type
+        Returns:
+            tuple: (success, message)
+        """
+        try:
+            success, result = self.add_type(type_name)
+            if not success:
+                return (False, result)
+            type_id = result
+            self.cur.execute("SELECT problem_id FROM problems WHERE problem_id = ?", (problem_id,))
+            if not self.cur.fetchone():
+                return (False, f"Problem with ID {problem_id} not found")
+            self.cur.execute("SELECT 1 FROM problem_problem_types WHERE problem_id = ? AND type_id = ?", (problem_id, type_id))
+            if self.cur.fetchone():
+                return (True, f"Problem already in type '{type_name}'")
+            self.cur.execute("INSERT INTO problem_problem_types (problem_id, type_id) VALUES (?, ?)", (problem_id, type_id))
+            self.conn.commit()
+            return (True, f"Problem added to type '{type_name}'")
+        except Exception as e:
+            self.conn.rollback()
+            return (False, str(e))
+
+    def remove_problem_from_type(self, problem_id, type_id):
+        """
+        Remove a problem from a type
+        Args:
+            problem_id (int): ID of the problem
+            type_id (int): ID of the type
+        Returns:
+            tuple: (success, message)
+        """
+        try:
+            self.cur.execute("SELECT 1 FROM problem_problem_types WHERE problem_id = ? AND type_id = ?", (problem_id, type_id))
+            if not self.cur.fetchone():
+                return (False, "Problem is not in this type")
+            self.cur.execute("DELETE FROM problem_problem_types WHERE problem_id = ? AND type_id = ?", (problem_id, type_id))
+            self.conn.commit()
+            return (True, "Problem removed from type")
+        except Exception as e:
+            self.conn.rollback()
+            return (False, str(e))
+
+    def get_types_for_problem(self, problem_id):
+        """
+        Get all types for a problem
+        Args:
+            problem_id (int): ID of the problem
+        Returns:
+            tuple: (success, list_of_types or error_message)
+        """
+        try:
+            self.cur.execute("""
+                SELECT t.type_id, t.name FROM problem_types t
+                JOIN problem_problem_types ppt ON t.type_id = ppt.type_id
+                WHERE ppt.problem_id = ?
+            """, (problem_id,))
+            types = [{"type_id": row[0], "name": row[1]} for row in self.cur.fetchall()]
+            return (True, types)
+        except Exception as e:
+            return (False, str(e))

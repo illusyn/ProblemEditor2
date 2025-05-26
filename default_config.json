@@ -4,5 +4,9 @@
       "default_format": "\\medskip\\mydefaultsize",
       "section_header": "\\section*{#CONTENT#}",
       "subsection_header": "\\subsection*{#CONTENT#}"
+    },
+    "preview": {
+      "font_family": "Calibri",
+      "font_size": 14
     }
 }

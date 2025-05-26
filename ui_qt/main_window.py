@@ -19,12 +19,15 @@ from ui_qt.style_config import active_palette, MultiShadowButton, WINDOW_BG_COLO
 from PyQt5.QtGui import QFont
 from ui_qt.problem_browser import ProblemBrowser
 from PyQt5.QtCore import Qt
+from managers.config_manager import ConfigManager
+from db.math_db import MathProblemDB
 
 class MainWindow(QMainWindow):
     def __init__(self, laptop_mode=False):
         super().__init__()
         self.setWindowTitle("Simplified Math Editor (PyQt5)")
         self.setGeometry(100, 100, 1200, 800)
+        self.config_manager = ConfigManager(config_file="default_config.json")
 
         # Initialize file manager
         self.file_manager = FileManager(self)
@@ -105,7 +108,7 @@ class MainWindow(QMainWindow):
         editor_panel_container = QWidget()
         editor_panel_container.setLayout(editor_vlayout)
         editor_layout.addWidget(editor_panel_container, stretch=2)
-        self.preview_panel = PreviewPanel()
+        self.preview_panel = PreviewPanel(config_manager=self.config_manager)
         editor_layout.addWidget(self.preview_panel, stretch=3)
         self.preview_panel.set_main_window(self)
         self.current_results = []
@@ -200,7 +203,18 @@ class MainWindow(QMainWindow):
                 btn.setChecked(False)
                 btn.setStyleSheet("")
                 self.left_panel.category_panel.selected.discard(cat["category_id"])
-        # Remove SAT types logic
+        # Load problem types
+        problem_id = problem.get("id", None)
+        if problem_id:
+            db = MathProblemDB(self.problem_db.db_path)
+            success, types = db.get_types_for_problem(problem_id)
+            if success:
+                self.left_panel.set_selected_types([t["name"] for t in types])
+            else:
+                self.left_panel.set_selected_types([])
+            db.close()
+        else:
+            self.left_panel.set_selected_types([])
         self.left_panel.set_earmark(problem.get("earmark", 0))
         self.update_preview()
 
@@ -360,20 +374,17 @@ class MainWindow(QMainWindow):
         return new_content if n else content
 
     def delete_current_problem(self):
-        problem_id = self.left_panel.get_problem_id()
+        problem_id = self.left_panel.get_problem_id().strip()
         if not problem_id:
             QMessageBox.warning(self, "Delete Problem", "No problem selected.")
             return
-        success = self.problem_db.delete_problem(problem_id)
+        db = MathProblemDB(self.problem_db.db_path)
+        success, message = db.delete_problem(int(problem_id))
         if success:
-            QMessageBox.information(self, "Delete Problem", "Problem deleted.")
-            # Optionally clear UI or refresh list
-            self.editor_panel.text_edit.clear()
-            self.left_panel.set_problem_id("")
-            self.left_panel.set_answer("")
-            self.left_panel.set_notes("")
+            QMessageBox.information(self, "Delete Problem", message)
+            self.show_next_problem()
         else:
-            QMessageBox.critical(self, "Delete Problem", "Failed to delete problem.") 
+            QMessageBox.critical(self, "Delete Problem", message)
 
     def save_current_problem(self):
         problem_id = self.left_panel.get_problem_id().strip()
@@ -382,52 +393,53 @@ class MainWindow(QMainWindow):
         notes = self.left_panel.get_notes().strip()
         categories = [cat["name"] for cat in self.left_panel.category_panel.get_selected_categories()]
         earmark = 1 if self.left_panel.get_earmark() else 0
-        import sqlite3
-        conn = sqlite3.connect(self.problem_db.db_path)
-        cur = conn.cursor()
+        selected_types = self.left_panel.get_selected_types()
+        db = MathProblemDB(self.problem_db.db_path)
         try:
             if problem_id:
-                cur.execute("SELECT problem_id FROM problems WHERE problem_id = ?", (problem_id,))
-                if cur.fetchone():
-                    cur.execute("""
-                        UPDATE problems SET content=?, answer=?, notes=?, earmark=?, last_modified=datetime('now') WHERE problem_id=?
-                    """, (content, answer, notes, earmark, problem_id))
-                    cur.execute("DELETE FROM problem_math_categories WHERE problem_id=?", (problem_id,))
-                    for cat_name in categories:
-                        cur.execute("SELECT category_id FROM math_categories WHERE name=?", (cat_name,))
-                        row = cur.fetchone()
-                        if row:
-                            cat_id = row[0]
-                        else:
-                            cur.execute("INSERT INTO math_categories (name) VALUES (?)", (cat_name,))
-                            cat_id = cur.lastrowid
-                        cur.execute("INSERT INTO problem_math_categories (problem_id, category_id) VALUES (?, ?)", (problem_id, cat_id))
-                    conn.commit()
-                    QMessageBox.information(self, "Save Problem", "Problem updated successfully.")
-                else:
-                    QMessageBox.warning(self, "Save Problem", f"Problem ID {problem_id} not found.")
-            else:
-                cur.execute("""
-                    INSERT INTO problems (content, answer, notes, earmark, creation_date, last_modified) VALUES (?, ?, ?, ?, datetime('now'), datetime('now'))
-                """, (content, answer, notes, earmark))
-                new_id = cur.lastrowid
+                # Update problem
+                success, msg = db.update_problem(
+                    int(problem_id),
+                    content=content,
+                    answer=answer,
+                    notes=notes,
+                    earmark=earmark
+                )
+                if not success:
+                    QMessageBox.critical(self, "Save Problem", f"Failed to update problem: {msg}")
+                    return
+                # Update categories
+                db.cur.execute("DELETE FROM problem_math_categories WHERE problem_id=?", (problem_id,))
                 for cat_name in categories:
-                    cur.execute("SELECT category_id FROM math_categories WHERE name=?", (cat_name,))
-                    row = cur.fetchone()
-                    if row:
-                        cat_id = row[0]
-                    else:
-                        cur.execute("INSERT INTO math_categories (name) VALUES (?)", (cat_name,))
-                        cat_id = cur.lastrowid
-                    cur.execute("INSERT INTO problem_math_categories (problem_id, category_id) VALUES (?, ?)", (new_id, cat_id))
-                conn.commit()
+                    db.add_problem_to_category(int(problem_id), cat_name)
+                # Update types
+                db.cur.execute("DELETE FROM problem_problem_types WHERE problem_id=?", (problem_id,))
+                for type_name in selected_types:
+                    db.add_problem_to_type(int(problem_id), type_name)
+                db.conn.commit()
+                QMessageBox.information(self, "Save Problem", "Problem updated successfully.")
+            else:
+                # Add new problem
+                success, new_id = db.add_problem(
+                    content,
+                    answer=answer,
+                    notes=notes,
+                    earmark=earmark,
+                    categories=categories
+                )
+                if not success:
+                    QMessageBox.critical(self, "Save Problem", f"Failed to add problem: {new_id}")
+                    return
+                for type_name in selected_types:
+                    db.add_problem_to_type(int(new_id), type_name)
+                db.conn.commit()
                 self.left_panel.set_problem_id(str(new_id))
                 QMessageBox.information(self, "Save Problem", f"New problem added with ID {new_id}.")
         except Exception as e:
-            conn.rollback()
+            db.conn.rollback()
             QMessageBox.critical(self, "Save Problem", f"Failed to save problem: {e}")
         finally:
-            conn.close() 
+            db.close()
 
     def reset_fields(self):
         self.left_panel.reset_fields()
