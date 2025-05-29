@@ -61,8 +61,8 @@ build/
 # Temporary and generated files
 exports/
 latex_test_output/
-./temp 
+ 
  
 ./HIDDEN 
- 
+./docs
  
