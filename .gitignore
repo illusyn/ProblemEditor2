@@ -51,9 +51,7 @@ dist/
 build/
 *.egg-info/
 
-# databases
-./db/math_images.db
-./db/math_problems.db
+
 
 # Coverage data
 .coverage
