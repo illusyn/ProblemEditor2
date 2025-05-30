@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import QMainWindow, QWidget, QHBoxLayout, QMenuBar, QAction
 from ui_qt.left_panel import LeftPanel
 from ui_qt.editor_panel import EditorPanel
 from ui_qt.preview_panel import PreviewPanel
-from db.problem_database import ProblemDatabase
+from db.math_db import MathProblemDB
 from managers.file_manager_qt import FileManager
 from managers.image_manager_qt import ImageManagerQt
 from managers.image_manager_qt import ImageDetailsDialog
@@ -20,7 +20,6 @@ from PyQt5.QtGui import QFont
 from ui_qt.problem_browser import ProblemBrowser
 from PyQt5.QtCore import Qt
 from managers.config_manager import ConfigManager
-from db.math_db import MathProblemDB
 
 class MainWindow(QMainWindow):
     def __init__(self, laptop_mode=False):
@@ -90,7 +89,7 @@ class MainWindow(QMainWindow):
         except TypeError:
             pass
         self.left_panel.reset_button.clicked.connect(self.reset_fields)
-        self.problem_db = ProblemDatabase()
+        self.problem_db = MathProblemDB()
         self.editor_panel = EditorPanel()
         editor_vlayout = QVBoxLayout()
         editor_vlayout.addWidget(self.editor_panel)
@@ -155,7 +154,7 @@ class MainWindow(QMainWindow):
         problem_id = self.left_panel.get_problem_id().strip()
         earmark_filter = self.left_panel.get_earmark()
         if problem_id:
-            problems = self.problem_db.get_all_problems()
+            problems = self.problem_db.get_problems_list(limit=1000000)[1]
             for p in problems:
                 if str(p.get("id", "")) == problem_id:
                     self.current_results = [p]
@@ -168,7 +167,7 @@ class MainWindow(QMainWindow):
             return
         search_text = self.left_panel.get_search_text().strip().lower()
         selected_cats = {cat["name"] for cat in self.left_panel.category_panel.get_selected_categories()}
-        problems = self.problem_db.get_all_problems()
+        problems = self.problem_db.get_problems_list(limit=1000000)[1]
         results = []
         for p in problems:
             if search_text and search_text not in (p.get('content','').lower()) and search_text not in (p.get('title','').lower()):
@@ -460,7 +459,10 @@ class MainWindow(QMainWindow):
         self.menuBar().setVisible(True)
 
     def browse_all_problems(self):
-        self.current_results = self.problem_db.get_all_problems()
+        self.current_results = self.problem_db.get_problems_list(limit=1000000)[1]
+        for p in self.current_results:
+            p['id'] = p['problem_id']
+        self.current_results.sort(key=lambda p: p['id'])
         self.current_result_index = 0
         if self.current_results:
             self.load_problem_into_ui(self.current_results[0])

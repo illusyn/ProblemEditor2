@@ -99,7 +99,9 @@ class ProblemBrowser(QWidget):
             btn.clicked.connect(self.update_filter)
 
     def load_problems(self):
-        self.all_problems = self.db.get_all_problems()
+        self.all_problems = self.db.get_problems_list(limit=1000000)[1]
+        for p in self.all_problems:
+            p['id'] = p['problem_id']
         self.displayed_problems = self.all_problems
         self.populate_table(self.displayed_problems)
 

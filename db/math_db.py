@@ -984,25 +984,6 @@ class MathProblemDB:
             ''', (set_id,))
         return self.cur.fetchall()
 
-    def get_all_problems(self):
-        conn = sqlite3.connect(self.db_path)
-        conn.row_factory = sqlite3.Row
-        cur = conn.cursor()
-        cur.execute("SELECT problem_id, content, answer, notes, earmark FROM problems")
-        rows = cur.fetchall()
-        problems = [dict(row) for row in rows]
-        for p in problems:
-            cur.execute("""
-                SELECT c.category_id, c.name FROM math_categories c
-                JOIN problem_math_categories pc ON c.category_id = pc.category_id
-                WHERE pc.problem_id = ?
-            """, (p['problem_id'],))
-            p['categories'] = [{"category_id": row[0], "name": row[1]} for row in cur.fetchall()]
-        conn.close()
-        for p in problems:
-            p['id'] = p.pop('problem_id')
-        return problems
-
     def add_type(self, name):
         """
         Add a new problem type
