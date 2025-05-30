@@ -125,6 +125,7 @@ class MainWindow(QMainWindow):
         return_action.triggered.connect(self.show_editor_screen)
         self.browser_toolbar.addAction(return_action)
         self.left_panel.problem_browser_button.clicked.connect(self.show_problem_browser)
+        self.left_panel.browse_all_button.clicked.connect(self.browse_all_problems)
         # Show editor by default
         self.stacked_widget.setCurrentWidget(self.editor_container)
         self.menuBar().setVisible(True)
@@ -456,4 +457,12 @@ class MainWindow(QMainWindow):
         self.stacked_widget.setCurrentWidget(self.editor_container)
         if hasattr(self, 'browser_toolbar'):
             self.browser_toolbar.hide()
-        self.menuBar().setVisible(True) 
+        self.menuBar().setVisible(True)
+
+    def browse_all_problems(self):
+        self.current_results = self.problem_db.get_all_problems()
+        self.current_result_index = 0
+        if self.current_results:
+            self.load_problem_into_ui(self.current_results[0])
+        else:
+            QMessageBox.information(self, "Browse All", "No problems found in the database.") 

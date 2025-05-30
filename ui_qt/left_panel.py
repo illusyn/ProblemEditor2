@@ -214,6 +214,10 @@ class LeftPanel(QWidget):
         self.problem_browser_button = self.create_neumorphic_button("Problem Browser", font_size=CONTROL_BTN_FONT_SIZE)
         self.problem_browser_button.setMinimumWidth(CONTROL_BTN_WIDTH)
         browser_row.addWidget(self.problem_browser_button)
+        # Add Browse All button
+        self.browse_all_button = self.create_neumorphic_button("Browse All", font_size=CONTROL_BTN_FONT_SIZE)
+        self.browse_all_button.setMinimumWidth(CONTROL_BTN_WIDTH)
+        browser_row.addWidget(self.browse_all_button)
         main_layout.addLayout(browser_row)
 
         # --- Top 2 Rows of Buttons ---

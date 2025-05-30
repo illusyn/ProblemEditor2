@@ -7,6 +7,8 @@
     },
     "preview": {
       "font_family": "Calibri",
-      "font_size": 14
+      "font_size": 14,
+      "math_font_family": "Cambria Math",
+      "math_font_size": 14
     }
 }

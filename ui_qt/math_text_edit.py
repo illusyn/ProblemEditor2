@@ -57,6 +57,13 @@ class MathTextEdit(QTextEdit):
         QShortcut(QKeySequence("Ctrl+R"), self, self.insert_half_power)
         QShortcut(QKeySequence("Ctrl+S"), self, self.insert_sqrt)
         QShortcut(QKeySequence("Ctrl+L"), self, self.paste_latex)
+        # New shortcuts for $$...$$ wrapped math
+        QShortcut(QKeySequence("Ctrl+Shift+F"), self, self.insert_fraction_dollars)
+        QShortcut(QKeySequence("Ctrl+Shift+D"), self, self.insert_degree_dollars)
+        QShortcut(QKeySequence("Ctrl+Shift+R"), self, self.insert_half_power_dollars)
+        QShortcut(QKeySequence("Ctrl+Shift+S"), self, self.insert_sqrt_dollars)
+        QShortcut(QKeySequence("Ctrl+P"), self, self.insert_problem_section)
+        QShortcut(QKeySequence("Ctrl+T"), self, self.insert_text_section)
 
     def show_context_menu(self, pos):
         menu = self.createStandardContextMenu()
@@ -155,6 +162,30 @@ class MathTextEdit(QTextEdit):
         cursor = self.textCursor()
         cursor.movePosition(QTextCursor.Left, QTextCursor.MoveAnchor, 1)
         self.setTextCursor(cursor)
+
+    def insert_fraction_dollars(self):
+        self.insertPlainText(r"$\frac{}{}$")
+        cursor = self.textCursor()
+        cursor.movePosition(QTextCursor.Left, QTextCursor.MoveAnchor, 2)
+        self.setTextCursor(cursor)
+
+    def insert_degree_dollars(self):
+        self.insertPlainText(r"$^\circ$")
+
+    def insert_half_power_dollars(self):
+        self.insertPlainText(r"$^.5$")
+
+    def insert_sqrt_dollars(self):
+        self.insertPlainText(r"$\sqrt{}$")
+        cursor = self.textCursor()
+        cursor.movePosition(QTextCursor.Left, QTextCursor.MoveAnchor, 1)
+        self.setTextCursor(cursor)
+
+    def insert_problem_section(self):
+        self.insertPlainText("#problem\n")
+
+    def insert_text_section(self):
+        self.insertPlainText("#text\n")
 
     def insertFromMimeData(self, source):
         # Override paste to clean text
