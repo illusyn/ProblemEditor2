@@ -388,7 +388,7 @@ class MathProblemDB:
         try:
             # First get the problems
             query = """
-                SELECT DISTINCT p.problem_id, p.content, p.answer, p.creation_date, p.last_modified
+                SELECT DISTINCT p.problem_id, p.content, p.answer, p.earmark, p.creation_date, p.last_modified
                 FROM problems p
             """
             
@@ -430,8 +430,9 @@ class MathProblemDB:
                     "problem_id": problem_id,
                     "content": row[1],
                     "answer": row[2],
-                    "creation_date": row[3],
-                    "last_modified": row[4],
+                    "earmark": row[3],
+                    "creation_date": row[4],
+                    "last_modified": row[5],
                     "categories": []
                 }
                 

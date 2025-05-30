@@ -66,7 +66,7 @@ def main():
 
     # Ensure all images are exported from the DB to the export images directory
     output_dir = os.path.dirname(args.output)
-    print(f"=====================output_dir: {output_dir}")
+    
     images_dir = os.path.join(output_dir, 'images')
     os.makedirs(images_dir, exist_ok=True)
     for prob in problems:
@@ -96,8 +96,8 @@ def main():
             answer_block += r'\textbf{ID:} ' + str(problem_number) + r'\\' + '\n'
             if answer:
                 answer_block += r'\textbf{Answer:} $' + latex_escape(answer) + r'$\\' + '\n'
-            earmark = prob.get('earmark', 0)
-            if earmark:
+            earmark = prob.get('earmark', None)
+            if earmark not in [None, 0, '', False, '0', 'False']:
                 answer_block += r'\textbf{Earmark:} Yes\\' + '\n'
             db_types = MathProblemDB()
             success, types = db_types.get_types_for_problem(problem_number)
