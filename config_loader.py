@@ -450,3 +450,9 @@ class ConfigLoader:
             dict: Dictionary of all variables
         """
         return self.config["variables"]
+    
+    def get_value(self, section, key, default=None):
+        try:
+            return self.config[section][key]
+        except Exception:
+            return default

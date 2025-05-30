@@ -8,6 +8,7 @@ Usage:
 Options:
     --category CATEGORY   Only export problems in this category
     --output FILE         Output LaTeX file (default: problems_export.tex)
+    --all                 Include answer, earmark, and problem types after each problem
 """
 
 import argparse
@@ -17,17 +18,31 @@ import re
 import os
 import shutil
 from db.math_image_db import MathImageDB
+from config_loader import ConfigLoader
+
+def latex_escape(text):
+    return text.replace('_', r'\_')
 
 def main():
 
     parser = argparse.ArgumentParser(description="Export math problems to LaTeX.")
     parser.add_argument('--category', type=str, help='Export only problems in this category')
     parser.add_argument('--output', type=str, default='exports/problems_export.tex', help='Output LaTeX file')
+    parser.add_argument('--all', action='store_true', help='Include answer, earmark, and problem types after each problem')
     args = parser.parse_args()
 
     db = MathProblemDB()
-    md_parser = MarkdownParser()
+    config_manager = ConfigLoader('default_config.json')
+    md_parser = MarkdownParser(config_manager=config_manager)
     image_db = MathImageDB()
+
+    # Force preview-style LaTeX preamble for export
+    config_manager.config['preview'] = {
+        'font_family': 'Calibri',
+        'font_size': 14,
+        'math_font_family': 'Cambria Math',
+        'math_font_size': 14
+    }
 
     # Export all problems (optionally filter by category)
     if args.category:
@@ -45,6 +60,9 @@ def main():
     if not success:
         print("Failed to get problems:", problems)
         return
+
+    # Sort problems by problem_id ascending
+    problems = sorted(problems, key=lambda p: p['problem_id'])
 
     # Ensure all images are exported from the DB to the export images directory
     output_dir = os.path.dirname(args.output)
@@ -68,10 +86,30 @@ def main():
     for idx, prob in enumerate(problems):
         content = prob['content']
         problem_number = prob['problem_id']
-        content, n_subs = re.subn(r'(#problem)(\s*\n)', fr'\1{{number:{problem_number}}}\2', content, count=1)
         latex = md_parser.parse(content, context='export')
         latex = latex.replace(r"\\begin{figure}[htbp]", r"\\begin{figure}[H]")
-        all_problems_latex += "\\begin{samepage}\n" + latex + "\n\\end{samepage}\n"
+        all_problems_latex += "\\begin{samepage}\n" + latex + "\n"
+        if args.all:
+            answer = prob.get('answer', '').strip()
+            answer_block = ''
+            # Problem ID
+            answer_block += r'\textbf{ID:} ' + str(problem_number) + r'\\' + '\n'
+            if answer:
+                answer_block += r'\textbf{Answer:} $' + latex_escape(answer) + r'$\\' + '\n'
+            earmark = prob.get('earmark', 0)
+            if earmark:
+                answer_block += r'\textbf{Earmark:} Yes\\' + '\n'
+            db_types = MathProblemDB()
+            success, types = db_types.get_types_for_problem(problem_number)
+            db_types.close()
+            if success and types:
+                type_names = ', '.join([latex_escape(t['name']) for t in types])
+                answer_block += r'\textbf{Types:} ' + type_names + r'\\' + '\n'
+            if answer_block:
+                all_problems_latex += f'''{{\color{{blue!70!black}}
+{answer_block}}}
+'''
+        all_problems_latex += "\\end{samepage}\n"
         if not ((idx + 1) % 2 == 0 and (idx + 1) != len(problems)):
             all_problems_latex += "\\vspace{1cm}\n"
         if (idx + 1) % 2 == 0 and (idx + 1) != len(problems):

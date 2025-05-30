@@ -892,7 +892,7 @@ class MarkdownParser:
     \usepackage{amsmath}
     \usepackage{amssymb}
     \usepackage{graphicx}
-    \graphicspath{{./images/}} 
+    \graphicspath{{./}{./images/}{./exports/images/}} 
     \usepackage{geometry}
     \usepackage{xcolor}
     \usepackage{mdframed}
