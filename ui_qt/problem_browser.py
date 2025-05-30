@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt
 from db.math_db import MathProblemDB
-from ui_qt.left_panel import NeumorphicEntry, NeumorphicButton
+from ui_qt.neumorphic_components import NeumorphicEntry, NeumorphicButton
 from ui_qt.style_config import FONT_FAMILY, SECTION_LABEL_FONT_SIZE, NEUMORPH_TEXT_COLOR, LABEL_FONT_SIZE
 from PyQt5.QtGui import QFont
 from ui_qt.category_panel import CategoryPanelQt

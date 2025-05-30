@@ -1,396 +1,176 @@
 """
-Left panel for the Simplified Math Editor (PyQt5).
+Simplified left panel for the Simplified Math Editor (PyQt5).
+
+This refactored version moves ALL query inputs into the QueryInputsPanel,
+leaving only the control buttons in the left panel.
 """
 
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QTextEdit, QLineEdit, QPushButton, QCheckBox, QScrollArea, QSizePolicy, QMessageBox
+    QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QSizePolicy
 )
-from PyQt5.QtGui import QFont, QColor, QPainter, QBrush, QLinearGradient
-from PyQt5.QtWidgets import QGraphicsDropShadowEffect
+from PyQt5.QtGui import QFont, QColor
 from PyQt5.QtCore import Qt
-from ui_qt.category_panel import CategoryPanelQt
-from ui_qt.style_config import (FONT_FAMILY, FONT_WEIGHT, LABEL_FONT_SIZE, SECTION_LABEL_FONT_SIZE, BUTTON_FONT_SIZE, CONTROL_BTN_FONT_SIZE, ENTRY_FONT_SIZE, NOTES_FONT_SIZE, NEUMORPH_TEXT_COLOR, WINDOW_BG_COLOR, NEUMORPH_BG_COLOR, NEUMORPH_SHADOW_DARK, NEUMORPH_SHADOW_LIGHT, NEUMORPH_GRADIENT_START, NEUMORPH_GRADIENT_END, NEUMORPH_RADIUS, BUTTON_BORDER_RADIUS, BUTTON_BG_COLOR, BUTTON_FONT_COLOR, ENTRY_BORDER_RADIUS, ENTRY_BG_COLOR, ENTRY_FONT_COLOR, NOTES_BG_COLOR, NOTES_FONT_COLOR, NOTES_BORDER_RADIUS, CONTROL_BTN_WIDTH, PROB_ID_ENTRY_WIDTH, SEARCH_TEXT_ENTRY_WIDTH, ANSWER_ENTRY_WIDTH, SEARCH_TEXT_LABEL_PADDING, ANSWER_LABEL_PADDING, DEFAULT_LABEL_PADDING, ROW_SPACING_REDUCTION, NOTES_FIXED_HEIGHT, PADDING, SPACING, LEFT_PANEL_WIDTH, DOMAIN_GRID_SPACING, DOMAIN_BTN_WIDTH, DOMAIN_BTN_HEIGHT, SECTION_LABEL_PADDING_TOP, BUTTON_MIN_WIDTH, BUTTON_MIN_HEIGHT, ENTRY_MIN_HEIGHT, ENTRY_PADDING_LEFT, TEXTEDIT_PADDING, SHADOW_RECT_ADJUST, SHADOW_OFFSETS, EDITOR_BG_COLOR, CATEGORY_BTN_SELECTED_COLOR)
-
-class NeumorphicButton(QPushButton):
-    def __init__(self, text, parent=None, radius=NEUMORPH_RADIUS, bg_color=NEUMORPH_BG_COLOR, shadow_dark=NEUMORPH_SHADOW_DARK, shadow_light=NEUMORPH_SHADOW_LIGHT, font_family=FONT_FAMILY, font_size=BUTTON_FONT_SIZE, font_color=BUTTON_FONT_COLOR):
-        super().__init__(text, parent)
-        self.radius = radius
-        self.bg_color = bg_color
-        self.shadow_dark = shadow_dark
-        self.shadow_light = shadow_light
-        self.font_family = font_family
-        self.font_size = font_size
-        self.font_color = font_color
-        self.setFont(QFont(self.font_family, self.font_size, QFont.Bold))
-        self.setStyleSheet("background: transparent; border: none;")
-        self.setMinimumHeight(BUTTON_MIN_HEIGHT)
-        self.setMinimumWidth(BUTTON_MIN_WIDTH)
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-        rect = self.rect().adjusted(SHADOW_RECT_ADJUST, SHADOW_RECT_ADJUST, -SHADOW_RECT_ADJUST, -SHADOW_RECT_ADJUST)
-        # Multi-layered blurred shadow (bottom-right)
-        for i, alpha in zip(SHADOW_OFFSETS, [40, 60, 90]):
-            shadow = QColor(self.shadow_dark)
-            shadow.setAlpha(alpha)
-            painter.setBrush(QBrush(shadow))
-            painter.setPen(Qt.NoPen)
-            painter.drawRoundedRect(rect.translated(i, i), self.radius, self.radius)
-        # Multi-layered highlight (top-left)
-        for i, alpha in zip(SHADOW_OFFSETS, [30, 50, 80]):
-            highlight = QColor(self.shadow_light)
-            highlight.setAlpha(alpha)
-            painter.setBrush(QBrush(highlight))
-            painter.drawRoundedRect(rect.translated(-i, -i), self.radius, self.radius)
-        # Solid background (highlight if checked)
-        if self.isCheckable() and self.isChecked():
-            painter.setBrush(QBrush(QColor(CATEGORY_BTN_SELECTED_COLOR)))
-        else:
-            painter.setBrush(QBrush(QColor(self.bg_color)))
-        painter.drawRoundedRect(rect, self.radius, self.radius)
-        # Text
-        painter.setPen(QColor(self.font_color))
-        painter.setFont(QFont(self.font_family, self.font_size, QFont.Bold))
-        painter.drawText(rect, Qt.AlignCenter, self.text())
-
-class NeumorphicEntry(QLineEdit):
-    def __init__(self, parent=None, radius=ENTRY_BORDER_RADIUS, bg_color=ENTRY_BG_COLOR, shadow_dark=NEUMORPH_SHADOW_DARK, shadow_light=NEUMORPH_SHADOW_LIGHT, font_family=FONT_FAMILY, font_size=ENTRY_FONT_SIZE, font_color=ENTRY_FONT_COLOR):
-        super().__init__(parent)
-        self.radius = radius
-        self.bg_color = bg_color
-        self.shadow_dark = shadow_dark
-        self.shadow_light = shadow_light
-        self.font_family = font_family
-        self.font_size = font_size
-        self.font_color = font_color
-        self.setFont(QFont(self.font_family, self.font_size, QFont.Bold))
-        self.setStyleSheet(f"background: transparent; border: none; color: {self.font_color}; padding-left: {ENTRY_PADDING_LEFT}px;")
-        self.setMinimumHeight(ENTRY_MIN_HEIGHT)
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-        rect = self.rect().adjusted(SHADOW_RECT_ADJUST, SHADOW_RECT_ADJUST, -SHADOW_RECT_ADJUST, -SHADOW_RECT_ADJUST)
-        # Sunken effect: shadow top-left, highlight bottom-right
-        for i, alpha in zip(SHADOW_OFFSETS, [40, 60, 90]):
-            shadow = QColor(self.shadow_dark)
-            shadow.setAlpha(alpha)
-            painter.setBrush(QBrush(shadow))
-            painter.setPen(Qt.NoPen)
-            painter.drawRoundedRect(rect.translated(-i, -i), self.radius, self.radius)
-        for i, alpha in zip(SHADOW_OFFSETS, [30, 50, 80]):
-            highlight = QColor(self.shadow_light)
-            highlight.setAlpha(alpha)
-            painter.setBrush(QBrush(highlight))
-            painter.drawRoundedRect(rect.translated(i, i), self.radius, self.radius)
-        # Solid background (no gradient)
-        painter.setBrush(QBrush(QColor(self.bg_color)))
-        painter.drawRoundedRect(rect, self.radius, self.radius)
-        # Call base class paint for text/cursor
-        super().paintEvent(event)
-
-class NeumorphicScrollArea(QScrollArea):
-    def __init__(self, parent=None, radius=NEUMORPH_RADIUS, bg_color=NEUMORPH_BG_COLOR, shadow_dark=NEUMORPH_SHADOW_DARK, shadow_light=NEUMORPH_SHADOW_LIGHT):
-        super().__init__(parent)
-        self.radius = radius
-        self.bg_color = bg_color
-        self.shadow_dark = shadow_dark
-        self.shadow_light = shadow_light
-        self.setStyleSheet("background: transparent; border: none;")
-        self.setFrameShape(QScrollArea.NoFrame)
-
-    def paintEvent(self, event):
-        painter = QPainter(self.viewport())
-        painter.setRenderHint(QPainter.Antialiasing)
-        rect = self.rect().adjusted(SHADOW_RECT_ADJUST, SHADOW_RECT_ADJUST, -SHADOW_RECT_ADJUST, -SHADOW_RECT_ADJUST)
-        # Multi-layered blurred shadow (bottom-right)
-        for i, alpha in zip(SHADOW_OFFSETS, [40, 60, 90]):
-            shadow = QColor(self.shadow_dark)
-            shadow.setAlpha(alpha)
-            painter.setBrush(QBrush(shadow))
-            painter.setPen(Qt.NoPen)
-            painter.drawRoundedRect(rect.translated(i, i), self.radius, self.radius)
-        # Multi-layered highlight (top-left)
-        for i, alpha in zip(SHADOW_OFFSETS, [30, 50, 80]):
-            highlight = QColor(self.shadow_light)
-            highlight.setAlpha(alpha)
-            painter.setBrush(QBrush(highlight))
-            painter.drawRoundedRect(rect.translated(-i, -i), self.radius, self.radius)
-        # Main gradient background
-        grad = QLinearGradient(rect.topLeft(), rect.bottomRight())
-        grad.setColorAt(0, QColor(NEUMORPH_GRADIENT_START))
-        grad.setColorAt(1, QColor(self.bg_color))
-        painter.setBrush(QBrush(grad))
-        painter.drawRoundedRect(rect, self.radius, self.radius)
-        super().paintEvent(event)
-
-class NeumorphicTextEdit(QTextEdit):
-    def __init__(self, parent=None, radius=NOTES_BORDER_RADIUS, bg_color=NOTES_BG_COLOR, shadow_dark=NEUMORPH_SHADOW_DARK, shadow_light=NEUMORPH_SHADOW_LIGHT, font_family=FONT_FAMILY, font_size=NOTES_FONT_SIZE, font_color=NOTES_FONT_COLOR):
-        super().__init__(parent)
-        self.radius = radius
-        self.bg_color = bg_color
-        self.shadow_dark = shadow_dark
-        self.shadow_light = shadow_light
-        self.font_family = font_family
-        self.font_size = font_size
-        self.font_color = font_color
-        self.setFont(QFont(self.font_family, self.font_size, QFont.Bold))
-        self.setStyleSheet(f"background: transparent; border: none; color: {self.font_color}; padding: {TEXTEDIT_PADDING}px;")
-        self.setFixedHeight(NOTES_FIXED_HEIGHT)  # Use centralized height
-
-    def paintEvent(self, event):
-        painter = QPainter(self.viewport())
-        painter.setRenderHint(QPainter.Antialiasing)
-        rect = self.rect().adjusted(SHADOW_RECT_ADJUST, SHADOW_RECT_ADJUST, -SHADOW_RECT_ADJUST, -SHADOW_RECT_ADJUST)
-        # Multi-layered blurred shadow (bottom-right)
-        for i, alpha in zip(SHADOW_OFFSETS, [40, 60, 90]):
-            shadow = QColor(self.shadow_dark)
-            shadow.setAlpha(alpha)
-            painter.setBrush(QBrush(shadow))
-            painter.setPen(Qt.NoPen)
-            painter.drawRoundedRect(rect.translated(i, i), self.radius, self.radius)
-        # Multi-layered highlight (top-left)
-        for i, alpha in zip(SHADOW_OFFSETS, [30, 50, 80]):
-            highlight = QColor(self.shadow_light)
-            highlight.setAlpha(alpha)
-            painter.setBrush(QBrush(highlight))
-            painter.drawRoundedRect(rect.translated(-i, -i), self.radius, self.radius)
-        # Solid background (no gradient)
-        painter.setBrush(QBrush(QColor(self.bg_color)))
-        painter.drawRoundedRect(rect, self.radius, self.radius)
-        super().paintEvent(event)
-
-class ProblemTypePanelQt(QWidget):
-    def __init__(self, parent=None, types=None):
-        super().__init__(parent)
-        self.types = types or ["Intro", "Efficiency", "SAT_Problem"]
-        self.selected = set()
-        self.buttons = {}
-        layout = QHBoxLayout(self)
-        layout.setSpacing(10)
-        for t in self.types:
-            btn = NeumorphicButton(t, font_size=BUTTON_FONT_SIZE)
-            btn.setCheckable(True)
-            btn.clicked.connect(lambda checked, name=t: self.toggle_type(name))
-            layout.addWidget(btn)
-            self.buttons[t] = btn
-        layout.addStretch()
-        self.setLayout(layout)
-
-    def toggle_type(self, type_name):
-        btn = self.buttons[type_name]
-        if btn.isChecked():
-            self.selected.add(type_name)
-        else:
-            self.selected.discard(type_name)
-
-    def get_selected_types(self):
-        return list(self.selected)
-
-    def set_selected_types(self, type_names):
-        for t, btn in self.buttons.items():
-            btn.setChecked(t in type_names)
-            if t in type_names:
-                self.selected.add(t)
-            else:
-                self.selected.discard(t)
+from ui_qt.query_inputs_panel import QueryInputsPanel
+from ui_qt.neumorphic_components import NeumorphicButton
+from ui_qt.style_config import (
+    FONT_FAMILY, CONTROL_BTN_FONT_SIZE, WINDOW_BG_COLOR, 
+    BUTTON_BORDER_RADIUS, BUTTON_BG_COLOR, BUTTON_FONT_COLOR, CONTROL_BTN_WIDTH, 
+    PADDING, SPACING
+)
+from ui_qt.query_panel import QueryPanel
 
 class LeftPanel(QWidget):
     def __init__(self, parent=None, laptop_mode=False):
         super().__init__(parent)
-        print(f"[DEBUG] LeftPanel: LABEL_FONT_SIZE={LABEL_FONT_SIZE}, BUTTON_FONT_SIZE={BUTTON_FONT_SIZE}, ENTRY_FONT_SIZE={ENTRY_FONT_SIZE}, NOTES_FONT_SIZE={NOTES_FONT_SIZE}")
+        print(f"[DEBUG] LeftPanel: Initializing with laptop_mode={laptop_mode}")
+        
+        # Set panel width based on mode
         if laptop_mode:
             self.setFixedWidth(600)
         else:
             self.setFixedWidth(780)
+        
         self.setStyleSheet(f"background-color: {WINDOW_BG_COLOR};")
+        
+        # Store laptop mode for potential future use
+        self.laptop_mode = laptop_mode
+        
+        # Ensure UI is initialized and buttons are created
+        self._init_ui()
+
+    def _init_ui(self):
+        """Initialize the UI components"""
+        # Create main layout
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(PADDING, PADDING, PADDING, PADDING)
         main_layout.setSpacing(SPACING)
 
-        # --- New Top Row: Problem Browser Button ---
-        browser_row = QHBoxLayout()
-        self.problem_browser_button = self.create_neumorphic_button("Problem Browser", font_size=CONTROL_BTN_FONT_SIZE)
+        # --- Top Row: Problem Browser, Save Problem ---
+        self._create_top_row(main_layout)
+
+        # --- QueryPanel (contains query controls and inputs) ---
+        self.query_panel = QueryPanel(laptop_mode=self.laptop_mode)
+        main_layout.addWidget(self.query_panel)
+
+    def _create_top_row(self, main_layout):
+        """Create the top row with Problem Browser and Save Problem buttons"""
+        top_row = QHBoxLayout()
+        
+        self.problem_browser_button = self.create_neumorphic_button("Problem Browser")
         self.problem_browser_button.setMinimumWidth(CONTROL_BTN_WIDTH)
-        browser_row.addWidget(self.problem_browser_button)
-        # Add Browse All button
-        self.browse_all_button = self.create_neumorphic_button("Browse All", font_size=CONTROL_BTN_FONT_SIZE)
-        self.browse_all_button.setMinimumWidth(CONTROL_BTN_WIDTH)
-        browser_row.addWidget(self.browse_all_button)
-        main_layout.addLayout(browser_row)
-
-        # --- Top 2 Rows of Buttons ---
-        row1 = QHBoxLayout()
-        for label in ["Reset", "Save Problem", "Preview"]:
-            btn = self.create_neumorphic_button(label, font_size=CONTROL_BTN_FONT_SIZE)
-            btn.setMinimumWidth(CONTROL_BTN_WIDTH)
-            if label == "Save Problem":
-                self.save_problem_button = btn
-            elif label == "Reset":
-                self.reset_button = btn
-            elif label == "Preview":
-                self.preview_button = btn
-            row1.addWidget(btn)
-        main_layout.addLayout(row1)
-
-        # Reduce the space between row1 and row2
-        main_layout.addSpacing(ROW_SPACING_REDUCTION)
-
-        row2 = QHBoxLayout()
-        for label in ["Query", "Next Match", "Previous Match"]:
-            btn = self.create_neumorphic_button(label, font_size=CONTROL_BTN_FONT_SIZE)
-            btn.setMinimumWidth(CONTROL_BTN_WIDTH)
-            if label == "Query":
-                self.query_button = btn
-            elif label == "Next Match":
-                self.next_match_button = btn
-            elif label == "Previous Match":
-                self.prev_match_button = btn
-            row2.addWidget(btn)
-        main_layout.addLayout(row2)
-
-        # --- Inputs Row ---
-        input_row = QHBoxLayout()
-        self.problem_id_entry = self.create_neumorphic_entry()
-        self.search_text_entry = self.create_neumorphic_entry()
-        self.answer_entry = self.create_neumorphic_entry()
+        top_row.addWidget(self.problem_browser_button)
         
-        # Set fixed widths for each entry field using centralized values
-        self.problem_id_entry.setFixedWidth(PROB_ID_ENTRY_WIDTH)
-        self.search_text_entry.setFixedWidth(SEARCH_TEXT_ENTRY_WIDTH)
-        self.answer_entry.setFixedWidth(ANSWER_ENTRY_WIDTH)
+        top_row.addStretch()
         
-        # Create labels and entries with their respective widths
-        labels = ["Prob ID", "Search Text", "Answer"]
-        entries = [self.problem_id_entry, self.search_text_entry, self.answer_entry]
+        self.save_problem_button = self.create_neumorphic_button("Save Problem")
+        self.save_problem_button.setMinimumWidth(CONTROL_BTN_WIDTH)
+        top_row.addWidget(self.save_problem_button)
         
-        for label, entry in zip(labels, entries):
-            col = QVBoxLayout()
-            col.setSpacing(0)  # Remove spacing between label and entry
-            lbl = QLabel(label)
-            lbl.setFont(QFont(FONT_FAMILY, LABEL_FONT_SIZE, QFont.Bold))
-            # Use centralized padding values
-            if label == "Search Text":
-                padding = SEARCH_TEXT_LABEL_PADDING
-            elif label == "Answer":
-                padding = ANSWER_LABEL_PADDING
-            else:
-                padding = DEFAULT_LABEL_PADDING
-            lbl.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; {padding} background: {WINDOW_BG_COLOR};")
-            lbl.setAlignment(Qt.AlignCenter)  # Center the label horizontally
-            col.addWidget(lbl)
-            col.addWidget(entry)
-            input_row.addLayout(col)
-        main_layout.addLayout(input_row)
-        # Add Earmark checkbox below answer entry
-        self.earmark_checkbox = QCheckBox("Earmark")
-        self.earmark_checkbox.setFont(QFont(FONT_FAMILY, LABEL_FONT_SIZE, QFont.Bold))
-        self.earmark_checkbox.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; margin-left: 10px;")
-        main_layout.addWidget(self.earmark_checkbox)
-        # Add Problem Type multiselect panel
-        self.problem_type_panel = ProblemTypePanelQt()
-        main_layout.addWidget(self.problem_type_panel)
-        # --- Math Domains ---
-        if laptop_mode:
-            main_layout.addSpacing(5)
-        else:
-            main_layout.addSpacing(30)
-        domains_label = QLabel("Math Domains")
-        domains_label.setFont(QFont(FONT_FAMILY, SECTION_LABEL_FONT_SIZE, QFont.Bold))
-        domains_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; padding-top: 0px; padding-bottom: 0px; margin-top: 0px; margin-bottom: 0px; background: {WINDOW_BG_COLOR};")
-        domains_label.setMaximumHeight(18)
-        domains_label.setAlignment(Qt.AlignCenter)
-        main_layout.addWidget(domains_label)
-        self.category_panel = CategoryPanelQt()
-        main_layout.addWidget(self.category_panel)
-        # --- Notes ---
-        self.notes_text = None
-        if not laptop_mode:
-            notes_label = QLabel("Notes")
-            notes_label.setFont(QFont(FONT_FAMILY, SECTION_LABEL_FONT_SIZE, QFont.Bold))
-            notes_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; {SECTION_LABEL_PADDING_TOP} background: {WINDOW_BG_COLOR};")
-            main_layout.addWidget(notes_label)
-            self.notes_text = NeumorphicTextEdit(bg_color=EDITOR_BG_COLOR)
-            main_layout.addWidget(self.notes_text)
+        main_layout.addLayout(top_row)
 
-        # Connect Reset button to reset_fields method
-        # self.reset_button.clicked.connect(self.reset_fields)
-
-    def create_neumorphic_button(self, text, parent=None, font_size=BUTTON_FONT_SIZE):
+    def create_neumorphic_button(self, text, parent=None):
+        """Create a neumorphic button with standard styling"""
         return NeumorphicButton(
             text,
             parent=parent,
-            radius=BUTTON_BORDER_RADIUS,
-            bg_color=BUTTON_BG_COLOR,
-            shadow_dark=QColor(NEUMORPH_SHADOW_DARK),
-            shadow_light=QColor(NEUMORPH_SHADOW_LIGHT),
-            font_family=FONT_FAMILY,
-            font_size=font_size,
-            font_color=BUTTON_FONT_COLOR
+            font_size=CONTROL_BTN_FONT_SIZE
         )
 
-    def create_neumorphic_entry(self):
-        return NeumorphicEntry(
-            radius=ENTRY_BORDER_RADIUS,
-            bg_color=ENTRY_BG_COLOR,
-            shadow_dark=QColor(NEUMORPH_SHADOW_DARK),
-            shadow_light=QColor(NEUMORPH_SHADOW_LIGHT),
-            font_family=FONT_FAMILY,
-            font_size=ENTRY_FONT_SIZE,
-            font_color=ENTRY_FONT_COLOR
-        )
-
+    # --- Proxy methods to QueryPanel ---
     def get_problem_id(self):
-        return self.problem_id_entry.text()
+        return self.query_panel.get_problem_id()
 
     def set_problem_id(self, value):
-        self.problem_id_entry.setText(value)
+        self.query_panel.set_problem_id(value)
 
     def get_answer(self):
-        return self.answer_entry.text()
+        return self.query_panel.get_answer()
 
     def set_answer(self, value):
-        self.answer_entry.setText(value)
+        self.query_panel.set_answer(value)
 
     def get_search_text(self):
-        return self.search_text_entry.text()
+        return self.query_panel.get_search_text()
 
     def set_search_text(self, value):
-        self.search_text_entry.setText(value)
+        self.query_panel.set_search_text(value)
 
     def get_notes(self):
-        if self.notes_text is not None:
-            return self.notes_text.toPlainText()
-        return ""
+        return self.query_panel.get_notes()
 
     def set_notes(self, text):
-        if self.notes_text is not None:
-            self.notes_text.setPlainText(text)
-
-    def on_query_clicked(self):
-        text = self.get_search_text()
-        QMessageBox.information(self, "Query", f"Search text: {text}")
+        self.query_panel.set_notes(text)
 
     def get_earmark(self):
-        return self.earmark_checkbox.isChecked()
+        return self.query_panel.get_earmark()
 
     def set_earmark(self, value):
-        self.earmark_checkbox.setChecked(bool(value))
+        self.query_panel.set_earmark(value)
 
     def get_selected_types(self):
-        return self.problem_type_panel.get_selected_types()
+        return self.query_panel.get_selected_types()
 
     def set_selected_types(self, type_names):
-        self.problem_type_panel.set_selected_types(type_names)
+        self.query_panel.set_selected_types(type_names)
+
+    def get_selected_categories(self):
+        return self.query_panel.get_selected_categories()
+
+    @property
+    def category_panel(self):
+        return self.query_panel.category_panel
+
+    @property
+    def problem_type_panel(self):
+        return self.query_panel.problem_type_panel
+
+    @property 
+    def earmark_checkbox(self):
+        return self.query_panel.earmark_checkbox
+
+    @property
+    def notes_text(self):
+        return self.query_panel.notes_text
+    
+    @property
+    def problem_id_entry(self):
+        return self.query_panel.problem_id_entry
+    
+    @property
+    def search_text_entry(self):
+        return self.query_panel.search_text_entry
+    
+    @property
+    def answer_entry(self):
+        return self.query_panel.answer_entry
 
     def reset_fields(self):
-        self.problem_id_entry.setText("")
-        self.search_text_entry.setText("")
-        self.answer_entry.setText("")
-        if self.notes_text is not None:
-            self.notes_text.setPlainText("")
-        self.earmark_checkbox.setChecked(False)
-        for btn in self.category_panel.buttons.values():
-            btn.setChecked(False)
-        self.category_panel.selected.clear() 
+        self.query_panel.reset_fields()
+
+    def build_full_query_criteria(self):
+        return self.query_panel.build_full_query_criteria()
+
+    def apply_full_query_criteria(self, criteria):
+        self.query_panel.apply_full_query_criteria(criteria)
+
+    def validate_inputs(self):
+        return self.query_panel.validate_inputs()
+
+    def has_any_input(self):
+        return self.query_panel.has_any_input()
+
+    def get_search_mode(self):
+        return self.query_panel.get_search_mode()
+
+    def clear_all_inputs(self):
+        self.reset_fields()
+
+    def get_input_summary(self):
+        return self.query_panel.get_input_summary()
+
+    # --- Legacy compatibility methods ---
+    def on_query_clicked(self):
+        """Legacy method for query button click handling"""
+        from PyQt5.QtWidgets import QMessageBox
+        text = self.get_search_text()
+        QMessageBox.information(self, "Query", f"Search text: {text}")

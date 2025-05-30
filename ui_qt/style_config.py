@@ -10,6 +10,7 @@ from PyQt5.QtCore import Qt
 
 # DPI scaling support
 _scale = 1.0
+_scale = 0.9
 
 def set_scale_from_dpi(dpi, base_dpi=96, min_scale=0.8, max_scale=1.5):
     """Set the global scaling factor based on screen DPI."""
@@ -110,7 +111,7 @@ CONTROL_BTN_WIDTH = int(240 * _scale)
 CONTROL_BTN_HEIGHT = int(56 * _scale)
 ENTRY_HEIGHT = int(44 * _scale)
 NOTES_MIN_HEIGHT = int(100 * _scale)
-PADDING = int(40 * _scale)
+PADDING = int(30 * _scale)
 SPACING = int(28 * _scale)
 SECTION_SPACING = int(18 * _scale)
 
@@ -125,7 +126,7 @@ ANSWER_LABEL_PADDING = f"padding-left: {int(50*_scale)}px; padding-bottom: {int(
 DEFAULT_LABEL_PADDING = f"padding-bottom: {int(4*_scale)}px;"
 
 # Layout spacing adjustments
-ROW_SPACING_REDUCTION = int(-14 * _scale)
+ROW_SPACING_REDUCTION = int(-24 * _scale) #was -14
 NOTES_FIXED_HEIGHT = int(75 * _scale)
 
 # Shadow and highlight effects
@@ -166,7 +167,7 @@ EDITOR_FONT_SIZE = LABEL_FONT_SIZE
 PREVIEW_LABEL_MIN_WIDTH = int(400 * _scale)
 PREVIEW_LABEL_MIN_HEIGHT = int(300 * _scale)
 
-BUTTON_MIN_WIDTH = int(140 * _scale)
+BUTTON_MIN_WIDTH = int(160 * _scale)
 BUTTON_MIN_HEIGHT = int(56 * _scale)
 ENTRY_MIN_HEIGHT = int(44 * _scale)
 ENTRY_PADDING_LEFT = int(14 * _scale)

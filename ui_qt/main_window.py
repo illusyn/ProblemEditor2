@@ -79,16 +79,12 @@ class MainWindow(QMainWindow):
         if not laptop_mode:
             self.left_panel.setFixedWidth(780)
         editor_layout.addWidget(self.left_panel)
-        self.left_panel.query_button.clicked.connect(self.on_query)
-        self.left_panel.next_match_button.clicked.connect(self.show_next_problem)
-        self.left_panel.prev_match_button.clicked.connect(self.show_previous_problem)
-        self.left_panel.preview_button.clicked.connect(self.update_preview)
-        self.left_panel.save_problem_button.clicked.connect(self.save_current_problem)
-        try:
-            self.left_panel.reset_button.clicked.disconnect()
-        except TypeError:
-            pass
-        self.left_panel.reset_button.clicked.connect(self.reset_fields)
+        self.left_panel.query_panel.query_button.clicked.connect(self.on_query)
+        self.left_panel.query_panel.next_match_button.clicked.connect(self.show_next_problem)
+        self.left_panel.query_panel.prev_match_button.clicked.connect(self.show_previous_problem)
+        self.left_panel.query_panel.preview_button.clicked.connect(self.update_preview)
+        self.left_panel.query_panel.reset_button.clicked.connect(self.reset_fields)
+        self.left_panel.query_panel.browse_all_button.clicked.connect(self.browse_all_problems)
         self.problem_db = MathProblemDB()
         self.editor_panel = EditorPanel()
         editor_vlayout = QVBoxLayout()
@@ -124,7 +120,7 @@ class MainWindow(QMainWindow):
         return_action.triggered.connect(self.show_editor_screen)
         self.browser_toolbar.addAction(return_action)
         self.left_panel.problem_browser_button.clicked.connect(self.show_problem_browser)
-        self.left_panel.browse_all_button.clicked.connect(self.browse_all_problems)
+        self.left_panel.query_panel.browse_all_button.clicked.connect(self.browse_all_problems)
         # Show editor by default
         self.stacked_widget.setCurrentWidget(self.editor_container)
         self.menuBar().setVisible(True)
