@@ -448,6 +448,18 @@ class MathProblemDB:
                     {"category_id": cat[0], "name": cat[1]}
                     for cat in self.cur.fetchall()
                 ]
+
+                # Get types for this problem
+                self.cur.execute("""
+                    SELECT t.type_id, t.name
+                    FROM problem_types t
+                    JOIN problem_problem_types ppt ON t.type_id = ppt.type_id
+                    WHERE ppt.problem_id = ?
+                """, (problem_id,))
+                problem["types"] = [
+                    {"type_id": t[0], "name": t[1]}
+                    for t in self.cur.fetchall()
+                ]
                 
                 problems.append(problem)
             

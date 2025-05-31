@@ -153,37 +153,45 @@ class NeumorphicTextEdit(QTextEdit):
 class ProblemTypePanelQt(QWidget):
     def __init__(self, parent=None, types=None):
         super().__init__(parent)
-        self.types = types or ["Intro", "Efficiency", "SAT Problem"]
-        self.selected = set()
-        self.buttons = {}
+        # types should be a list of dicts: {"type_id": int, "name": str}
+        if types is None:
+            # fallback for legacy usage
+            types = [
+                {"type_id": 1, "name": "Intro"},
+                {"type_id": 2, "name": "Efficiency"},
+                {"type_id": 3, "name": "SAT Problem"}
+            ]
+        self.types = types
+        self.selected = set()  # set of type_id
+        self.buttons = {}  # type_id: button
         layout = QHBoxLayout(self)
         layout.setSpacing(20)
         for t in self.types:
-            btn = NeumorphicButton(t, font_size=BUTTON_FONT_SIZE)
+            btn = NeumorphicButton(t["name"], font_size=BUTTON_FONT_SIZE)
             btn.setCheckable(True)
-            btn.clicked.connect(lambda checked, name=t: self.toggle_type(name))
+            btn.clicked.connect(lambda checked, tid=t["type_id"]: self.toggle_type(tid))
             layout.addWidget(btn)
-            self.buttons[t] = btn
+            self.buttons[t["type_id"]] = btn
         layout.addStretch()
         self.setLayout(layout)
 
-    def toggle_type(self, type_name):
-        btn = self.buttons[type_name]
+    def toggle_type(self, type_id):
+        btn = self.buttons[type_id]
         if btn.isChecked():
-            self.selected.add(type_name)
+            self.selected.add(type_id)
         else:
-            self.selected.discard(type_name)
+            self.selected.discard(type_id)
 
-    def get_selected_types(self):
+    def get_selected_type_ids(self):
         return list(self.selected)
 
-    def set_selected_types(self, type_names):
-        for t, btn in self.buttons.items():
-            btn.setChecked(t in type_names)
-            if t in type_names:
-                self.selected.add(t)
+    def set_selected_type_ids(self, type_ids):
+        for tid, btn in self.buttons.items():
+            btn.setChecked(tid in type_ids)
+            if tid in type_ids:
+                self.selected.add(tid)
             else:
-                self.selected.discard(t)
+                self.selected.discard(tid)
 
 class QueryInputsPanel(QWidget):
     """
@@ -222,7 +230,12 @@ class QueryInputsPanel(QWidget):
         main_layout.addLayout(earmark_row)
         
         # --- Problem type buttons directly below earmark row ---
-        self.problem_type_panel = ProblemTypePanelQt()
+        from db.math_db import MathProblemDB
+        db = MathProblemDB()
+        types = db.cur.execute("SELECT type_id, name FROM problem_types ORDER BY name").fetchall()
+        db.close()
+        type_dicts = [{"type_id": row[0], "name": row[1]} for row in types]
+        self.problem_type_panel = ProblemTypePanelQt(types=type_dicts)
         self.problem_type_panel.setContentsMargins(0, 0, 0, 0)
         self.problem_type_panel.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         main_layout.addWidget(self.problem_type_panel)
@@ -346,13 +359,13 @@ class QueryInputsPanel(QWidget):
         self.earmark_checkbox.setChecked(bool(value))
     
     # --- Problem type methods ---
-    def get_selected_types(self):
-        """Get list of selected problem types"""
-        return self.problem_type_panel.get_selected_types()
+    def get_selected_type_ids(self):
+        """Get list of selected problem type IDs"""
+        return self.problem_type_panel.get_selected_type_ids()
 
-    def set_selected_types(self, type_names):
-        """Set selected problem types"""
-        self.problem_type_panel.set_selected_types(type_names)
+    def set_selected_type_ids(self, type_ids):
+        """Set selected problem type IDs"""
+        self.problem_type_panel.set_selected_type_ids(type_ids)
     
     # --- Category methods ---
     def get_selected_categories(self):
@@ -415,7 +428,7 @@ class QueryInputsPanel(QWidget):
             'answer': self.get_answer().strip(),
             # Advanced inputs
             'earmark': self.get_earmark(),
-            'selected_types': self.get_selected_types(),
+            'selected_type_ids': self.get_selected_type_ids(),
             'selected_categories': self.get_selected_categories(),
             'notes': self.get_notes().strip()
         }
@@ -439,8 +452,8 @@ class QueryInputsPanel(QWidget):
         if 'earmark' in criteria:
             self.set_earmark(criteria['earmark'])
         
-        if 'selected_types' in criteria:
-            self.set_selected_types(criteria['selected_types'])
+        if 'selected_type_ids' in criteria:
+            self.set_selected_type_ids(criteria['selected_type_ids'])
         
         if 'selected_categories' in criteria:
             # Set categories by name
@@ -480,7 +493,7 @@ class QueryInputsPanel(QWidget):
             criteria['problem_id'],
             criteria['search_text'],
             criteria['earmark'],
-            criteria['selected_types'],
+            criteria['selected_type_ids'],
             criteria['selected_categories']
         ])
         
@@ -497,7 +510,7 @@ class QueryInputsPanel(QWidget):
             criteria['search_text'], 
             criteria['answer'],
             criteria['earmark'],
-            criteria['selected_types'],
+            criteria['selected_type_ids'],
             criteria['selected_categories'],
             criteria['notes']
         ])
@@ -515,7 +528,7 @@ class QueryInputsPanel(QWidget):
             return 'direct_id'
         elif criteria['search_text']:
             return 'text_search'
-        elif any([criteria['earmark'], criteria['selected_types'], criteria['selected_categories']]):
+        elif any([criteria['earmark'], criteria['selected_type_ids'], criteria['selected_categories']]):
             return 'filtered_search'
         else:
             return 'browse_all'

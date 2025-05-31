@@ -53,19 +53,19 @@ class LeftPanel(QWidget):
         main_layout.addWidget(self.query_panel)
 
     def _create_top_row(self, main_layout):
-        """Create the top row with Problem Browser and Save Problem buttons"""
+        """Create the top row with Problem Browser, Problem Browser 2, and Save Problem buttons"""
         top_row = QHBoxLayout()
-        
         self.problem_browser_button = self.create_neumorphic_button("Problem Browser")
         self.problem_browser_button.setMinimumWidth(CONTROL_BTN_WIDTH)
         top_row.addWidget(self.problem_browser_button)
-        
+        # Add Problem Browser 2 button
+        self.problem_browser2_button = self.create_neumorphic_button("Problem Browser 2")
+        self.problem_browser2_button.setMinimumWidth(CONTROL_BTN_WIDTH)
+        top_row.addWidget(self.problem_browser2_button)
         top_row.addStretch()
-        
         self.save_problem_button = self.create_neumorphic_button("Save Problem")
         self.save_problem_button.setMinimumWidth(CONTROL_BTN_WIDTH)
         top_row.addWidget(self.save_problem_button)
-        
         main_layout.addLayout(top_row)
 
     def create_neumorphic_button(self, text, parent=None):
@@ -107,11 +107,11 @@ class LeftPanel(QWidget):
     def set_earmark(self, value):
         self.query_panel.set_earmark(value)
 
-    def get_selected_types(self):
-        return self.query_panel.get_selected_types()
+    def get_selected_type_ids(self):
+        return self.query_panel.get_selected_type_ids()
 
-    def set_selected_types(self, type_names):
-        self.query_panel.set_selected_types(type_names)
+    def set_selected_type_ids(self, type_ids):
+        self.query_panel.set_selected_type_ids(type_ids)
 
     def get_selected_categories(self):
         return self.query_panel.get_selected_categories()

@@ -18,8 +18,20 @@ from converters.image_converter import ImageConverter
 from ui_qt.style_config import active_palette, MultiShadowButton, WINDOW_BG_COLOR, FONT_FAMILY, BUTTON_FONT_SIZE, LABEL_FONT_SIZE, NOTES_FONT_SIZE
 from PyQt5.QtGui import QFont
 from ui_qt.problem_browser import ProblemBrowser
+from ui_qt.problem_manager import ProblemManager
 from PyQt5.QtCore import Qt
 from managers.config_manager import ConfigManager
+
+def update_problem_image_map(problem_id, content, db):
+    # Remove old mappings
+    db.cur.execute("DELETE FROM problem_image_map WHERE problem_id = ?", (problem_id,))
+    # Extract image names from content
+    image_names = re.findall(r'\\includegraphics(?:\\[.*?\\])?\\{([^\\}]+)\\}', content)
+    for image_name in image_names:
+        db.cur.execute(
+            "INSERT INTO problem_image_map (problem_id, image_name) VALUES (?, ?)",
+            (problem_id, image_name)
+        )
 
 class MainWindow(QMainWindow):
     def __init__(self, laptop_mode=False):
@@ -85,6 +97,10 @@ class MainWindow(QMainWindow):
         self.left_panel.query_panel.preview_button.clicked.connect(self.update_preview)
         self.left_panel.query_panel.reset_button.clicked.connect(self.reset_fields)
         self.left_panel.query_panel.browse_all_button.clicked.connect(self.browse_all_problems)
+        # Add Problem Browser 2 screen
+        self.problem_manager_screen = ProblemManager(laptop_mode=laptop_mode)
+        self.stacked_widget.addWidget(self.problem_manager_screen)
+        self.left_panel.problem_browser2_button.clicked.connect(self.show_problem_manager_screen)
         self.problem_db = MathProblemDB()
         self.editor_panel = EditorPanel()
         editor_vlayout = QVBoxLayout()
@@ -152,7 +168,7 @@ class MainWindow(QMainWindow):
         if problem_id:
             problems = self.problem_db.get_problems_list(limit=1000000)[1]
             for p in problems:
-                if str(p.get("id", "")) == problem_id:
+                if str(p.get("problem_id", "")) == problem_id:
                     self.current_results = [p]
                     self.current_result_index = 0
                     self.load_problem_into_ui(p)
@@ -184,7 +200,9 @@ class MainWindow(QMainWindow):
 
     def load_problem_into_ui(self, problem):
         self.editor_panel.text_edit.setPlainText(problem.get("content", ""))
-        self.left_panel.set_problem_id(str(problem.get("id", "")))
+        print(f"[DEBUG] load_problem_into_ui: problem dict keys: {list(problem.keys())}")
+        print(f"[DEBUG] load_problem_into_ui: problem['problem_id'] = {problem.get('problem_id')}")
+        self.left_panel.set_problem_id(str(problem.get("problem_id", "")))
         print(f"[DEBUG] Setting answer: {repr(problem.get('answer', ''))}")
         self.left_panel.set_answer(problem.get("answer", ""))
         self.left_panel.set_notes(problem.get("notes", ""))
@@ -205,12 +223,12 @@ class MainWindow(QMainWindow):
             db = MathProblemDB(self.problem_db.db_path)
             success, types = db.get_types_for_problem(problem_id)
             if success:
-                self.left_panel.set_selected_types([t["name"] for t in types])
+                self.left_panel.set_selected_type_ids([t["type_id"] for t in types])
             else:
-                self.left_panel.set_selected_types([])
+                self.left_panel.set_selected_type_ids([])
             db.close()
         else:
-            self.left_panel.set_selected_types([])
+            self.left_panel.set_selected_type_ids([])
         self.left_panel.set_earmark(problem.get("earmark", 0))
         self.update_preview()
 
@@ -389,7 +407,7 @@ class MainWindow(QMainWindow):
         notes = self.left_panel.get_notes().strip()
         categories = [cat["name"] for cat in self.left_panel.category_panel.get_selected_categories()]
         earmark = 1 if self.left_panel.get_earmark() else 0
-        selected_types = self.left_panel.get_selected_types()
+        selected_types = self.left_panel.get_selected_type_ids()
         db = MathProblemDB(self.problem_db.db_path)
         try:
             if problem_id:
@@ -410,8 +428,10 @@ class MainWindow(QMainWindow):
                     db.add_problem_to_category(int(problem_id), cat_name)
                 # Update types
                 db.cur.execute("DELETE FROM problem_problem_types WHERE problem_id=?", (problem_id,))
-                for type_name in selected_types:
-                    db.add_problem_to_type(int(problem_id), type_name)
+                for type_id in selected_types:
+                    db.add_problem_to_type(int(problem_id), type_id)
+                # Update image mapping
+                update_problem_image_map(int(problem_id), content, db)
                 db.conn.commit()
                 QMessageBox.information(self, "Save Problem", "Problem updated successfully.")
             else:
@@ -426,8 +446,10 @@ class MainWindow(QMainWindow):
                 if not success:
                     QMessageBox.critical(self, "Save Problem", f"Failed to add problem: {new_id}")
                     return
-                for type_name in selected_types:
-                    db.add_problem_to_type(int(new_id), type_name)
+                for type_id in selected_types:
+                    db.add_problem_to_type(int(new_id), type_id)
+                # Update image mapping
+                update_problem_image_map(int(new_id), content, db)
                 db.conn.commit()
                 self.left_panel.set_problem_id(str(new_id))
                 QMessageBox.information(self, "Save Problem", f"New problem added with ID {new_id}.")
@@ -462,5 +484,10 @@ class MainWindow(QMainWindow):
         self.current_result_index = 0
         if self.current_results:
             self.load_problem_into_ui(self.current_results[0])
+            self.show_editor_screen()
         else:
-            QMessageBox.information(self, "Browse All", "No problems found in the database.") 
+            QMessageBox.information(self, "Browse All", "No problems found in the database.")
+
+    def show_problem_manager_screen(self):
+        self.stacked_widget.setCurrentWidget(self.problem_manager_screen)
+        self.menuBar().setVisible(True) 

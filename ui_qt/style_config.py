@@ -10,7 +10,7 @@ from PyQt5.QtCore import Qt
 
 # DPI scaling support
 _scale = 1.0
-_scale = 0.9
+_scale = 0.8
 
 def set_scale_from_dpi(dpi, base_dpi=96, min_scale=0.8, max_scale=1.5):
     """Set the global scaling factor based on screen DPI."""

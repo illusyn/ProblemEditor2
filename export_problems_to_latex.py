@@ -73,7 +73,6 @@ def main():
         content = prob['content']
         # Find all image names in the LaTeX content
         image_names = re.findall(r'\\includegraphics(?:\[.*?\])?\{([^\}]+)\}', content)
-        print(f"Image names found in content: {image_names}")
         for image_name in image_names:
             output_path = os.path.join(images_dir, image_name)
             print(f"[SCRIPT DEBUG] About to export image: {image_name} to {output_path}")
