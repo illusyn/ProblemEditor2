@@ -91,7 +91,8 @@ class MainWindow(QMainWindow):
         if not laptop_mode:
             self.left_panel.setFixedWidth(780)
         editor_layout.addWidget(self.left_panel)
-        self.left_panel.query_panel.query_button.clicked.connect(self.on_query)
+        self.left_panel.query_panel.query_clicked.connect(self.on_query)
+        print("[DEBUG] Connected query_clicked to on_query")
         self.left_panel.query_panel.next_match_button.clicked.connect(self.show_next_problem)
         self.left_panel.query_panel.prev_match_button.clicked.connect(self.show_previous_problem)
         self.left_panel.query_panel.preview_button.clicked.connect(self.update_preview)
@@ -163,10 +164,17 @@ class MainWindow(QMainWindow):
         self.status_bar.showMessage("Preview updated")
 
     def on_query(self):
+        selected_set_id = self.left_panel.query_panel.query_inputs_panel.get_selected_set_id()
+        print(f"[DEBUG] <<<<<<<<<<<<<<<<<< selected_set_id={selected_set_id} (type={type(selected_set_id)})")
+        if selected_set_id is not None:
+            selected_set_id = int(selected_set_id)
         problem_id = self.left_panel.get_problem_id().strip()
         earmark_filter = self.left_panel.get_earmark()
-        if problem_id:
+        if selected_set_id:
+            problems = self.problem_db.list_problems_in_set(selected_set_id)
+        else:
             problems = self.problem_db.get_problems_list(limit=1000000)[1]
+        if problem_id:
             for p in problems:
                 if str(p.get("problem_id", "")) == problem_id:
                     self.current_results = [p]
@@ -179,7 +187,6 @@ class MainWindow(QMainWindow):
             return
         search_text = self.left_panel.get_search_text().strip().lower()
         selected_cats = {cat["name"] for cat in self.left_panel.category_panel.get_selected_categories()}
-        problems = self.problem_db.get_problems_list(limit=1000000)[1]
         results = []
         for p in problems:
             if search_text and search_text not in (p.get('content','').lower()) and search_text not in (p.get('title','').lower()):

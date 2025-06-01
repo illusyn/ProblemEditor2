@@ -31,6 +31,7 @@ class MathProblemDB:
             db_path = db_dir / "math_problems.db"
             
         self.db_path = str(db_path)
+        print(f"[DEBUG] MathProblemDB using database: {self.db_path}")
         self.conn = sqlite3.connect(self.db_path)
         
         # Enable foreign key constraints
@@ -101,7 +102,7 @@ class MathProblemDB:
         
         # Problem set members table
         self.cur.execute('''
-            CREATE TABLE IF NOT EXISTS problem_set_members (
+            CREATE TABLE IF NOT EXISTS problem_set_member (
                 set_id INTEGER NOT NULL REFERENCES problem_sets(set_id) ON DELETE CASCADE,
                 problem_id INTEGER NOT NULL REFERENCES problems(problem_id) ON DELETE CASCADE,
                 order_index INTEGER,
@@ -958,7 +959,7 @@ class MathProblemDB:
         """Add a problem to a set, optionally with order."""
         try:
             self.cur.execute('''
-                INSERT OR REPLACE INTO problem_set_members (set_id, problem_id, order_index)
+                INSERT OR REPLACE INTO problem_set_member (set_id, problem_id, order_index)
                 VALUES (?, ?, ?)
             ''', (set_id, problem_id, order_index))
             self.conn.commit()
@@ -971,7 +972,7 @@ class MathProblemDB:
         """Remove a problem from a set."""
         try:
             self.cur.execute('''
-                DELETE FROM problem_set_members WHERE set_id = ? AND problem_id = ?
+                DELETE FROM problem_set_member WHERE set_id = ? AND problem_id = ?
             ''', (set_id, problem_id))
             self.conn.commit()
             return (True, "Problem removed from set")
@@ -980,21 +981,61 @@ class MathProblemDB:
             return (False, str(e))
 
     def list_problems_in_set(self, set_id, ordered=True):
-        """List all problems in a set, ordered if requested."""
         if ordered:
+            print(f"-------------------ordered={ordered}")
             self.cur.execute('''
-                SELECT p.* FROM problems p
-                JOIN problem_set_members m ON p.problem_id = m.problem_id
+                SELECT p.problem_id, p.content, p.answer, p.earmark, p.creation_date, p.last_modified
+                FROM problems p
+                JOIN problem_set_member m ON p.problem_id = m.problem_id
                 WHERE m.set_id = ?
                 ORDER BY m.order_index ASC
             ''', (set_id,))
         else:
             self.cur.execute('''
-                SELECT p.* FROM problems p
-                JOIN problem_set_members m ON p.problem_id = m.problem_id
+                SELECT p.problem_id, p.content, p.answer, p.earmark, p.creation_date, p.last_modified
+                FROM problems p
+                JOIN problem_set_member m ON p.problem_id = m.problem_id
                 WHERE m.set_id = ?
             ''', (set_id,))
-        return self.cur.fetchall()
+        rows = self.cur.fetchall()
+        print(f"----------rows={rows}")
+        problems = []
+        for row in rows:
+            problem_id = row[0]
+            problem = {
+                "problem_id": problem_id,
+                "content": row[1],
+                "answer": row[2],
+                "earmark": row[3],
+                "creation_date": row[4],
+                "last_modified": row[5],
+                "categories": []
+            }
+            # Get categories for this problem
+            self.cur.execute("""
+                SELECT c.category_id, c.name
+                FROM math_categories c
+                JOIN problem_math_categories pc ON c.category_id = pc.category_id
+                WHERE pc.problem_id = ?
+            """, (problem_id,))
+            problem["categories"] = [
+                {"category_id": cat[0], "name": cat[1]}
+                for cat in self.cur.fetchall()
+            ]
+            # Get types for this problem
+            self.cur.execute("""
+                SELECT t.type_id, t.name
+                FROM problem_types t
+                JOIN problem_problem_types ppt ON t.type_id = ppt.type_id
+                WHERE ppt.problem_id = ?
+            """, (problem_id,))
+            problem["types"] = [
+                {"type_id": t[0], "name": t[1]}
+                for t in self.cur.fetchall()
+            ]
+            problems.append(problem)
+        print(f"[DEBUG] Returning {len(problems)} problems from list_problems_in_set: {[p['problem_id'] for p in problems]}")
+        return problems
 
     def add_type(self, name):
         """

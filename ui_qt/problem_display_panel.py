@@ -289,7 +289,7 @@ class ProblemDisplayPanel(QWidget):
 
     # --- Rubber-band selection ---
     def eventFilter(self, obj, event):
-        print(f"[DEBUG] eventFilter: obj={obj}, event.type={event.type()}, event={event}")
+        # print(f"[DEBUG] eventFilter: obj={obj}, event.type={event.type()}, event={event}")
         if not self.isVisible():
             return False
         if obj is self.scroll_content:

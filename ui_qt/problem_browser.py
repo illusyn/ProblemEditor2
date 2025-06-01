@@ -207,7 +207,12 @@ class ProblemBrowser(QWidget):
             self.set_desc_edit.setText(set_row[2] or "")
             self.set_ordered_cb.setChecked(bool(set_row[3]))
             # Optionally: filter table to show only problems in this set
-            problems = self.db.get_problems_in_set(set_row[0])
+            problem_ids = [row[0] for row in self.db.get_problems_in_set(set_row[0])]
+            problems = []
+            for pid in problem_ids:
+                success, prob = self.db.get_problem(pid, with_images=False, with_categories=True)
+                if success:
+                    problems.append(prob)
             self.populate_table(problems)
         except Exception as e:
             QMessageBox.critical(self, "Query Problem Set", f"Failed to query set: {e}") 

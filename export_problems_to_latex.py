@@ -66,19 +66,24 @@ def main():
 
     # Ensure all images are exported from the DB to the export images directory
     output_dir = os.path.dirname(args.output)
-    
     images_dir = os.path.join(output_dir, 'images')
     os.makedirs(images_dir, exist_ok=True)
     for prob in problems:
-        content = prob['content']
-        # Find all image names in the LaTeX content
-        image_names = re.findall(r'\\includegraphics(?:\[.*?\])?\{([^\}]+)\}', content)
-        for image_name in image_names:
+        problem_id = prob['problem_id']
+        # Get all images for this problem from the DB
+        success, prob_data = db.get_problem(problem_id, with_images=True, with_categories=False)
+        if not success:
+            print(f"Warning: Could not get images for problem {problem_id}: {prob_data}")
+            continue
+        images = prob_data.get('images', [])
+        for img in images:
+            image_id = img['image_id']
+            image_name = img['image_name']
             output_path = os.path.join(images_dir, image_name)
-            print(f"[SCRIPT DEBUG] About to export image: {image_name} to {output_path}")
-            success, msg = image_db.export_to_file(image_name, output_path)
+            # Use MathProblemDB.export_image to export by image_id
+            success, msg = db.export_image(image_id=image_id, output_path=output_path)
             if not success:
-                print(f"Warning: Could not export image {image_name} to {images_dir}: {msg}")
+                print(f"Warning: Could not export image {image_name} (id={image_id}) to {images_dir}: {msg}")
 
     # --- Build all problems as a single LaTeX string ---
     all_problems_latex = ""

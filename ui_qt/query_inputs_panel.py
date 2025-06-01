@@ -8,7 +8,7 @@ This module contains ALL query-related input components:
 
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QTextEdit, 
-    QLineEdit, QPushButton, QCheckBox, QScrollArea, QSizePolicy, QGroupBox
+    QLineEdit, QPushButton, QCheckBox, QScrollArea, QSizePolicy, QGroupBox, QComboBox
 )
 from PyQt5.QtGui import QFont, QColor, QPainter, QBrush, QLinearGradient
 from PyQt5.QtCore import Qt
@@ -28,6 +28,7 @@ from ui_qt.style_config import (
     BUTTON_MIN_HEIGHT, ENTRY_MIN_HEIGHT, ENTRY_PADDING_LEFT, TEXTEDIT_PADDING, 
     SHADOW_RECT_ADJUST, SHADOW_OFFSETS, EDITOR_BG_COLOR, CATEGORY_BTN_SELECTED_COLOR
 )
+from db.problem_set_db import ProblemSetDB
 
 class NeumorphicButton(QPushButton):
     def __init__(self, text, parent=None, radius=NEUMORPH_RADIUS, bg_color=NEUMORPH_BG_COLOR, 
@@ -220,6 +221,15 @@ class QueryInputsPanel(QWidget):
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)  # No extra margins
         main_layout.setSpacing(SPACING)
+        
+        # --- Set Dropdown ---
+        self.set_dropdown = QComboBox()
+        self.set_dropdown.addItem("All Sets", None)
+        db = ProblemSetDB()
+        for set_id, name, desc, ordered in db.get_all_sets():
+            self.set_dropdown.addItem(name, set_id)
+        db.close()
+        main_layout.addWidget(self.set_dropdown)
         
         # --- Basic Inputs Row (Problem ID, Search Text, Answer) ---
         self._create_basic_inputs(main_layout)
@@ -541,3 +551,6 @@ class QueryInputsPanel(QWidget):
             return 'filtered_search'
         else:
             return 'browse_all'
+
+    def get_selected_set_id(self):
+        return self.set_dropdown.currentData()

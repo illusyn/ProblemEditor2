@@ -1,7 +1,7 @@
 import sqlite3
 
 class ProblemSetDB:
-    def __init__(self, db_path='math_problems.db'):
+    def __init__(self, db_path='db/math_problems.db'):
         self.conn = sqlite3.connect(db_path)
         self.cur = self.conn.cursor()
         self._ensure_table()
@@ -38,13 +38,13 @@ class ProblemSetDB:
         self.cur.execute('UPDATE problem_sets SET name=?, description=?, ordered=? WHERE set_id=?', (name, description, int(ordered), set_id))
         self.conn.commit()
 
-    def add_problem_to_set(self, set_id, problem_id, position=None):
-        if position is None:
-            self.cur.execute('SELECT MAX(position) FROM problem_set_member WHERE set_id=?', (set_id,))
-            max_pos = self.cur.fetchone()[0]
-            position = (max_pos + 1) if max_pos is not None else 0
+    def add_problem_to_set(self, set_id, problem_id, order_index=None):
+        if order_index is None:
+            self.cur.execute('SELECT MAX(order_index) FROM problem_set_member WHERE set_id=?', (set_id,))
+            max_index = self.cur.fetchone()[0]
+            order_index = (max_index + 1) if max_index is not None else 0
         try:
-            self.cur.execute('INSERT INTO problem_set_member (set_id, problem_id, position) VALUES (?, ?, ?)', (set_id, problem_id, position))
+            self.cur.execute('INSERT INTO problem_set_member (set_id, problem_id, order_index) VALUES (?, ?, ?)', (set_id, problem_id, order_index))
             self.conn.commit()
             return True
         except sqlite3.IntegrityError:
@@ -55,7 +55,7 @@ class ProblemSetDB:
         self.conn.commit()
 
     def get_problems_in_set(self, set_id):
-        self.cur.execute('SELECT problem_id, position FROM problem_set_member WHERE set_id=? ORDER BY position', (set_id,))
+        self.cur.execute('SELECT problem_id, order_index FROM problem_set_member WHERE set_id=? ORDER BY order_index', (set_id,))
         return self.cur.fetchall()
 
     def close(self):

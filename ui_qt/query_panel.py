@@ -9,6 +9,7 @@ from ui_qt.problem_set_panel import ProblemSetPanel
 class QueryPanel(QWidget):
     query_executed = pyqtSignal(list)  # Emits a list of problems
     reset_clicked = pyqtSignal()       # Emits when reset is clicked
+    query_clicked = pyqtSignal()       # Emits when Query button is clicked
     def __init__(self, parent=None, laptop_mode=False):
         super().__init__(parent)
         self.laptop_mode = laptop_mode
@@ -35,7 +36,7 @@ class QueryPanel(QWidget):
         # self.setMaximumHeight(900)
 
         # Connect query button to emit signal (placeholder logic)
-        self.query_button.clicked.connect(self._on_query_clicked)
+        self.query_button.clicked.connect(self.query_clicked.emit)
         self.reset_button.clicked.connect(self._on_reset_clicked)
 
     def _create_query_controls(self, main_layout):
