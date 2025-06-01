@@ -43,36 +43,39 @@ class NeumorphicButton(QPushButton):
 
     def paintEvent(self, event):
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-        rect = self.rect().adjusted(SHADOW_RECT_ADJUST, SHADOW_RECT_ADJUST, 
-                                  -SHADOW_RECT_ADJUST, -SHADOW_RECT_ADJUST)
-        
-        # Multi-layered blurred shadow (bottom-right)
-        for i, alpha in zip(SHADOW_OFFSETS, [40, 60, 90]):
-            shadow = QColor(self.shadow_dark)
-            shadow.setAlpha(alpha)
-            painter.setBrush(QBrush(shadow))
-            painter.setPen(Qt.NoPen)
-            painter.drawRoundedRect(rect.translated(i, i), self.radius, self.radius)
-        
-        # Multi-layered highlight (top-left)
-        for i, alpha in zip(SHADOW_OFFSETS, [30, 50, 80]):
-            highlight = QColor(self.shadow_light)
-            highlight.setAlpha(alpha)
-            painter.setBrush(QBrush(highlight))
-            painter.drawRoundedRect(rect.translated(-i, -i), self.radius, self.radius)
-        
-        # Solid background (highlight if checked)
-        if self.isCheckable() and self.isChecked():
-            painter.setBrush(QBrush(QColor(CATEGORY_BTN_SELECTED_COLOR)))
-        else:
-            painter.setBrush(QBrush(QColor(self.bg_color)))
-        painter.drawRoundedRect(rect, self.radius, self.radius)
-        
-        # Text
-        painter.setPen(QColor(self.font_color))
-        painter.setFont(QFont(self.font_family, self.font_size, QFont.Bold))
-        painter.drawText(rect, Qt.AlignCenter, self.text())
+        try:
+            painter.setRenderHint(QPainter.Antialiasing)
+            rect = self.rect().adjusted(SHADOW_RECT_ADJUST, SHADOW_RECT_ADJUST, 
+                                      -SHADOW_RECT_ADJUST, -SHADOW_RECT_ADJUST)
+            
+            # Multi-layered blurred shadow (bottom-right)
+            for i, alpha in zip(SHADOW_OFFSETS, [40, 60, 90]):
+                shadow = QColor(self.shadow_dark)
+                shadow.setAlpha(alpha)
+                painter.setBrush(QBrush(shadow))
+                painter.setPen(Qt.NoPen)
+                painter.drawRoundedRect(rect.translated(i, i), self.radius, self.radius)
+            
+            # Multi-layered highlight (top-left)
+            for i, alpha in zip(SHADOW_OFFSETS, [30, 50, 80]):
+                highlight = QColor(self.shadow_light)
+                highlight.setAlpha(alpha)
+                painter.setBrush(QBrush(highlight))
+                painter.drawRoundedRect(rect.translated(-i, -i), self.radius, self.radius)
+            
+            # Solid background (highlight if checked)
+            if self.isCheckable() and self.isChecked():
+                painter.setBrush(QBrush(QColor(CATEGORY_BTN_SELECTED_COLOR)))
+            else:
+                painter.setBrush(QBrush(QColor(self.bg_color)))
+            painter.drawRoundedRect(rect, self.radius, self.radius)
+            
+            # Text
+            painter.setPen(QColor(self.font_color))
+            painter.setFont(QFont(self.font_family, self.font_size, QFont.Bold))
+            painter.drawText(rect, Qt.AlignCenter, self.text())
+        finally:
+            painter.end()
 
 class NeumorphicEntry(QLineEdit):
     """Neumorphic styled entry field with inset shadow effects"""
@@ -98,30 +101,33 @@ class NeumorphicEntry(QLineEdit):
 
     def paintEvent(self, event):
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-        rect = self.rect().adjusted(SHADOW_RECT_ADJUST, SHADOW_RECT_ADJUST, 
-                                  -SHADOW_RECT_ADJUST, -SHADOW_RECT_ADJUST)
-        
-        # Sunken effect: shadow top-left, highlight bottom-right
-        for i, alpha in zip(SHADOW_OFFSETS, [40, 60, 90]):
-            shadow = QColor(self.shadow_dark)
-            shadow.setAlpha(alpha)
-            painter.setBrush(QBrush(shadow))
-            painter.setPen(Qt.NoPen)
-            painter.drawRoundedRect(rect.translated(-i, -i), self.radius, self.radius)
-        
-        for i, alpha in zip(SHADOW_OFFSETS, [30, 50, 80]):
-            highlight = QColor(self.shadow_light)
-            highlight.setAlpha(alpha)
-            painter.setBrush(QBrush(highlight))
-            painter.drawRoundedRect(rect.translated(i, i), self.radius, self.radius)
-        
-        # Solid background (no gradient)
-        painter.setBrush(QBrush(QColor(self.bg_color)))
-        painter.drawRoundedRect(rect, self.radius, self.radius)
-        
-        # Call base class paint for text/cursor
-        super().paintEvent(event)
+        try:
+            painter.setRenderHint(QPainter.Antialiasing)
+            rect = self.rect().adjusted(SHADOW_RECT_ADJUST, SHADOW_RECT_ADJUST, 
+                                      -SHADOW_RECT_ADJUST, -SHADOW_RECT_ADJUST)
+            
+            # Sunken effect: shadow top-left, highlight bottom-right
+            for i, alpha in zip(SHADOW_OFFSETS, [40, 60, 90]):
+                shadow = QColor(self.shadow_dark)
+                shadow.setAlpha(alpha)
+                painter.setBrush(QBrush(shadow))
+                painter.setPen(Qt.NoPen)
+                painter.drawRoundedRect(rect.translated(-i, -i), self.radius, self.radius)
+            
+            for i, alpha in zip(SHADOW_OFFSETS, [30, 50, 80]):
+                highlight = QColor(self.shadow_light)
+                highlight.setAlpha(alpha)
+                painter.setBrush(QBrush(highlight))
+                painter.drawRoundedRect(rect.translated(i, i), self.radius, self.radius)
+            
+            # Solid background (no gradient)
+            painter.setBrush(QBrush(QColor(self.bg_color)))
+            painter.drawRoundedRect(rect, self.radius, self.radius)
+            
+            # Call base class paint for text/cursor
+            super().paintEvent(event)
+        finally:
+            painter.end()
 
 class NeumorphicTextEdit(QTextEdit):
     """Neumorphic styled text edit area with inset shadow effects"""
@@ -150,27 +156,30 @@ class NeumorphicTextEdit(QTextEdit):
 
     def paintEvent(self, event):
         painter = QPainter(self.viewport())
-        painter.setRenderHint(QPainter.Antialiasing)
-        rect = self.rect().adjusted(SHADOW_RECT_ADJUST, SHADOW_RECT_ADJUST, 
-                                  -SHADOW_RECT_ADJUST, -SHADOW_RECT_ADJUST)
-        
-        # Multi-layered blurred shadow (bottom-right)
-        for i, alpha in zip(SHADOW_OFFSETS, [40, 60, 90]):
-            shadow = QColor(self.shadow_dark)
-            shadow.setAlpha(alpha)
-            painter.setBrush(QBrush(shadow))
-            painter.setPen(Qt.NoPen)
-            painter.drawRoundedRect(rect.translated(i, i), self.radius, self.radius)
-        
-        # Multi-layered highlight (top-left)
-        for i, alpha in zip(SHADOW_OFFSETS, [30, 50, 80]):
-            highlight = QColor(self.shadow_light)
-            highlight.setAlpha(alpha)
-            painter.setBrush(QBrush(highlight))
-            painter.drawRoundedRect(rect.translated(-i, -i), self.radius, self.radius)
-        
-        # Solid background (no gradient)
-        painter.setBrush(QBrush(QColor(self.bg_color)))
-        painter.drawRoundedRect(rect, self.radius, self.radius)
-        
-        super().paintEvent(event)
+        try:
+            painter.setRenderHint(QPainter.Antialiasing)
+            rect = self.rect().adjusted(SHADOW_RECT_ADJUST, SHADOW_RECT_ADJUST, 
+                                      -SHADOW_RECT_ADJUST, -SHADOW_RECT_ADJUST)
+            
+            # Multi-layered blurred shadow (bottom-right)
+            for i, alpha in zip(SHADOW_OFFSETS, [40, 60, 90]):
+                shadow = QColor(self.shadow_dark)
+                shadow.setAlpha(alpha)
+                painter.setBrush(QBrush(shadow))
+                painter.setPen(Qt.NoPen)
+                painter.drawRoundedRect(rect.translated(i, i), self.radius, self.radius)
+            
+            # Multi-layered highlight (top-left)
+            for i, alpha in zip(SHADOW_OFFSETS, [30, 50, 80]):
+                highlight = QColor(self.shadow_light)
+                highlight.setAlpha(alpha)
+                painter.setBrush(QBrush(highlight))
+                painter.drawRoundedRect(rect.translated(-i, -i), self.radius, self.radius)
+            
+            # Solid background (no gradient)
+            painter.setBrush(QBrush(QColor(self.bg_color)))
+            painter.drawRoundedRect(rect, self.radius, self.radius)
+            
+            super().paintEvent(event)
+        finally:
+            painter.end()

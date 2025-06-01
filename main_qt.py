@@ -16,7 +16,7 @@ set_laptop_mode(scale)
 # Now import the rest of the modules
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QLineEdit, QGraphicsDropShadowEffect
 from PyQt5.QtGui import QColor, QGuiApplication
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 from ui_qt.main_window import MainWindow
 from ui_qt.style_config import set_scale_from_dpi
 
@@ -96,4 +96,22 @@ if __name__ == "__main__":
         width, height = int(res_match.group(1)), int(res_match.group(2))
         window.resize(width, height)
     window.show()
+
+    def print_main_window_size_hints():
+        print("[DEBUG] MainWindow minimumSizeHint:", window.minimumSizeHint())
+        print("[DEBUG] MainWindow sizeHint:", window.sizeHint())
+        if hasattr(window, 'problem_manager_screen'):
+            print("[DEBUG] ProblemManager minimumSizeHint:", window.problem_manager_screen.minimumSizeHint())
+            print("[DEBUG] ProblemManager sizeHint:", window.problem_manager_screen.sizeHint())
+            if hasattr(window.problem_manager_screen, 'query_panel'):
+                print("[DEBUG] QueryPanel minimumSizeHint:", window.problem_manager_screen.query_panel.minimumSizeHint())
+                print("[DEBUG] QueryPanel sizeHint:", window.problem_manager_screen.query_panel.sizeHint())
+            if hasattr(window.problem_manager_screen, 'problem_display_panel'):
+                print("[DEBUG] ProblemDisplayPanel minimumSizeHint:", window.problem_manager_screen.problem_display_panel.minimumSizeHint())
+                print("[DEBUG] ProblemDisplayPanel sizeHint:", window.problem_manager_screen.problem_display_panel.sizeHint())
+            if hasattr(window.problem_manager_screen.query_panel, 'problem_set_panel'):
+                print("[DEBUG] ProblemSetPanel minimumSizeHint:", window.problem_manager_screen.query_panel.problem_set_panel.minimumSizeHint())
+                print("[DEBUG] ProblemSetPanel sizeHint:", window.problem_manager_screen.query_panel.problem_set_panel.sizeHint())
+
+    QTimer.singleShot(1000, print_main_window_size_hints)
     sys.exit(app.exec_()) 

@@ -4,6 +4,7 @@ from ui_qt.query_inputs_panel import QueryInputsPanel
 from ui_qt.neumorphic_components import NeumorphicButton
 from ui_qt.style_config import CONTROL_BTN_FONT_SIZE, CONTROL_BTN_WIDTH, SPACING, PADDING, WINDOW_BG_COLOR
 from db.math_db import MathProblemDB
+from ui_qt.problem_set_panel import ProblemSetPanel
 
 class QueryPanel(QWidget):
     query_executed = pyqtSignal(list)  # Emits a list of problems
@@ -25,6 +26,13 @@ class QueryPanel(QWidget):
         # --- Query Inputs Panel (contains ALL input fields) ---
         self.query_inputs_panel = QueryInputsPanel(laptop_mode=self.laptop_mode)
         layout.addWidget(self.query_inputs_panel)
+
+        # Debug prints for child size hints
+        print("[DEBUG] QueryInputsPanel minimumSizeHint:", self.query_inputs_panel.minimumSizeHint())
+        print("[DEBUG] QueryInputsPanel sizeHint:", self.query_inputs_panel.sizeHint())
+
+        # Set a maximum height for QueryPanel to prevent huge minimum size
+        # self.setMaximumHeight(900)
 
         # Connect query button to emit signal (placeholder logic)
         self.query_button.clicked.connect(self._on_query_clicked)

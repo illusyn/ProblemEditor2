@@ -1,13 +1,17 @@
-from PyQt5.QtWidgets import QWidget, QGridLayout, QLabel, QVBoxLayout, QSizePolicy, QScrollArea, QSpacerItem, QHBoxLayout, QComboBox, QGroupBox
-from PyQt5.QtGui import QPixmap, QFont
-from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QWidget, QGridLayout, QLabel, QVBoxLayout, QSizePolicy, QScrollArea, QSpacerItem, QHBoxLayout, QComboBox, QGroupBox, QCheckBox, QPushButton, QRubberBand, QApplication
+from PyQt5.QtGui import QPixmap, QFont, QPainter, QColor, QPen
+from PyQt5.QtCore import Qt, QRect, QPoint, QSize
 import re, os
 from db.math_db import MathProblemDB
 from managers.image_manager_qt import ImageManagerQt
+import json
+from ui_qt.style_config import CATEGORY_BTN_SELECTED_COLOR
 
 class ProblemCellWidget(QWidget):
     def __init__(self, problem, font_size, parent=None):
         super().__init__(parent)
+        self.problem = problem
+        self.selected = False
         main_layout = QHBoxLayout(self)
         main_layout.setSpacing(12)
         self.setLayout(main_layout)
@@ -99,10 +103,37 @@ class ProblemCellWidget(QWidget):
             main_layout.addLayout(images_vbox, stretch=2)
 
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.setAutoFillBackground(True)
+
+    def set_selected(self, selected: bool):
+        self.selected = selected
+        self.update()
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            if self.parent() and hasattr(self.parent(), 'on_cell_clicked'):
+                self.parent().on_cell_clicked(self)
+        super().mousePressEvent(event)
+
+    def paintEvent(self, event):
+        super().paintEvent(event)
+        if self.selected:
+            painter = QPainter(self)
+            try:
+                pen = QPen(QColor(CATEGORY_BTN_SELECTED_COLOR))
+                pen.setWidth(4)
+                painter.setPen(pen)
+                painter.drawRect(self.rect().adjusted(2, 2, -2, -2))
+            finally:
+                painter.end()
 
 class ProblemDisplayPanel(QWidget):
+    CONFIG_PATH = "user_settings.json"
+
     def __init__(self, parent=None):
+        print("ProblemDisplayPanel init:0")
         super().__init__(parent)
+        print("ProblemDisplayPanel init")
         self.outer_layout = QVBoxLayout(self)
         self.setLayout(self.outer_layout)
 
@@ -113,12 +144,17 @@ class ProblemDisplayPanel(QWidget):
         config_layout.addWidget(QLabel("Font size:"))
         self.font_size_combo = QComboBox()
         self.font_size_combo.addItems([str(i) for i in range(10, 33)])
-        self.font_size_combo.setCurrentText("14")
+        # Load saved font size if available
+        self.font_size_combo.setCurrentText(str(self.load_saved_font_size()))
+        self.current_font_size = int(self.font_size_combo.currentText())
         config_layout.addWidget(self.font_size_combo)
+        # Add 'Save Fontsize' button instead of checkbox
+        self.save_font_btn = QPushButton("Save Fontsize")
+        config_layout.addWidget(self.save_font_btn)
+        self.save_font_btn.clicked.connect(self.on_save_font_btn_clicked)
         config_layout.addStretch(1)
         self.outer_layout.addWidget(config_group)
-        self.font_size_combo.currentTextChanged.connect(self.update_all_content_fonts)
-        self.current_font_size = 14
+        self.font_size_combo.currentTextChanged.connect(self.on_font_size_changed)
 
         # Scrollable area for problems
         self.scroll_area = QScrollArea(self)
@@ -136,6 +172,14 @@ class ProblemDisplayPanel(QWidget):
 
         self.problems = []
         self.problem_cells = []
+        self.selected_problem_ids = set()
+        self.selection_anchor_idx = None  # Track anchor for shift-selection
+        self.rubber_band = None
+        self.origin = QPoint()
+        self.scroll_content.installEventFilter(self)
+
+        # Set a fixed height for the panel (adjust as needed)
+        # self.setFixedHeight(600)
 
     def set_problems(self, problems):
         # Clear existing widgets
@@ -146,13 +190,15 @@ class ProblemDisplayPanel(QWidget):
                 widget.deleteLater()
         self.problems = problems
         self.problem_cells = []
+        self.selected_problem_ids = set()
+        self.selection_anchor_idx = None
         if not problems:
             return
         cols = 3  # Number of columns in the grid
         for idx, problem in enumerate(problems):
             row = idx // cols
             col = idx % cols
-            cell = ProblemCellWidget(problem, self.current_font_size)
+            cell = ProblemCellWidget(problem, self.current_font_size, parent=self.scroll_content)
             self.grid.addWidget(cell, row, col)
             self.problem_cells.append(cell)
         self.update_all_content_fonts()
@@ -164,4 +210,122 @@ class ProblemDisplayPanel(QWidget):
             font_size = 14
         self.current_font_size = font_size
         for cell in self.problem_cells:
-            cell.content_label.setFont(QFont('Arial', font_size)) 
+            cell.content_label.setFont(QFont('Arial', font_size))
+
+    def load_saved_font_size(self):
+        if os.path.exists(self.CONFIG_PATH):
+            with open(self.CONFIG_PATH, "r") as f:
+                data = json.load(f)
+                return data.get("problem_manager_font_size", 14)
+        return 14
+
+    def save_font_size(self, size):
+        data = {}
+        if os.path.exists(self.CONFIG_PATH):
+            with open(self.CONFIG_PATH, "r") as f:
+                data = json.load(f)
+        data["problem_manager_font_size"] = int(size)
+        with open(self.CONFIG_PATH, "w") as f:
+            json.dump(data, f)
+
+    def on_font_size_changed(self, size):
+        self.update_all_content_fonts()
+        # No auto-save on change; only save when button is clicked
+
+    def on_save_font_btn_clicked(self):
+        self.save_font_size(self.font_size_combo.currentText())
+
+    def load_remember_font_setting(self):
+        # Deprecated, no longer used
+        return True
+
+    def save_remember_font_setting(self, remember):
+        # Deprecated, no longer used
+        pass
+
+    def on_cell_clicked(self, cell):
+        prob_id = cell.problem.get('problem_id')
+        if prob_id is None:
+            return
+        idx = self.problem_cells.index(cell)
+        modifiers = QApplication.keyboardModifiers()
+        if modifiers & Qt.ControlModifier:
+            # Ctrl+Click toggles selection
+            if prob_id in self.selected_problem_ids:
+                self.selected_problem_ids.remove(prob_id)
+                cell.set_selected(False)
+            else:
+                self.selected_problem_ids.add(prob_id)
+                cell.set_selected(True)
+            self.selection_anchor_idx = idx
+        elif modifiers & Qt.ShiftModifier:
+            # Shift+Click: expand selection from anchor to clicked cell
+            if self.selection_anchor_idx is not None:
+                start, end = sorted([self.selection_anchor_idx, idx])
+                for i in range(start, end+1):
+                    pid = self.problem_cells[i].problem.get('problem_id')
+                    self.selected_problem_ids.add(pid)
+                    self.problem_cells[i].set_selected(True)
+            else:
+                self.selected_problem_ids.add(prob_id)
+                cell.set_selected(True)
+                self.selection_anchor_idx = idx
+        else:
+            # Single click: clear others, select this
+            for c in self.problem_cells:
+                c.set_selected(False)
+            self.selected_problem_ids = {prob_id}
+            cell.set_selected(True)
+            self.selection_anchor_idx = idx
+
+    def clear_selection(self):
+        self.selected_problem_ids.clear()
+        for c in self.problem_cells:
+            c.set_selected(False)
+        self.selection_anchor_idx = None
+
+    def get_selected_problems(self):
+        return [c.problem for c in self.problem_cells if c.problem.get('problem_id') in self.selected_problem_ids]
+
+    # --- Rubber-band selection ---
+    def eventFilter(self, obj, event):
+        print(f"[DEBUG] eventFilter: obj={obj}, event.type={event.type()}, event={event}")
+        if not self.isVisible():
+            return False
+        if obj is self.scroll_content:
+            if event.type() == event.MouseButtonPress and event.button() == Qt.LeftButton:
+                self.origin = event.pos()
+                if not self.rubber_band:
+                    self.rubber_band = QRubberBand(QRubberBand.Rectangle, self.scroll_content)
+                self.rubber_band.setGeometry(QRect(self.origin, QSize()))
+                self.rubber_band.show()
+                return True
+            elif event.type() == event.MouseMove and self.rubber_band and self.rubber_band.isVisible():
+                rect = QRect(self.origin, event.pos()).normalized()
+                self.rubber_band.setGeometry(rect)
+                return True
+            elif event.type() == event.MouseButtonRelease and self.rubber_band and self.rubber_band.isVisible():
+                rect = self.rubber_band.geometry()
+                self.rubber_band.hide()
+                shift_held = QApplication.keyboardModifiers() & Qt.ShiftModifier
+                self._select_cells_in_rect(rect, expand=shift_held)
+                return True
+        return super().eventFilter(obj, event)
+
+    def _select_cells_in_rect(self, rect, expand=False):
+        # If expand is True, add to selection; else, clear and select only those in rect
+        if not expand:
+            for c in self.problem_cells:
+                c.set_selected(False)
+            self.selected_problem_ids.clear()
+        last_selected_idx = None
+        for i, c in enumerate(self.problem_cells):
+            cell_rect = c.geometry()
+            if rect.intersects(cell_rect):
+                pid = c.problem.get('problem_id')
+                self.selected_problem_ids.add(pid)
+                c.set_selected(True)
+                last_selected_idx = i
+        # Update anchor to last cell in selection if any
+        if last_selected_idx is not None:
+            self.selection_anchor_idx = last_selected_idx 

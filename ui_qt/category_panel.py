@@ -23,45 +23,48 @@ class NeumorphicToolButton(QToolButton):
 
     def paintEvent(self, event):
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-        rect = self.rect().adjusted(4, 4, -4, -4)
-        full_radius = self.radius
-        if self.isChecked():
-            # Inset effect for checked state
-            for i, alpha in zip([8, 6, 4], [40, 60, 90]):
-                shadow = QColor(NEUMORPH_SHADOW_DARK)
-                shadow.setAlpha(alpha)
-                painter.setBrush(QBrush(shadow))
-                painter.setPen(Qt.NoPen)
-                painter.drawRoundedRect(rect.translated(-i, -i), full_radius, full_radius)
-            for i, alpha in zip([8, 6, 4], [30, 50, 80]):
-                highlight = QColor(NEUMORPH_SHADOW_LIGHT)
-                highlight.setAlpha(alpha)
-                painter.setBrush(QBrush(highlight))
-                painter.drawRoundedRect(rect.translated(i, i), full_radius, full_radius)
-            # Solid color for checked state
-            painter.setBrush(QBrush(QColor(CATEGORY_BTN_SELECTED_COLOR)))
-            painter.drawRoundedRect(rect, full_radius, full_radius)
-        else:
-            # Raised effect for normal state
-            for i, alpha in zip([8, 6, 4], [40, 60, 90]):
-                shadow = QColor(NEUMORPH_SHADOW_DARK)
-                shadow.setAlpha(alpha)
-                painter.setBrush(QBrush(shadow))
-                painter.setPen(Qt.NoPen)
-                painter.drawRoundedRect(rect.translated(i, i), full_radius, full_radius)
-            for i, alpha in zip([8, 6, 4], [30, 50, 80]):
-                highlight = QColor(NEUMORPH_SHADOW_LIGHT)
-                highlight.setAlpha(alpha)
-                painter.setBrush(QBrush(highlight))
-                painter.drawRoundedRect(rect.translated(-i, -i), full_radius, full_radius)
-            # Solid color for normal state
-            painter.setBrush(QBrush(QColor(NEUMORPH_BG_COLOR)))
-            painter.drawRoundedRect(rect, full_radius, full_radius)
-        # Text
-        painter.setPen(QColor(NEUMORPH_TEXT_COLOR))
-        painter.setFont(QFont(self.font_family, self.font_size, QFont.Bold))
-        painter.drawText(rect, Qt.AlignCenter, self.text())
+        try:
+            painter.setRenderHint(QPainter.Antialiasing)
+            rect = self.rect().adjusted(4, 4, -4, -4)
+            full_radius = self.radius
+            if self.isChecked():
+                # Inset effect for checked state
+                for i, alpha in zip([8, 6, 4], [40, 60, 90]):
+                    shadow = QColor(NEUMORPH_SHADOW_DARK)
+                    shadow.setAlpha(alpha)
+                    painter.setBrush(QBrush(shadow))
+                    painter.setPen(Qt.NoPen)
+                    painter.drawRoundedRect(rect.translated(-i, -i), full_radius, full_radius)
+                for i, alpha in zip([8, 6, 4], [30, 50, 80]):
+                    highlight = QColor(NEUMORPH_SHADOW_LIGHT)
+                    highlight.setAlpha(alpha)
+                    painter.setBrush(QBrush(highlight))
+                    painter.drawRoundedRect(rect.translated(i, i), full_radius, full_radius)
+                # Solid color for checked state
+                painter.setBrush(QBrush(QColor(CATEGORY_BTN_SELECTED_COLOR)))
+                painter.drawRoundedRect(rect, full_radius, full_radius)
+            else:
+                # Raised effect for normal state
+                for i, alpha in zip([8, 6, 4], [40, 60, 90]):
+                    shadow = QColor(NEUMORPH_SHADOW_DARK)
+                    shadow.setAlpha(alpha)
+                    painter.setBrush(QBrush(shadow))
+                    painter.setPen(Qt.NoPen)
+                    painter.drawRoundedRect(rect.translated(i, i), full_radius, full_radius)
+                for i, alpha in zip([8, 6, 4], [30, 50, 80]):
+                    highlight = QColor(NEUMORPH_SHADOW_LIGHT)
+                    highlight.setAlpha(alpha)
+                    painter.setBrush(QBrush(highlight))
+                    painter.drawRoundedRect(rect.translated(-i, -i), full_radius, full_radius)
+                # Solid color for normal state
+                painter.setBrush(QBrush(QColor(NEUMORPH_BG_COLOR)))
+                painter.drawRoundedRect(rect, full_radius, full_radius)
+            # Text
+            painter.setPen(QColor(NEUMORPH_TEXT_COLOR))
+            painter.setFont(QFont(self.font_family, self.font_size, QFont.Bold))
+            painter.drawText(rect, Qt.AlignCenter, self.text())
+        finally:
+            painter.end()
 
 class CategoryPanelQt(QWidget):
     def __init__(self, categories=None, parent=None):

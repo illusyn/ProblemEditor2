@@ -226,27 +226,30 @@ class MultiShadowButton(QPushButton):
 
     def paintEvent(self, event):
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
-        rect = self.rect().adjusted(4, 4, -4, -4)
-        radius = self.palette.button_radius
-        # First shadow (shadow_dark, offset down/right)
-        shadow1_color = QColor(self.palette.shadow_dark)
-        shadow1_color.setAlpha(80)
-        painter.setBrush(QBrush(shadow1_color))
-        painter.setPen(Qt.NoPen)
-        painter.drawRoundedRect(rect.translated(3, 3), radius, radius)
-        # Second shadow (gradient_start, offset up/left)
-        shadow2_color = QColor(self.palette.gradient_start)
-        shadow2_color.setAlpha(50)
-        painter.setBrush(QBrush(shadow2_color))
-        painter.drawRoundedRect(rect.translated(-2, -2), radius, radius)
-        # Button background
-        painter.setBrush(QBrush(QColor(self.palette.bg_color)))
-        painter.setPen(Qt.NoPen)
-        painter.drawRoundedRect(rect, radius, radius)
-        # Draw the button text and icon as usual
-        painter.setFont(QFont(FONT_FAMILY, BUTTON_FONT_SIZE, QFont.Bold))
-        super().paintEvent(event)
+        try:
+            painter.setRenderHint(QPainter.Antialiasing)
+            rect = self.rect().adjusted(4, 4, -4, -4)
+            radius = self.palette.button_radius
+            # First shadow (shadow_dark, offset down/right)
+            shadow1_color = QColor(self.palette.shadow_dark)
+            shadow1_color.setAlpha(80)
+            painter.setBrush(QBrush(shadow1_color))
+            painter.setPen(Qt.NoPen)
+            painter.drawRoundedRect(rect.translated(3, 3), radius, radius)
+            # Second shadow (gradient_start, offset up/left)
+            shadow2_color = QColor(self.palette.gradient_start)
+            shadow2_color.setAlpha(50)
+            painter.setBrush(QBrush(shadow2_color))
+            painter.drawRoundedRect(rect.translated(-2, -2), radius, radius)
+            # Button background
+            painter.setBrush(QBrush(QColor(self.palette.bg_color)))
+            painter.setPen(Qt.NoPen)
+            painter.drawRoundedRect(rect, radius, radius)
+            # Draw the button text and icon as usual
+            painter.setFont(QFont(FONT_FAMILY, BUTTON_FONT_SIZE, QFont.Bold))
+            super().paintEvent(event)
+        finally:
+            painter.end()
 
 LAPTOP_MODE = False
 
