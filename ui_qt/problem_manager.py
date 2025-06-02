@@ -1,20 +1,41 @@
-from PyQt5.QtWidgets import QWidget, QHBoxLayout
+from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QSpacerItem, QSizePolicy
+from PyQt5.QtCore import pyqtSignal, Qt
 from ui_qt.query_panel import QueryPanel
 from ui_qt.problem_display_panel import ProblemDisplayPanel
 from ui_qt.problem_set_panel import ProblemSetPanel
+from ui_qt.neumorphic_components import NeumorphicButton
+from ui_qt.style_config import CONTROL_BTN_WIDTH
 
 class ProblemManager(QWidget):
+    return_to_editor = pyqtSignal()
+
     def __init__(self, parent=None, laptop_mode=False):
         super().__init__(parent)
-        layout = QHBoxLayout(self)
-        self.query_panel = QueryPanel(laptop_mode=laptop_mode)
-        self.problem_display_panel = ProblemDisplayPanel()
-        layout.addWidget(self.query_panel, stretch=2)  # 40%
-        layout.addWidget(self.problem_display_panel, stretch=3)  # 60%
-        self.query_panel.query_clicked.connect(self.on_query)
+        main_layout = QVBoxLayout(self)
+        # Main content layout
+        content_layout = QHBoxLayout()
+        # --- Left side: Return button above query panel ---
+        left_vbox = QVBoxLayout()
+        self.return_btn = NeumorphicButton("Return to Editor", self)
+        self.return_btn.setMinimumWidth(CONTROL_BTN_WIDTH)
+        self.return_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.return_btn.clicked.connect(self.return_to_editor)
+        btn_row = QHBoxLayout()
+        btn_row.addStretch(1)
+        btn_row.addWidget(self.return_btn)
+        btn_row.addStretch(1)
+        left_vbox.addLayout(btn_row)
+        self.query_panel = QueryPanel(laptop_mode=laptop_mode, show_preview_and_nav_buttons=False)
+        left_vbox.addWidget(self.query_panel)
         # Add ProblemSetPanel only in ProblemManager
         self.problem_set_panel = ProblemSetPanel(self, get_selected_problem_ids_callback=self.get_selected_problem_ids)
         self.query_panel.layout().addWidget(self.problem_set_panel)
+        content_layout.addLayout(left_vbox, stretch=2)  # 40%
+        # --- Right side: Problem display ---
+        self.problem_display_panel = ProblemDisplayPanel()
+        content_layout.addWidget(self.problem_display_panel, stretch=3)  # 60%
+        main_layout.addLayout(content_layout)
+        self.query_panel.query_clicked.connect(self.on_query)
         # Connect query results to display panel
         self.query_panel.query_executed.connect(self.problem_display_panel.set_problems)
         # Connect reset to clear the grid

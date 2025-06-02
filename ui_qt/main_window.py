@@ -88,13 +88,15 @@ class MainWindow(QMainWindow):
         print("[DEBUG] Connected query_clicked to on_query")
         self.left_panel.query_panel.next_match_button.clicked.connect(self.show_next_problem)
         self.left_panel.query_panel.prev_match_button.clicked.connect(self.show_previous_problem)
-        self.left_panel.query_panel.preview_button.clicked.connect(self.update_preview)
+        self.left_panel.preview_button.clicked.connect(self.update_preview)
         self.left_panel.query_panel.reset_button.clicked.connect(self.reset_fields)
         self.left_panel.query_panel.browse_all_button.clicked.connect(self.browse_all_problems)
         # Add Problem Browser 2 screen
         self.problem_manager_screen = ProblemManager(laptop_mode=laptop_mode)
         self.stacked_widget.addWidget(self.problem_manager_screen)
         self.left_panel.problem_browser2_button.clicked.connect(self.show_problem_manager_screen)
+        # Connect return_to_editor signal
+        self.problem_manager_screen.return_to_editor.connect(self.show_editor_screen)
         self.problem_db = MathProblemDB()
         self.editor_panel = EditorPanel()
         editor_vlayout = QVBoxLayout()
@@ -148,7 +150,6 @@ class MainWindow(QMainWindow):
 
     def on_query(self):
         selected_set_id = self.left_panel.query_panel.query_inputs_panel.get_selected_set_id()
-        print(f"[DEBUG] <<<<<<<<<<<<<<<<<< selected_set_id={selected_set_id} (type={type(selected_set_id)})")
         if selected_set_id is not None:
             selected_set_id = int(selected_set_id)
         problem_id = self.left_panel.get_problem_id().strip()

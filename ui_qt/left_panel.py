@@ -45,7 +45,7 @@ class LeftPanel(QWidget):
         main_layout.setContentsMargins(PADDING, PADDING, PADDING, PADDING)
         main_layout.setSpacing(0)  # Minimize gap between top row and query controls
 
-        # --- Top Row: Problem Browser, Save Problem ---
+        # --- Top Row: Problem Browser, Save Problem, Preview ---
         self._create_top_row(main_layout)
         main_layout.addSpacing(4)  # Reduce space between top row and query controls
         # --- QueryPanel (contains query controls and inputs) ---
@@ -53,20 +53,19 @@ class LeftPanel(QWidget):
         main_layout.addWidget(self.query_panel)
 
     def _create_top_row(self, main_layout):
-        """Create the top row with Problem Browser 2 and Save Problem buttons"""
+        """Create the top row with Problem Browser 2, Save Problem, and Preview buttons"""
         top_row = QHBoxLayout()
-        # Remove old Problem Browser button
-        # self.problem_browser_button = self.create_neumorphic_button("Problem Browser")
-        # self.problem_browser_button.setMinimumWidth(CONTROL_BTN_WIDTH)
-        # top_row.addWidget(self.problem_browser_button)
-        # Only add Problem Browser 2 button
-        self.problem_browser2_button = self.create_neumorphic_button("Problem Browser 2")
+        self.problem_browser2_button = self.create_neumorphic_button("Problem Browser")
         self.problem_browser2_button.setMinimumWidth(CONTROL_BTN_WIDTH)
         top_row.addWidget(self.problem_browser2_button)
         top_row.addStretch()
         self.save_problem_button = self.create_neumorphic_button("Save Problem")
         self.save_problem_button.setMinimumWidth(CONTROL_BTN_WIDTH)
         top_row.addWidget(self.save_problem_button)
+        # Add Preview button to the far right
+        self.preview_button = self.create_neumorphic_button("Preview")
+        self.preview_button.setMinimumWidth(CONTROL_BTN_WIDTH)
+        top_row.addWidget(self.preview_button)
         main_layout.addLayout(top_row)
 
     def create_neumorphic_button(self, text, parent=None):

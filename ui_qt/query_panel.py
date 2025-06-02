@@ -10,9 +10,10 @@ class QueryPanel(QWidget):
     query_executed = pyqtSignal(list)  # Emits a list of problems
     reset_clicked = pyqtSignal()       # Emits when reset is clicked
     query_clicked = pyqtSignal()       # Emits when Query button is clicked
-    def __init__(self, parent=None, laptop_mode=False):
+    def __init__(self, parent=None, laptop_mode=False, show_preview_and_nav_buttons=True):
         super().__init__(parent)
         self.laptop_mode = laptop_mode
+        self.show_preview_and_nav_buttons = show_preview_and_nav_buttons
         self.setStyleSheet(f"background-color: {WINDOW_BG_COLOR};")
         self._init_ui()
 
@@ -49,22 +50,17 @@ class QueryPanel(QWidget):
         self.reset_button = self.create_neumorphic_button("Reset")
         self.reset_button.setMinimumWidth(CONTROL_BTN_WIDTH)
 
-        self.preview_button = self.create_neumorphic_button("Preview")
-        self.preview_button.setMinimumWidth(CONTROL_BTN_WIDTH)
-
         self.query_button = self.create_neumorphic_button("Query")
         self.query_button.setMinimumWidth(CONTROL_BTN_WIDTH)
 
-        self.next_match_button = self.create_neumorphic_button("Next Match")
-        self.next_match_button.setMinimumWidth(CONTROL_BTN_WIDTH)
-
-        self.prev_match_button = self.create_neumorphic_button("Previous Match")
-        self.prev_match_button.setMinimumWidth(CONTROL_BTN_WIDTH)
-
-        buttons = [
-            self.browse_all_button, self.reset_button, self.preview_button,
-            self.query_button, self.next_match_button, self.prev_match_button
-        ]
+        buttons = [self.browse_all_button, self.reset_button, self.query_button]
+        # Only add Preview button if not in main editor context
+        if self.show_preview_and_nav_buttons:
+            self.next_match_button = self.create_neumorphic_button("Next Match")
+            self.next_match_button.setMinimumWidth(CONTROL_BTN_WIDTH)
+            self.prev_match_button = self.create_neumorphic_button("Previous Match")
+            self.prev_match_button.setMinimumWidth(CONTROL_BTN_WIDTH)
+            buttons += [self.next_match_button, self.prev_match_button]
         for i, btn in enumerate(buttons):
             query_grid.addWidget(btn, i // 3, i % 3)
         main_layout.addLayout(query_grid)
