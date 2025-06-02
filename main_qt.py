@@ -11,14 +11,12 @@ for arg in sys.argv:
     if m:
         scale = float(m.group(1))
         break
-from ui_qt.style_config import set_laptop_mode
-set_laptop_mode(scale)
 # Now import the rest of the modules
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QLineEdit, QGraphicsDropShadowEffect
 from PyQt5.QtGui import QColor, QGuiApplication
 from PyQt5.QtCore import Qt, QTimer
 from ui_qt.main_window import MainWindow
-from ui_qt.style_config import set_scale_from_dpi
+from ui_qt.style_config import set_scale
 
 class NeumorphicButton(QPushButton):
     def __init__(self, text, parent=None):
@@ -63,25 +61,12 @@ class NeumorphicLineEdit(QLineEdit):
         shadow.setColor(QColor(163, 177, 198, 100))
         self.setGraphicsEffect(shadow)
 
-class Demo(QWidget):
-    def __init__(self):
-        super().__init__()
-        self.setStyleSheet("background-color: #f0f0f3;")
-        layout = QVBoxLayout(self)
-        layout.setSpacing(30)
-        layout.setContentsMargins(60, 60, 60, 60)
-        self.button = NeumorphicButton("Sign Up")
-        self.input = NeumorphicLineEdit()
-        self.input.setPlaceholderText("Enter your username")
-        layout.addWidget(self.input)
-        layout.addWidget(self.button)
-
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     # Get the primary screen's DPI
     screen = QGuiApplication.primaryScreen()
     dpi = screen.logicalDotsPerInch() if screen else 96
-    set_scale_from_dpi(dpi)
+    set_scale('main')  # Or 'laptop' if running on laptop; add DPI logic if needed
     window = MainWindow(laptop_mode=(scale < 1.0))
     # Print the minimum window size for debugging
     print(f"Minimum window size: {window.minimumSize().width()} x {window.minimumSize().height()}")

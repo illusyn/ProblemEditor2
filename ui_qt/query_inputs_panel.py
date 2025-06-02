@@ -222,15 +222,6 @@ class QueryInputsPanel(QWidget):
         main_layout.setContentsMargins(0, 0, 0, 0)  # No extra margins
         main_layout.setSpacing(SPACING)
         
-        # --- Set Dropdown ---
-        self.set_dropdown = QComboBox()
-        self.set_dropdown.addItem("All Sets", None)
-        db = ProblemSetDB()
-        for set_id, name, desc, ordered in db.get_all_sets():
-            self.set_dropdown.addItem(name, set_id)
-        db.close()
-        main_layout.addWidget(self.set_dropdown)
-        
         # --- Basic Inputs Row (Problem ID, Search Text, Answer) ---
         self._create_basic_inputs(main_layout)
         
@@ -287,6 +278,20 @@ class QueryInputsPanel(QWidget):
             notes_row.addWidget(self.notes_text, stretch=1)
             main_layout.addLayout(notes_row)
         
+        # --- Set Dropdown (moved below notes) ---
+        self.set_dropdown = QComboBox()
+        self.set_dropdown.addItem("All Sets", None)
+        db = ProblemSetDB()
+        for set_id, name, desc, ordered in db.get_all_sets():
+            self.set_dropdown.addItem(name, set_id)
+        db.close()
+        # Set width to 1/3 of PROB_ID_ENTRY_WIDTH + SEARCH_TEXT_ENTRY_WIDTH + ANSWER_ENTRY_WIDTH
+        total_width = PROB_ID_ENTRY_WIDTH + SEARCH_TEXT_ENTRY_WIDTH + ANSWER_ENTRY_WIDTH
+        self.set_dropdown.setFixedWidth(int(total_width / 3))
+        self.set_dropdown.setFixedHeight(44)  # Make it taller (adjust as needed)
+        self.set_dropdown.setFont(QFont(FONT_FAMILY, LABEL_FONT_SIZE, QFont.Bold))
+        main_layout.addWidget(self.set_dropdown)
+        
         # Add stretch to push content to top
         main_layout.addStretch()
     
@@ -318,16 +323,15 @@ class QueryInputsPanel(QWidget):
             lbl.setFont(QFont(FONT_FAMILY, LABEL_FONT_SIZE, QFont.Bold))
             lbl.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; padding: 0px; margin: 0px; background: {WINDOW_BG_COLOR};")
             lbl.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-            lbl.setMinimumHeight(1)
+            lbl.setMinimumHeight(LABEL_FONT_SIZE + 4)  # Ensure label is always visible
             
-            col.addWidget(lbl, alignment=Qt.AlignBottom)
-            col.addSpacing(6)  # Add vertical space between label and entry
+            col.addWidget(lbl, alignment=Qt.AlignLeft)
+            col.addSpacing(8)  # More space between label and entry
             
             # Set entry height and add to column
             entry.setMinimumHeight(36)  # Entry field height
-            col.addWidget(entry, alignment=Qt.AlignTop)
-            
-            input_row.addLayout(col)
+            col.addWidget(entry)
+            input_row.addLayout(col)  # <-- Add each column to the row
         
         main_layout.addLayout(input_row)
     

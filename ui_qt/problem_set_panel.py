@@ -31,28 +31,22 @@ class ProblemSetPanel(QWidget):
         # Left: List of sets
         self.set_list = QListWidget()
         self.set_list.setMinimumWidth(200)
-        self.set_list.setMinimumHeight(200)
-        self.set_list.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Expanding)
+        self.set_list.setMaximumHeight(self.set_list.sizeHintForRow(0) * 3 + 6)  # 3 lines tall
+        self.set_list.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.set_list.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         self.set_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
         content_layout.addWidget(self.set_list, stretch=1)
 
-        # Right: Set details
-        details_group = QGroupBox("Set Details")
+        # Right: Set details (no QGroupBox, no label)
         details_layout = QVBoxLayout()
-        details_group.setLayout(details_layout)
         details_layout.addWidget(QLabel("Name:"))
         self.name_edit = QLineEdit()
         details_layout.addWidget(self.name_edit)
         details_layout.addWidget(QLabel("Description:"))
-        self.desc_edit = QTextEdit()
-        self.desc_edit.setFixedHeight(60)
-        self.desc_edit.setMaximumHeight(60)
-        self.desc_edit.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        self.desc_edit = QLineEdit()  # Single-line
         details_layout.addWidget(self.desc_edit)
-        self.ordered_checkbox = QCheckBox("Ordered")
-        details_layout.addWidget(self.ordered_checkbox)
         details_layout.addStretch(1)
-        content_layout.addWidget(details_group, stretch=2)
+        content_layout.addLayout(details_layout, stretch=2)
 
         main_layout.addLayout(content_layout, stretch=1)
 
@@ -62,8 +56,7 @@ class ProblemSetPanel(QWidget):
         self.delete_btn.clicked.connect(self.on_delete_set)
         self.set_list.currentRowChanged.connect(self.on_set_selected)
         self.name_edit.editingFinished.connect(self.on_save_details)
-        self.desc_edit.textChanged.connect(self.on_save_details)
-        self.ordered_checkbox.stateChanged.connect(self.on_save_details)
+        self.desc_edit.editingFinished.connect(self.on_save_details)
 
         # --- Add Selected Problems to Set Button ---
         self.add_problems_btn = QPushButton("Add Selected Problems to Set")
@@ -152,7 +145,6 @@ class ProblemSetPanel(QWidget):
                 self.load_sets()
                 self.name_edit.clear()
                 self.desc_edit.clear()
-                self.ordered_checkbox.setChecked(False)
 
     def on_set_selected(self, row):
         if self._ignore_selection:
@@ -168,16 +160,14 @@ class ProblemSetPanel(QWidget):
             sets = [s for s in self.db.get_all_sets() if s[0] == set_id]
             print(f"[DEBUG] on_set_selected: sets={sets}")
             if sets:
-                _, name, description, ordered = sets[0]
-                print(f"[DEBUG] on_set_selected: name={name}, description={description}, ordered={ordered}")
+                _, name, description, _ = sets[0]
+                print(f"[DEBUG] on_set_selected: name={name}, description={description}")
                 self.name_edit.setText(name)
-                self.desc_edit.setPlainText(description or "")
-                self.ordered_checkbox.setChecked(bool(ordered))
+                self.desc_edit.setText(description or "")
         else:
             print("[DEBUG] on_set_selected: row < 0, clearing fields")
             self.name_edit.clear()
             self.desc_edit.clear()
-            self.ordered_checkbox.setChecked(False)
 
     def on_save_details(self):
         row = self.set_list.currentRow()
@@ -185,9 +175,8 @@ class ProblemSetPanel(QWidget):
             item = self.set_list.item(row)
             set_id = item.data(Qt.UserRole)
             name = self.name_edit.text()
-            description = self.desc_edit.toPlainText()
-            ordered = self.ordered_checkbox.isChecked()
-            self.db.update_set_details(set_id, name, description, ordered)
+            description = self.desc_edit.text()
+            self.db.update_set_details(set_id, name, description, False)
             self.load_sets()
             # Reselect
             self._ignore_selection = True

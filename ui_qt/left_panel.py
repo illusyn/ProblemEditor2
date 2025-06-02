@@ -43,11 +43,11 @@ class LeftPanel(QWidget):
         # Create main layout
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(PADDING, PADDING, PADDING, PADDING)
-        main_layout.setSpacing(SPACING)
+        main_layout.setSpacing(0)  # Minimize gap between top row and query controls
 
         # --- Top Row: Problem Browser, Save Problem ---
         self._create_top_row(main_layout)
-
+        main_layout.addSpacing(4)  # Reduce space between top row and query controls
         # --- QueryPanel (contains query controls and inputs) ---
         self.query_panel = QueryPanel(laptop_mode=self.laptop_mode)
         main_layout.addWidget(self.query_panel)
@@ -70,6 +70,7 @@ class LeftPanel(QWidget):
 
     def create_neumorphic_button(self, text, parent=None):
         """Create a neumorphic button with standard styling"""
+        print(f"-------------CONTROL_BTN_FONT_SIZE={CONTROL_BTN_FONT_SIZE}")
         return NeumorphicButton(
             text,
             parent=parent,
