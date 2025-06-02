@@ -31,14 +31,14 @@ BASE_LEFT_PANEL_WIDTH = 820
 BASE_CHECKBOX_SIZE = 22
 BASE_CHECKBOX_PADDING = 8
 BASE_CHECKBOX_BORDER_RADIUS = 12
-BASE_CATEGORY_BTN_WIDTH = 120
+BASE_CATEGORY_BTN_WIDTH = 180
 BASE_CATEGORY_BTN_HEIGHT = 36
 BASE_CATEGORY_PANEL_SPACING = 8
 BASE_DOMAIN_GRID_SPACING = 13
 BASE_DOMAIN_BTN_WIDTH = 220
 BASE_DOMAIN_BTN_HEIGHT = 58
 BASE_SECTION_LABEL_PADDING_TOP = 10
-BASE_BUTTON_MIN_WIDTH = 160
+BASE_BUTTON_MIN_WIDTH = 220
 BASE_BUTTON_MIN_HEIGHT = 56
 BASE_ENTRY_MIN_HEIGHT = 44
 BASE_ENTRY_PADDING_LEFT = 14
@@ -138,7 +138,7 @@ def set_scale(profile="main"):
 
 # Set initial scale (choose "main" or "laptop")
 set_scale("main")
-
+print(f"===================BUTTON_MIN_WIDTH: {BUTTON_MIN_WIDTH}")
 # Font settings
 FONT_FAMILY = "Courier"  # Base font family
 FONT_WEIGHT = "Bold"     # Base font weight
@@ -314,7 +314,7 @@ def _choose_palette(palettes, name):
 _palette_name = _load_palette_name()
 _palettes = _load_palettes()
 _selected_palette = _choose_palette(_palettes, _palette_name)
-set_active_palette(_selected_palette)
+# set_active_palette(_selected_palette)
 
 class MultiShadowButton(QPushButton):
     def __init__(self, text, palette, parent=None):

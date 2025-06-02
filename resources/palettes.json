@@ -15,21 +15,21 @@
       "button_radius": 60,
       "button_padding": "20px 30px"
     },
-	{
-    "name": "DarkBlue",
-    "window_bg_color": "#f0f0f0",
-	  "bg_color": "#f0f0f0",
-    "entry_bg_color": "#f0f1f9",
-    "editor_bg_color": "#f7f8fc",
-    "shadow_dark": "#82A2ED",
-    "shadow_light": "#ffffff",
-    "text_color": "#031282",
-    "gradient_start": "#f7f7fa",
-    "gradient_end": "#f0f0f3",
-    "radius": 60,
-    "button_radius": 60,
-    "button_padding": "20px 30px"
-	},
+    {
+      "name": "DarkBlue",
+      "window_bg_color": "#f0f0f0",
+      "bg_color": "#f0f0f0",
+      "entry_bg_color": "#f0f1f9",
+      "editor_bg_color": "#f7f8fc",
+      "shadow_dark": "#82A2ED",
+      "shadow_light": "#ffffff",
+      "text_color": "#031282",
+      "gradient_start": "#f7f7fa",
+      "gradient_end": "#f0f0f3",
+      "radius": 60,
+      "button_radius": 60,
+      "button_padding": "20px 30px"
+    },
     {
       "name": "Light",
       "window_bg_color": "#f0f0f3",
@@ -44,6 +44,32 @@
       "radius": 18,
       "button_radius": 12,
       "button_padding": "10px 20px"
+    },
+    {
+      "name": "Frosted Blue",
+      "bg_color": "#e3eafc",
+      "shadow_dark": "#b0b8c9",
+      "shadow_light": "#ffffff",
+      "text_color": "#2a3a5e",
+      "gradient_start": "#f7faff",
+      "gradient_end": "#e3eafc",
+      "radius": 18,
+      "button_radius": 12,
+      "button_padding": "10px 20px",
+      "button_bg_color": "#d0d8ee"
+    },
+    {
+      "name": "Red Velvet",
+      "bg_color": "#f8eaea",
+      "shadow_dark": "#e6bcbc",
+      "shadow_light": "#fff5f5",
+      "text_color": "#72011b",
+      "gradient_start": "#fff5f5",
+      "gradient_end": "#f8eaea",
+      "radius": 18,
+      "button_radius": 12,
+      "button_padding": "10px 20px",
+      "button_bg_color": "#f3cccc"
     }
   ]
 }

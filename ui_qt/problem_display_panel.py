@@ -84,7 +84,6 @@ class ProblemCellWidget(QWidget):
                     if not os.path.exists(image_path):
                         success, msg = image_manager.image_db.export_to_file(image_name, image_path)
                         if not success:
-                            print(f"[DEBUG] Could not export image {image_name}: {msg}")
                             continue
                     pixmap = QPixmap(image_path)
                     if not pixmap.isNull():
@@ -289,7 +288,6 @@ class ProblemDisplayPanel(QWidget):
 
     # --- Rubber-band selection ---
     def eventFilter(self, obj, event):
-        # print(f"[DEBUG] eventFilter: obj={obj}, event.type={event.type()}, event={event}")
         if not self.isVisible():
             return False
         if obj is self.scroll_content:

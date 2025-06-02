@@ -98,5 +98,5 @@ if __name__ == "__main__":
                 print("[DEBUG] ProblemSetPanel minimumSizeHint:", window.problem_manager_screen.query_panel.problem_set_panel.minimumSizeHint())
                 print("[DEBUG] ProblemSetPanel sizeHint:", window.problem_manager_screen.query_panel.problem_set_panel.sizeHint())
 
-    QTimer.singleShot(1000, print_main_window_size_hints)
+    # QTimer.singleShot(1000, print_main_window_size_hints)
     sys.exit(app.exec_()) 

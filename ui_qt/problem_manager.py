@@ -30,6 +30,8 @@ class ProblemManager(QWidget):
         # Add ProblemSetPanel only in ProblemManager
         self.problem_set_panel = ProblemSetPanel(self, get_selected_problem_ids_callback=self.get_selected_problem_ids)
         self.query_panel.layout().addWidget(self.problem_set_panel)
+        # Connect set_list_changed to refresh_set_dropdown
+        self.problem_set_panel.set_list_changed.connect(self.query_panel.query_inputs_panel.refresh_set_dropdown)
         content_layout.addLayout(left_vbox, stretch=2)  # 40%
         # --- Right side: Problem display ---
         self.problem_display_panel = ProblemDisplayPanel()
@@ -58,16 +60,20 @@ class ProblemManager(QWidget):
     def on_query(self):
         criteria = self.query_panel.query_inputs_panel.build_query_criteria()
         selected_set_id = self.query_panel.query_inputs_panel.get_selected_set_id()
-        print(f"[DEBUG] selected_set_id={selected_set_id} (type={type(selected_set_id)})")
         from db.math_db import MathProblemDB
         db = MathProblemDB()
         # If a set is selected, get only problems in that set; else get all
         if selected_set_id:
             problems = db.list_problems_in_set(selected_set_id)
-            print(f"[DEBUG] Problems returned from list_problems_in_set: {len(problems)}")
+            # list_problems_in_set may return an error string if it fails
+            if not isinstance(problems, list):
+                print("[ERROR] list_problems_in_set failed:", problems)
+                problems = []
         else:
-            problems = db.get_problems_list(limit=10000)[1]
-            print(f"[DEBUG] Problems returned from get_problems_list: {len(problems)}")
+            success, problems = db.get_problems_list(limit=10000)
+            if not success:
+                print("[ERROR] get_problems_list failed:", problems)
+                problems = []
         db.close()
 
         # Filter by Problem ID
@@ -92,4 +98,4 @@ class ProblemManager(QWidget):
             problems = [p for p in problems if selected_cat_names.issubset({c['name'] for c in p.get('categories', [])})]
 
         self.problem_display_panel.set_problems(problems)
-        print(f"[DEBUG] ProblemManager on_query called. Displaying {len(problems)} problems.") 
+        

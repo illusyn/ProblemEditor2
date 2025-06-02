@@ -85,7 +85,6 @@ class MainWindow(QMainWindow):
             self.left_panel.setFixedWidth(780)
         editor_layout.addWidget(self.left_panel)
         self.left_panel.query_panel.query_clicked.connect(self.on_query)
-        print("[DEBUG] Connected query_clicked to on_query")
         self.left_panel.query_panel.next_match_button.clicked.connect(self.show_next_problem)
         self.left_panel.query_panel.prev_match_button.clicked.connect(self.show_previous_problem)
         self.left_panel.preview_button.clicked.connect(self.update_preview)
@@ -191,10 +190,7 @@ class MainWindow(QMainWindow):
 
     def load_problem_into_ui(self, problem):
         self.editor_panel.text_edit.setPlainText(problem.get("content", ""))
-        print(f"[DEBUG] load_problem_into_ui: problem dict keys: {list(problem.keys())}")
-        print(f"[DEBUG] load_problem_into_ui: problem['problem_id'] = {problem.get('problem_id')}")
         self.left_panel.set_problem_id(str(problem.get("problem_id", "")))
-        print(f"[DEBUG] Setting answer: {repr(problem.get('answer', ''))}")
         self.left_panel.set_answer(problem.get("answer", ""))
         self.left_panel.set_notes(problem.get("notes", ""))
         selected_cat_names = {c["name"] for c in problem.get("categories", [])}

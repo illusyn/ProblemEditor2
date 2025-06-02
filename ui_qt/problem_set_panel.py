@@ -2,10 +2,11 @@ from PyQt5.QtWidgets import (
     QWidget, QHBoxLayout, QVBoxLayout, QListWidget, QPushButton, QLineEdit, QTextEdit, QCheckBox, QLabel, QGroupBox, QMessageBox, QInputDialog, QListWidgetItem, QSizePolicy,
     QAbstractItemView
 )
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSignal
 from db.problem_set_db import ProblemSetDB
 
 class ProblemSetPanel(QWidget):
+    set_list_changed = pyqtSignal()
     def __init__(self, parent=None, get_selected_problem_ids_callback=None):
         super().__init__(parent)
         self.setWindowTitle("Problem Set Manager")
@@ -18,8 +19,11 @@ class ProblemSetPanel(QWidget):
         # --- Top buttons ---
         btn_layout = QHBoxLayout()
         self.add_btn = QPushButton("Add Set")
+        self.add_btn.setFocusPolicy(Qt.NoFocus)
         self.rename_btn = QPushButton("Rename")
+        self.rename_btn.setFocusPolicy(Qt.NoFocus)
         self.delete_btn = QPushButton("Delete")
+        self.delete_btn.setFocusPolicy(Qt.NoFocus)
         btn_layout.addWidget(self.add_btn)
         btn_layout.addWidget(self.rename_btn)
         btn_layout.addWidget(self.delete_btn)
@@ -34,7 +38,7 @@ class ProblemSetPanel(QWidget):
         self.set_list.setMaximumHeight(self.set_list.sizeHintForRow(0) * 3 + 6)  # 3 lines tall
         self.set_list.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         self.set_list.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        self.set_list.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.set_list.setSelectionMode(QAbstractItemView.SingleSelection)
         content_layout.addWidget(self.set_list, stretch=1)
 
         # Right: Set details (no QGroupBox, no label)
@@ -87,31 +91,23 @@ class ProblemSetPanel(QWidget):
 
     def on_add_set(self):
         print("[DEBUG] on_add_set: called")
+        name = self.name_edit.text().strip()
+        print(f"[DEBUG] name_edit.text() = '{self.name_edit.text()}', stripped = '{name}'")
+        if not name:
+            QMessageBox.warning(self, "Add Set", "Please enter a set name in the Name field.")
+            return
+        set_id = self.db.add_set(name)
+        self.load_sets()
+        self._ignore_selection = True
         try:
-            name = self.name_edit.text().strip()
-            print(f"[DEBUG] on_add_set: name={name!r}")
-            if not name:
-                QMessageBox.warning(self, "Add Set", "Please enter a set name in the Name field.")
-                return
-            set_id = self.db.add_set(name)
-            print(f"[DEBUG] on_add_set: set_id={set_id}")
-            self.load_sets()
-            print("[DEBUG] on_add_set: after load_sets")
-            print(f"[DEBUG] on_add_set: entering selection loop, set_id={set_id}, list count={self.set_list.count()}")
-            self._ignore_selection = True
-            try:
-                for i in range(self.set_list.count()):
-                    item = self.set_list.item(i)
-                    print(f"[DEBUG] on_add_set: checking item {i}, data={item.data(Qt.UserRole)}")
-                    if item.data(Qt.UserRole) == set_id:
-                        self.set_list.setCurrentRow(i)
-                        print(f"[DEBUG] on_add_set: selected row {i} for set_id={set_id}")
-                        break
-            finally:
-                self._ignore_selection = False
-            print("[DEBUG] on_add_set: finished")
-        except Exception as e:
-            print(f"[ERROR] Exception in on_add_set: {e}")
+            for i in range(self.set_list.count()):
+                item = self.set_list.item(i)
+                if item.data(Qt.UserRole) == set_id:
+                    self.set_list.setCurrentRow(i)
+                    break
+        finally:
+            self._ignore_selection = False
+        self.set_list_changed.emit()  # Notify listeners that the set list has changed
 
     def on_rename_set(self):
         row = self.set_list.currentRow()
@@ -135,37 +131,35 @@ class ProblemSetPanel(QWidget):
                 self._ignore_selection = False
 
     def on_delete_set(self):
+        print("[DEBUG] on_delete_set called")
         row = self.set_list.currentRow()
+        print(f"[DEBUG] currentRow = {row}")
         if row >= 0:
             item = self.set_list.item(row)
             set_id = item.data(Qt.UserRole)
             reply = QMessageBox.question(self, "Delete Set", "Are you sure you want to delete this set?", QMessageBox.Yes | QMessageBox.No)
             if reply == QMessageBox.Yes:
+                print(f"[DEBUG] Deleting set_id={set_id}")
                 self.db.delete_set(set_id)
                 self.load_sets()
                 self.name_edit.clear()
                 self.desc_edit.clear()
+                print("[DEBUG] Emitting set_list_changed after delete")
+                self.set_list_changed.emit()  # Notify listeners that the set list has changed
 
     def on_set_selected(self, row):
         if self._ignore_selection:
-            print("[DEBUG] on_set_selected: ignoring due to guard")
             return
-        print(f"[DEBUG] on_set_selected: row={row}")
         if row >= 0:
             item = self.set_list.item(row)
-            print(f"[DEBUG] on_set_selected: item={item}")
             set_id = item.data(Qt.UserRole)
-            print(f"[DEBUG] on_set_selected: set_id={set_id}")
             # Fetch details from DB
             sets = [s for s in self.db.get_all_sets() if s[0] == set_id]
-            print(f"[DEBUG] on_set_selected: sets={sets}")
             if sets:
                 _, name, description, _ = sets[0]
-                print(f"[DEBUG] on_set_selected: name={name}, description={description}")
                 self.name_edit.setText(name)
                 self.desc_edit.setText(description or "")
         else:
-            print("[DEBUG] on_set_selected: row < 0, clearing fields")
             self.name_edit.clear()
             self.desc_edit.clear()
 

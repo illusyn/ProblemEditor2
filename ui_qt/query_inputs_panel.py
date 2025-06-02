@@ -558,3 +558,14 @@ class QueryInputsPanel(QWidget):
 
     def get_selected_set_id(self):
         return self.set_dropdown.currentData()
+
+    def refresh_set_dropdown(self):
+        print("[DEBUG] refresh_set_dropdown called")
+        self.set_dropdown.clear()
+        self.set_dropdown.addItem("All Sets", None)
+        db = ProblemSetDB()
+        sets = db.get_all_sets()
+        print(f"[DEBUG] Sets in DB: {[name for _, name, *_ in sets]}")
+        for set_id, name, desc, ordered in sets:
+            self.set_dropdown.addItem(name, set_id)
+        db.close()
