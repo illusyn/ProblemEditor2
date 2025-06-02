@@ -53,12 +53,13 @@ class LeftPanel(QWidget):
         main_layout.addWidget(self.query_panel)
 
     def _create_top_row(self, main_layout):
-        """Create the top row with Problem Browser, Problem Browser 2, and Save Problem buttons"""
+        """Create the top row with Problem Browser 2 and Save Problem buttons"""
         top_row = QHBoxLayout()
-        self.problem_browser_button = self.create_neumorphic_button("Problem Browser")
-        self.problem_browser_button.setMinimumWidth(CONTROL_BTN_WIDTH)
-        top_row.addWidget(self.problem_browser_button)
-        # Add Problem Browser 2 button
+        # Remove old Problem Browser button
+        # self.problem_browser_button = self.create_neumorphic_button("Problem Browser")
+        # self.problem_browser_button.setMinimumWidth(CONTROL_BTN_WIDTH)
+        # top_row.addWidget(self.problem_browser_button)
+        # Only add Problem Browser 2 button
         self.problem_browser2_button = self.create_neumorphic_button("Problem Browser 2")
         self.problem_browser2_button.setMinimumWidth(CONTROL_BTN_WIDTH)
         top_row.addWidget(self.problem_browser2_button)

@@ -17,7 +17,6 @@ import os
 from converters.image_converter import ImageConverter
 from ui_qt.style_config import active_palette, MultiShadowButton, WINDOW_BG_COLOR, FONT_FAMILY, BUTTON_FONT_SIZE, LABEL_FONT_SIZE, NOTES_FONT_SIZE
 from PyQt5.QtGui import QFont
-from ui_qt.problem_browser import ProblemBrowser
 from ui_qt.problem_manager import ProblemManager
 from PyQt5.QtCore import Qt
 from managers.config_manager import ConfigManager
@@ -73,12 +72,6 @@ class MainWindow(QMainWindow):
         export_action.triggered.connect(self.file_manager.export_to_pdf)
         file_menu.addAction(export_action)
 
-        # Add Problem Browser menu
-        # tools_menu = menubar.addMenu("Tools")
-        # browser_action = QAction("Problem Browser", self)
-        # browser_action.triggered.connect(self.show_problem_browser)
-        # tools_menu.addAction(browser_action)
-
         self.setMenuBar(menubar)
 
         # Central widget and layout
@@ -128,16 +121,6 @@ class MainWindow(QMainWindow):
         self.status_bar = self.statusBar()
         self.status_bar.showMessage("Ready")
         self.stacked_widget.addWidget(self.editor_container)
-        # --- Problem Browser ---
-        self.problem_browser = ProblemBrowser(db_path=self.problem_db.db_path, parent=self)
-        self.stacked_widget.addWidget(self.problem_browser)
-        # Toolbar for Problem Browser
-        self.browser_toolbar = QToolBar("Problem Browser Toolbar", self)
-        return_action = QAction("Return to Editor", self)
-        return_action.triggered.connect(self.show_editor_screen)
-        self.browser_toolbar.addAction(return_action)
-        self.left_panel.problem_browser_button.clicked.connect(self.show_problem_browser)
-        self.left_panel.query_panel.browse_all_button.clicked.connect(self.browse_all_problems)
         # Show editor by default
         self.stacked_widget.setCurrentWidget(self.editor_container)
         self.menuBar().setVisible(True)
@@ -471,16 +454,8 @@ class MainWindow(QMainWindow):
         self.editor_panel.text_edit.clear()
         self.preview_panel.clear() 
 
-    def show_problem_browser(self):
-        self.stacked_widget.setCurrentWidget(self.problem_browser)
-        self.addToolBar(Qt.TopToolBarArea, self.browser_toolbar)
-        self.browser_toolbar.show()
-        self.menuBar().setVisible(False)
-
     def show_editor_screen(self):
         self.stacked_widget.setCurrentWidget(self.editor_container)
-        if hasattr(self, 'browser_toolbar'):
-            self.browser_toolbar.hide()
         self.menuBar().setVisible(True)
 
     def browse_all_problems(self):
