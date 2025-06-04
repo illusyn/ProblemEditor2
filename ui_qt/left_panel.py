@@ -51,6 +51,10 @@ class LeftPanel(QWidget):
         # --- QueryPanel (contains query controls and inputs) ---
         self.query_panel = QueryPanel(laptop_mode=self.laptop_mode)
         main_layout.addWidget(self.query_panel)
+        # Wire up problem_display_panel for set panel add-to-set button
+        parent_widget = self.parent()
+        if parent_widget is not None and hasattr(parent_widget, 'problem_display_panel'):
+            self.query_panel.problem_display_panel = parent_widget.problem_display_panel
 
     def _create_top_row(self, main_layout):
         """Create the top row with Problem Browser 2, Save Problem, and Preview buttons"""

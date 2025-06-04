@@ -18,8 +18,10 @@ from converters.image_converter import ImageConverter
 from ui_qt.style_config import active_palette, MultiShadowButton, WINDOW_BG_COLOR, FONT_FAMILY, BUTTON_FONT_SIZE, LABEL_FONT_SIZE, NOTES_FONT_SIZE
 from PyQt5.QtGui import QFont
 from ui_qt.problem_manager import ProblemManager
+from ui_qt.problem_display_panel import ProblemDisplayPanel
 from PyQt5.QtCore import Qt
 from managers.config_manager import ConfigManager
+from ui_qt.set_panel import SetPanelQt
 
 def update_problem_image_map(problem_id, content, db):
     # Remove old mappings
@@ -125,6 +127,17 @@ class MainWindow(QMainWindow):
         # Show editor by default
         self.stacked_widget.setCurrentWidget(self.editor_container)
         self.menuBar().setVisible(True)
+        # Wire up problem_display_panel for set panel add-to-set button
+        if hasattr(self, 'problem_display_panel'):
+            self.left_panel.query_panel.problem_display_panel = self.problem_display_panel
+        # Add main ProblemDisplayPanel to the editor UI
+        self.problem_display_panel = ProblemDisplayPanel(self)
+        editor_layout.addWidget(self.problem_display_panel, stretch=3)
+        self.left_panel.query_panel.problem_display_panel = self.problem_display_panel
+        # Add global Add-to-Set button
+        self.add_to_set_btn = QPushButton("Add Selected Problems to Set(s)***")
+        self.add_to_set_btn.clicked.connect(self.on_add_to_set_clicked)
+        editor_layout.addWidget(self.add_to_set_btn)
 
     def update_preview(self):
         """Update the preview with current editor content, ensuring all images are available for LaTeX."""
@@ -148,9 +161,8 @@ class MainWindow(QMainWindow):
         self.status_bar.showMessage("Preview updated")
 
     def on_query(self):
-        selected_set_id = self.left_panel.query_panel.query_inputs_panel.get_selected_set_id()
-        if selected_set_id is not None:
-            selected_set_id = int(selected_set_id)
+        selected_set_ids = self.left_panel.query_panel.query_inputs_panel.get_selected_set_ids()
+        selected_set_id = selected_set_ids[0] if selected_set_ids else None
         problem_id = self.left_panel.get_problem_id().strip()
         earmark_filter = self.left_panel.get_earmark()
         if selected_set_id:
@@ -233,6 +245,19 @@ class MainWindow(QMainWindow):
 
     def showEvent(self, event):
         super().showEvent(event)
+        # Find the actual SetPanelQt instance in the UI
+        set_panels = self.findChildren(SetPanelQt)
+        if set_panels:
+            self.set_panel = set_panels[0]
+            print("[DEBUG] Using SetPanelQt instance for all logic:", self.set_panel)
+        # Set the callback on the actually visible SetPanelQt instance
+        query_inputs_panel = self.left_panel.query_panel.query_inputs_panel
+        if set_panels:
+            set_panel = set_panels[0]
+            print("[DEBUG] Setting callback on SetPanelQt:", set_panel)
+            set_panel.set_get_selected_problem_ids_callback(
+                lambda: [p.get('problem_id') for p in self.problem_display_panel.get_selected_problems()]
+            )
         self.showMaximized()
 
     def adjust_image_size(self):
@@ -469,4 +494,25 @@ class MainWindow(QMainWindow):
 
     def show_problem_manager_screen(self):
         self.stacked_widget.setCurrentWidget(self.problem_manager_screen)
-        self.menuBar().setVisible(True) 
+        self.menuBar().setVisible(True)
+
+    def on_add_to_set_clicked(self):
+        selected_problems = self.problem_display_panel.get_selected_problems()
+        selected_sets = self.set_panel.get_selected_set_ids() if hasattr(self.set_panel, 'get_selected_set_ids') else []
+        print("[DEBUG] on_add_to_set_clicked: selected_sets:", selected_sets)
+        if not selected_problems or not selected_sets:
+            QMessageBox.warning(self, "Add to Set", "Please select problems and sets.")
+            return
+        from db.problem_set_db import ProblemSetDB
+        db = ProblemSetDB()
+        added = 0
+        already = 0
+        for set_id in selected_sets:
+            for prob in selected_problems:
+                pid = prob.get('problem_id')
+                result = db.add_problem_to_set(set_id, pid)
+                if result:
+                    added += 1
+                else:
+                    already += 1
+        QMessageBox.information(self, "Add to Set", f"Added {added} problems to {len(selected_sets)} set(s). Already present: {already}.") 

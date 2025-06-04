@@ -1,8 +1,8 @@
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QSpacerItem, QSizePolicy
+from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QSpacerItem, QSizePolicy, QMessageBox
 from PyQt5.QtCore import pyqtSignal, Qt
 from ui_qt.query_panel import QueryPanel
 from ui_qt.problem_display_panel import ProblemDisplayPanel
-from ui_qt.problem_set_panel import ProblemSetPanel
+from ui_qt.set_panel import SetPanelQt
 from ui_qt.neumorphic_components import NeumorphicButton
 from ui_qt.style_config import CONTROL_BTN_WIDTH
 
@@ -11,6 +11,7 @@ class ProblemManager(QWidget):
 
     def __init__(self, parent=None, laptop_mode=False):
         super().__init__(parent)
+        print("[DEBUG] ProblemManager __init__ called:", self)
         main_layout = QVBoxLayout(self)
         # Main content layout
         content_layout = QHBoxLayout()
@@ -27,21 +28,32 @@ class ProblemManager(QWidget):
         left_vbox.addLayout(btn_row)
         self.query_panel = QueryPanel(laptop_mode=laptop_mode, show_preview_and_nav_buttons=False)
         left_vbox.addWidget(self.query_panel)
-        # Add ProblemSetPanel only in ProblemManager
-        self.problem_set_panel = ProblemSetPanel(self, get_selected_problem_ids_callback=self.get_selected_problem_ids)
-        self.query_panel.layout().addWidget(self.problem_set_panel)
-        # Connect set_list_changed to refresh_set_dropdown
-        self.problem_set_panel.set_list_changed.connect(self.query_panel.query_inputs_panel.refresh_set_dropdown)
+        # Add SetPanelQt for set selection in Problem Manager
+        self.set_panel = SetPanelQt(self)
+        left_vbox.addWidget(self.set_panel)
         content_layout.addLayout(left_vbox, stretch=2)  # 40%
-        # --- Right side: Problem display ---
+        # --- Right side: Problem display + Add-to-Set button ---
+        right_panel = QWidget()
+        right_layout = QVBoxLayout(right_panel)
         self.problem_display_panel = ProblemDisplayPanel()
-        content_layout.addWidget(self.problem_display_panel, stretch=3)  # 60%
+        right_layout.addWidget(self.problem_display_panel)
+        self.add_to_set_btn = QPushButton("Add Selected Problems to Set(s)")
+        self.add_to_set_btn.clicked.connect(self.on_add_to_set_clicked)
+        right_layout.addWidget(self.add_to_set_btn)
+        content_layout.addWidget(right_panel, stretch=3)
         main_layout.addLayout(content_layout)
         self.query_panel.query_clicked.connect(self.on_query)
         # Connect query results to display panel
         self.query_panel.query_executed.connect(self.problem_display_panel.set_problems)
         # Connect reset to clear the grid
         self.query_panel.reset_clicked.connect(lambda: self.problem_display_panel.set_problems([]))
+
+        # --- Centralized selection state ---
+        self.selected_problem_ids = set()
+        self.selected_set_ids = set()
+        print(f"-------------------->set():{set()}")
+        self.problem_display_panel.selection_changed.connect(self.on_problems_selected)
+        # If SetPanelQt emits a selection_changed signal, connect it here if needed
 
     def get_selected_problem_ids(self):
         return [p.get('problem_id') for p in self.problem_display_panel.get_selected_problems()]
@@ -59,7 +71,8 @@ class ProblemManager(QWidget):
 
     def on_query(self):
         criteria = self.query_panel.query_inputs_panel.build_query_criteria()
-        selected_set_id = self.query_panel.query_inputs_panel.get_selected_set_id()
+        selected_set_ids = self.query_panel.query_inputs_panel.get_selected_set_ids()
+        selected_set_id = selected_set_ids[0] if selected_set_ids else None
         from db.math_db import MathProblemDB
         db = MathProblemDB()
         # If a set is selected, get only problems in that set; else get all
@@ -98,4 +111,33 @@ class ProblemManager(QWidget):
             problems = [p for p in problems if selected_cat_names.issubset({c['name'] for c in p.get('categories', [])})]
 
         self.problem_display_panel.set_problems(problems)
+
+    def on_add_to_set_clicked(self):
+        selected_problems = self.problem_display_panel.get_selected_problems()
+        selected_sets = self.set_panel.get_selected_set_ids() if hasattr(self.set_panel, 'get_selected_set_ids') else []
+        print("[DEBUG] on_add_to_set_clicked: selected_sets:", selected_sets)
+        if not selected_problems or not selected_sets:
+            QMessageBox.warning(self, "Add to Set", "Please select problems and sets.")
+            return
+        from db.problem_set_db import ProblemSetDB
+        db = ProblemSetDB()
+        added = 0
+        already = 0
+        for prob in selected_problems:
+            pid = prob.get('problem_id')
+            for set_id in selected_sets:
+                result = db.add_problem_to_set(set_id, pid)
+                if result:
+                    added += 1
+                else:
+                    already += 1
+        QMessageBox.information(self, "Add to Set", f"Added {added} problems to {len(selected_sets)} set(s). Already present: {already}.")
+
+    def on_problems_selected(self, ids):
+        print("[DEBUG] on_problems_selected:", ids)
+        self.selected_problem_ids = set(ids)
+
+    def on_sets_selected(self, ids):
+        print("[DEBUG] on_sets_selected:", ids)
+        self.selected_set_ids = set(ids)
         

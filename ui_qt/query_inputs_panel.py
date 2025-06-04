@@ -29,6 +29,7 @@ from ui_qt.style_config import (
     SHADOW_RECT_ADJUST, SHADOW_OFFSETS, EDITOR_BG_COLOR, CATEGORY_BTN_SELECTED_COLOR
 )
 from db.problem_set_db import ProblemSetDB
+from ui_qt.set_panel import SetPanelQt
 
 class NeumorphicButton(QPushButton):
     def __init__(self, text, parent=None, radius=NEUMORPH_RADIUS, bg_color=NEUMORPH_BG_COLOR, 
@@ -265,6 +266,10 @@ class QueryInputsPanel(QWidget):
         
         self.category_panel = CategoryPanelQt()
         main_layout.addWidget(self.category_panel)
+
+        # --- Sets Panel ---
+        self.set_panel = SetPanelQt()
+        main_layout.addWidget(self.set_panel)
         
         # --- Notes Section (desktop mode only) ---
         self.notes_text = None
@@ -277,20 +282,6 @@ class QueryInputsPanel(QWidget):
             notes_row.addWidget(notes_label)
             notes_row.addWidget(self.notes_text, stretch=1)
             main_layout.addLayout(notes_row)
-        
-        # --- Set Dropdown (moved below notes) ---
-        self.set_dropdown = QComboBox()
-        self.set_dropdown.addItem("All Sets", None)
-        db = ProblemSetDB()
-        for set_id, name, desc, ordered in db.get_all_sets():
-            self.set_dropdown.addItem(name, set_id)
-        db.close()
-        # Set width to 1/3 of PROB_ID_ENTRY_WIDTH + SEARCH_TEXT_ENTRY_WIDTH + ANSWER_ENTRY_WIDTH
-        total_width = PROB_ID_ENTRY_WIDTH + SEARCH_TEXT_ENTRY_WIDTH + ANSWER_ENTRY_WIDTH
-        self.set_dropdown.setFixedWidth(int(total_width / 3))
-        self.set_dropdown.setFixedHeight(44)  # Make it taller (adjust as needed)
-        self.set_dropdown.setFont(QFont(FONT_FAMILY, LABEL_FONT_SIZE, QFont.Bold))
-        main_layout.addWidget(self.set_dropdown)
         
         # Add stretch to push content to top
         main_layout.addStretch()
@@ -556,16 +547,9 @@ class QueryInputsPanel(QWidget):
         else:
             return 'browse_all'
 
-    def get_selected_set_id(self):
-        return self.set_dropdown.currentData()
+    # --- Set methods ---
+    def get_selected_set_ids(self):
+        return self.set_panel.get_selected_set_ids()
 
-    def refresh_set_dropdown(self):
-        print("[DEBUG] refresh_set_dropdown called")
-        self.set_dropdown.clear()
-        self.set_dropdown.addItem("All Sets", None)
-        db = ProblemSetDB()
-        sets = db.get_all_sets()
-        print(f"[DEBUG] Sets in DB: {[name for _, name, *_ in sets]}")
-        for set_id, name, desc, ordered in sets:
-            self.set_dropdown.addItem(name, set_id)
-        db.close()
+    def set_selected_set_ids(self, set_ids):
+        self.set_panel.set_selected_set_ids(set_ids)

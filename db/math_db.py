@@ -31,7 +31,6 @@ class MathProblemDB:
             db_path = db_dir / "math_problems.db"
             
         self.db_path = str(db_path)
-        print(f"[DEBUG] MathProblemDB using database: {self.db_path}")
         self.conn = sqlite3.connect(self.db_path)
         
         # Enable foreign key constraints

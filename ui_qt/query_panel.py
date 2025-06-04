@@ -4,7 +4,6 @@ from ui_qt.query_inputs_panel import QueryInputsPanel
 from ui_qt.neumorphic_components import NeumorphicButton
 from ui_qt.style_config import CONTROL_BTN_FONT_SIZE, CONTROL_BTN_WIDTH, SPACING, PADDING, WINDOW_BG_COLOR
 from db.math_db import MathProblemDB
-from ui_qt.problem_set_panel import ProblemSetPanel
 
 class QueryPanel(QWidget):
     query_executed = pyqtSignal(list)  # Emits a list of problems

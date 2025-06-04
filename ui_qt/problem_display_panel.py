@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QGridLayout, QLabel, QVBoxLayout, QSizePolicy, QScrollArea, QSpacerItem, QHBoxLayout, QComboBox, QGroupBox, QCheckBox, QPushButton, QRubberBand, QApplication
 from PyQt5.QtGui import QPixmap, QFont, QPainter, QColor, QPen
-from PyQt5.QtCore import Qt, QRect, QPoint, QSize
+from PyQt5.QtCore import Qt, QRect, QPoint, QSize, pyqtSignal
 import re, os
 from db.math_db import MathProblemDB
 from managers.image_manager_qt import ImageManagerQt
@@ -76,7 +76,7 @@ class ProblemCellWidget(QWidget):
         if problem_id is not None:
             db = MathProblemDB()
             try:
-                db.cur.execute("SELECT image_name FROM problem_image_map WHERE problem_id=?", (problem_id,))
+                db.cur.execute("SELECT image_name FROM problem_images WHERE problem_id=?", (problem_id,))
                 image_names = [row[0] for row in db.cur.fetchall()]
                 image_manager = ImageManagerQt(self)
                 for image_name in image_names:
@@ -128,6 +128,7 @@ class ProblemCellWidget(QWidget):
 
 class ProblemDisplayPanel(QWidget):
     CONFIG_PATH = "user_settings.json"
+    selection_changed = pyqtSignal(list)
 
     def __init__(self, parent=None):
         print("ProblemDisplayPanel init:0")
@@ -276,15 +277,19 @@ class ProblemDisplayPanel(QWidget):
             self.selected_problem_ids = {prob_id}
             cell.set_selected(True)
             self.selection_anchor_idx = idx
+        self.selection_changed.emit(list(self.selected_problem_ids))
 
     def clear_selection(self):
         self.selected_problem_ids.clear()
         for c in self.problem_cells:
             c.set_selected(False)
         self.selection_anchor_idx = None
+        self.selection_changed.emit([])
 
     def get_selected_problems(self):
-        return [c.problem for c in self.problem_cells if c.problem.get('problem_id') in self.selected_problem_ids]
+        selected = [c.problem for c in self.problem_cells if c.problem.get('problem_id') in self.selected_problem_ids]
+        print("[DEBUG] get_selected_problems called, returning:", [p.get('problem_id') for p in selected])
+        return selected
 
     # --- Rubber-band selection ---
     def eventFilter(self, obj, event):
@@ -326,4 +331,5 @@ class ProblemDisplayPanel(QWidget):
                 last_selected_idx = i
         # Update anchor to last cell in selection if any
         if last_selected_idx is not None:
-            self.selection_anchor_idx = last_selected_idx 
+            self.selection_anchor_idx = last_selected_idx
+        self.selection_changed.emit(list(self.selected_problem_ids)) 
