@@ -240,18 +240,15 @@ class QueryInputsPanel(QWidget):
         # Add spacing before advanced inputs
         main_layout.addSpacing(4)
         
-        # --- Earmark checkbox on its own row ---
-        earmark_row = QHBoxLayout()
-        earmark_row.setSpacing(0)
-        earmark_row.setContentsMargins(0, 0, 0, 0)
+        # --- Earmark checkbox and Problem type buttons on the same row ---
+        earmark_and_types_row = QHBoxLayout()
+        earmark_and_types_row.setSpacing(16)
+        earmark_and_types_row.setContentsMargins(0, 0, 0, 0)
         self.earmark_checkbox = QCheckBox("Earmark")
         self.earmark_checkbox.setFont(QFont(FONT_FAMILY, LABEL_FONT_SIZE, QFont.Bold))
         self.earmark_checkbox.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; margin-left: 10px;")
-        earmark_row.addWidget(self.earmark_checkbox)
-        earmark_row.addStretch(20)
-        main_layout.addLayout(earmark_row)
+        earmark_and_types_row.addWidget(self.earmark_checkbox)
         
-        # --- Problem type buttons directly below earmark row ---
         from db.math_db import MathProblemDB
         db = MathProblemDB()
         types = db.cur.execute("SELECT type_id, name FROM problem_types ORDER BY name").fetchall()
@@ -260,7 +257,10 @@ class QueryInputsPanel(QWidget):
         self.problem_type_panel = ProblemTypePanelQt(types=type_dicts)
         self.problem_type_panel.setContentsMargins(0, 0, 0, 0)
         self.problem_type_panel.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        main_layout.addWidget(self.problem_type_panel)
+        earmark_and_types_row.addSpacing(12)
+        earmark_and_types_row.addWidget(self.problem_type_panel)
+        earmark_and_types_row.addStretch(20)
+        main_layout.addLayout(earmark_and_types_row)
         
         main_layout.addSpacing(40)  # Add space after problem type buttons
         
