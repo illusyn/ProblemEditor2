@@ -1,3 +1,4 @@
+# query_panel.py
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGridLayout
 from PyQt5.QtCore import pyqtSignal
 from ui_qt.query_inputs_panel import QueryInputsPanel
@@ -33,7 +34,7 @@ class QueryPanel(QWidget):
         print("[DEBUG] QueryInputsPanel sizeHint:", self.query_inputs_panel.sizeHint())
 
         # Set a maximum height for QueryPanel to prevent huge minimum size
-        # self.setMaximumHeight(900)
+        self.setMaximumHeight(1500)
 
         # Connect query button to emit signal (placeholder logic)
         self.query_button.clicked.connect(self.query_clicked.emit)

@@ -16,6 +16,7 @@ from pathlib import Path
 import os
 from converters.image_converter import ImageConverter
 from ui_qt.style_config import active_palette, MultiShadowButton, WINDOW_BG_COLOR, FONT_FAMILY, BUTTON_FONT_SIZE, LABEL_FONT_SIZE, NOTES_FONT_SIZE
+print(f"---------------WINDOW_BG_COLOR: {WINDOW_BG_COLOR}")
 from PyQt5.QtGui import QFont
 from ui_qt.problem_manager import ProblemManager
 from ui_qt.problem_display_panel import ProblemDisplayPanel
@@ -250,14 +251,11 @@ class MainWindow(QMainWindow):
         if set_panels:
             self.set_panel = set_panels[0]
             print("[DEBUG] Using SetPanelQt instance for all logic:", self.set_panel)
-        # Set the callback on the actually visible SetPanelQt instance
-        query_inputs_panel = self.left_panel.query_panel.query_inputs_panel
+        # Remove callback setting on SetPanelQt
+        # If needed, connect the new signal here:
         if set_panels:
             set_panel = set_panels[0]
-            print("[DEBUG] Setting callback on SetPanelQt:", set_panel)
-            set_panel.set_get_selected_problem_ids_callback(
-                lambda: [p.get('problem_id') for p in self.problem_display_panel.get_selected_problems()]
-            )
+            set_panel.request_selected_problem_ids.connect(self.on_add_selected_problems_to_sets)
         self.showMaximized()
 
     def adjust_image_size(self):
@@ -500,6 +498,27 @@ class MainWindow(QMainWindow):
         selected_problems = self.problem_display_panel.get_selected_problems()
         selected_sets = self.set_panel.get_selected_set_ids() if hasattr(self.set_panel, 'get_selected_set_ids') else []
         print("[DEBUG] on_add_to_set_clicked: selected_sets:", selected_sets)
+        if not selected_problems or not selected_sets:
+            QMessageBox.warning(self, "Add to Set", "Please select problems and sets.")
+            return
+        from db.problem_set_db import ProblemSetDB
+        db = ProblemSetDB()
+        added = 0
+        already = 0
+        for set_id in selected_sets:
+            for prob in selected_problems:
+                pid = prob.get('problem_id')
+                result = db.add_problem_to_set(set_id, pid)
+                if result:
+                    added += 1
+                else:
+                    already += 1
+        QMessageBox.information(self, "Add to Set", f"Added {added} problems to {len(selected_sets)} set(s). Already present: {already}.")
+
+    def on_add_selected_problems_to_sets(self):
+        selected_problems = self.problem_display_panel.get_selected_problems()
+        selected_sets = self.set_panel.get_selected_set_ids() if hasattr(self.set_panel, 'get_selected_set_ids') else []
+        print("[DEBUG] on_add_selected_problems_to_sets: selected_sets:", selected_sets)
         if not selected_problems or not selected_sets:
             QMessageBox.warning(self, "Add to Set", "Please select problems and sets.")
             return

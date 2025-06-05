@@ -1,10 +1,13 @@
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QSpacerItem, QSizePolicy, QMessageBox
+# problem_manager.py
+
+from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QSpacerItem, QSizePolicy, QMessageBox, QLabel, QTextEdit
 from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtGui import QFont
 from ui_qt.query_panel import QueryPanel
 from ui_qt.problem_display_panel import ProblemDisplayPanel
-from ui_qt.set_panel import SetPanelQt
+from ui_qt.set_editor_panel import SetEditorPanelQt
 from ui_qt.neumorphic_components import NeumorphicButton
-from ui_qt.style_config import CONTROL_BTN_WIDTH
+from ui_qt.style_config import CONTROL_BTN_WIDTH, FONT_FAMILY, SECTION_LABEL_FONT_SIZE
 
 class ProblemManager(QWidget):
     return_to_editor = pyqtSignal()
@@ -16,7 +19,9 @@ class ProblemManager(QWidget):
         # Main content layout
         content_layout = QHBoxLayout()
         # --- Left side: Return button above query panel ---
-        left_vbox = QVBoxLayout()
+        left_panel_widget = QWidget()
+        left_vbox = QVBoxLayout(left_panel_widget)
+        left_panel_widget.setStyleSheet('background: transparent;')
         self.return_btn = NeumorphicButton("Return to Editor", self)
         self.return_btn.setMinimumWidth(CONTROL_BTN_WIDTH)
         self.return_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
@@ -27,33 +32,34 @@ class ProblemManager(QWidget):
         btn_row.addStretch(1)
         left_vbox.addLayout(btn_row)
         self.query_panel = QueryPanel(laptop_mode=laptop_mode, show_preview_and_nav_buttons=False)
-        left_vbox.addWidget(self.query_panel)
-        # Add SetPanelQt for set selection in Problem Manager
-        self.set_panel = SetPanelQt(self)
-        left_vbox.addWidget(self.set_panel)
-        content_layout.addLayout(left_vbox, stretch=2)  # 40%
-        # --- Right side: Problem display + Add-to-Set button ---
+        left_vbox.addWidget(self.query_panel, stretch=1)
+        self.set_editor_panel = SetEditorPanelQt(self)
+        left_vbox.addWidget(self.set_editor_panel)
+        content_layout.addWidget(left_panel_widget, stretch=2)  # 40%
+        # --- Right side: Problem display only ---
         right_panel = QWidget()
         right_layout = QVBoxLayout(right_panel)
         self.problem_display_panel = ProblemDisplayPanel()
         right_layout.addWidget(self.problem_display_panel)
-        self.add_to_set_btn = QPushButton("Add Selected Problems to Set(s)")
-        self.add_to_set_btn.clicked.connect(self.on_add_to_set_clicked)
-        right_layout.addWidget(self.add_to_set_btn)
         content_layout.addWidget(right_panel, stretch=3)
         main_layout.addLayout(content_layout)
+        self.setLayout(main_layout)
         self.query_panel.query_clicked.connect(self.on_query)
         # Connect query results to display panel
         self.query_panel.query_executed.connect(self.problem_display_panel.set_problems)
         # Connect reset to clear the grid
         self.query_panel.reset_clicked.connect(lambda: self.problem_display_panel.set_problems([]))
-
         # --- Centralized selection state ---
         self.selected_problem_ids = set()
         self.selected_set_ids = set()
         print(f"-------------------->set():{set()}")
         self.problem_display_panel.selection_changed.connect(self.on_problems_selected)
-        # If SetPanelQt emits a selection_changed signal, connect it here if needed
+        # Remove SetPanelQt and Add-to-Set button from here
+        # Add-to-Set logic will be handled in SetEditorPanelQt
+        # If using a QWidget for the left panel, set its background to transparent for debugging
+        # If not, set the background of the parent widget of left_vbox to transparent
+        # Example (if left_panel_widget exists):
+        # left_panel_widget.setStyleSheet('background: transparent;')
 
     def get_selected_problem_ids(self):
         return [p.get('problem_id') for p in self.problem_display_panel.get_selected_problems()]
@@ -88,50 +94,24 @@ class ProblemManager(QWidget):
                 print("[ERROR] get_problems_list failed:", problems)
                 problems = []
         db.close()
-
         # Filter by Problem ID
         problem_id = criteria.get('problem_id', '').strip()
         if problem_id:
             problems = [p for p in problems if str(p.get('problem_id', '')) == problem_id]
-
         # Filter by Earmark
         earmark = criteria.get('earmark', False)
         if earmark:
             problems = [p for p in problems if p.get('earmark', 0)]
-
         # Filter by Problem Types
         selected_type_ids = criteria.get('selected_type_ids', [])
         if selected_type_ids:
             problems = [p for p in problems if any(t['type_id'] in selected_type_ids for t in p.get('types', []))]
-
         # Filter by Categories
         selected_categories = criteria.get('selected_categories', [])
         if selected_categories:
             selected_cat_names = {cat['name'] for cat in selected_categories}
             problems = [p for p in problems if selected_cat_names.issubset({c['name'] for c in p.get('categories', [])})]
-
         self.problem_display_panel.set_problems(problems)
-
-    def on_add_to_set_clicked(self):
-        selected_problems = self.problem_display_panel.get_selected_problems()
-        selected_sets = self.set_panel.get_selected_set_ids() if hasattr(self.set_panel, 'get_selected_set_ids') else []
-        print("[DEBUG] on_add_to_set_clicked: selected_sets:", selected_sets)
-        if not selected_problems or not selected_sets:
-            QMessageBox.warning(self, "Add to Set", "Please select problems and sets.")
-            return
-        from db.problem_set_db import ProblemSetDB
-        db = ProblemSetDB()
-        added = 0
-        already = 0
-        for prob in selected_problems:
-            pid = prob.get('problem_id')
-            for set_id in selected_sets:
-                result = db.add_problem_to_set(set_id, pid)
-                if result:
-                    added += 1
-                else:
-                    already += 1
-        QMessageBox.information(self, "Add to Set", f"Added {added} problems to {len(selected_sets)} set(s). Already present: {already}.")
 
     def on_problems_selected(self, ids):
         print("[DEBUG] on_problems_selected:", ids)

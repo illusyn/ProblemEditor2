@@ -1,3 +1,4 @@
+# query_inputs_panel.py
 """
 Query inputs panel for the Simplified Math Editor (PyQt5).
 
@@ -29,7 +30,7 @@ from ui_qt.style_config import (
     SHADOW_RECT_ADJUST, SHADOW_OFFSETS, EDITOR_BG_COLOR, CATEGORY_BTN_SELECTED_COLOR
 )
 from db.problem_set_db import ProblemSetDB
-from ui_qt.set_panel import SetPanelQt
+from ui_qt.set_inputs_panel import SetInputsPanelQt
 
 class NeumorphicButton(QPushButton):
     def __init__(self, text, parent=None, radius=NEUMORPH_RADIUS, bg_color=NEUMORPH_BG_COLOR, 
@@ -170,7 +171,7 @@ class ProblemTypePanelQt(QWidget):
             types = [
                 {"type_id": 1, "name": "Intro"},
                 {"type_id": 2, "name": "Efficiency"},
-                {"type_id": 3, "name": "SAT Problem"}
+                {"type_id": 3, "name": "SAT-Problem"}
             ]
         self.types = types
         self.selected = set()  # set of type_id
@@ -213,15 +214,25 @@ class QueryInputsPanel(QWidget):
     
     def __init__(self, parent=None, laptop_mode=False):
         super().__init__(parent)
+        self.setStyleSheet('background: transparent;')
         self.laptop_mode = laptop_mode
-        self.setStyleSheet(f"background-color: {WINDOW_BG_COLOR};")
-        self.init_ui()
-    
-    def init_ui(self):
-        """Initialize the UI components"""
+        # --- Wrap all contents in a QGroupBox ---
+        from PyQt5.QtWidgets import QGroupBox, QVBoxLayout
+        self.outer_groupbox = QGroupBox("")
+        outer_layout = QVBoxLayout(self.outer_groupbox)
+        outer_layout.setContentsMargins(8, 8, 8, 8)
+        outer_layout.setSpacing(SPACING)
+        self.init_ui(outer_layout)
         main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(0, 0, 0, 0)  # No extra margins
-        main_layout.setSpacing(SPACING)
+        main_layout.setContentsMargins(0, 0, 0, 0)
+        main_layout.addWidget(self.outer_groupbox)
+    
+    def init_ui(self, main_layout=None):
+        """Initialize the UI components"""
+        if main_layout is None:
+            main_layout = QVBoxLayout(self)
+            main_layout.setContentsMargins(0, 0, 0, 0)  # No extra margins
+            main_layout.setSpacing(SPACING)
         
         # --- Basic Inputs Row (Problem ID, Search Text, Answer) ---
         self._create_basic_inputs(main_layout)
@@ -265,26 +276,18 @@ class QueryInputsPanel(QWidget):
         main_layout.addWidget(domains_label)
         
         self.category_panel = CategoryPanelQt()
-        main_layout.addWidget(self.category_panel)
-
-        # --- Sets Panel ---
-        self.set_panel = SetPanelQt()
+        self.category_groupbox = QGroupBox("")
+        self.category_groupbox.setMinimumHeight(440)
+        category_layout = QVBoxLayout(self.category_groupbox)
+        category_layout.setContentsMargins(0, 0, 0, 0)
+        category_layout.setSpacing(0)
+        category_layout.addWidget(self.category_panel)
+        self.category_groupbox.setLayout(category_layout)
+        main_layout.addWidget(self.category_groupbox)
+        
+        # --- Sets Panel (for filtering) ---
+        self.set_panel = SetInputsPanelQt()
         main_layout.addWidget(self.set_panel)
-        
-        # --- Notes Section (desktop mode only) ---
-        self.notes_text = None
-        if not self.laptop_mode:
-            notes_row = QHBoxLayout()
-            notes_label = QLabel("Notes")
-            notes_label.setFont(QFont(FONT_FAMILY, SECTION_LABEL_FONT_SIZE, QFont.Bold))
-            notes_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; {SECTION_LABEL_PADDING_TOP} background: {WINDOW_BG_COLOR};")
-            self.notes_text = NeumorphicTextEdit(bg_color=EDITOR_BG_COLOR)
-            notes_row.addWidget(notes_label)
-            notes_row.addWidget(self.notes_text, stretch=1)
-            main_layout.addLayout(notes_row)
-        
-        # Add stretch to push content to top
-        main_layout.addStretch()
     
     def _create_basic_inputs(self, main_layout):
         """Create the basic input fields (Problem ID, Search Text, Answer)"""
@@ -392,18 +395,6 @@ class QueryInputsPanel(QWidget):
             btn.setChecked(False)
         self.category_panel.selected.clear()
     
-    # --- Notes methods ---
-    def get_notes(self):
-        """Get notes text content"""
-        if self.notes_text is not None:
-            return self.notes_text.toPlainText()
-        return ""
-
-    def set_notes(self, text):
-        """Set notes text content"""
-        if self.notes_text is not None:
-            self.notes_text.setPlainText(text)
-    
     # --- Reset functionality ---
     def reset_all_inputs(self):
         """Reset all query inputs to default state"""
@@ -422,10 +413,6 @@ class QueryInputsPanel(QWidget):
         
         # Reset categories
         self.clear_category_selection()
-        
-        # Reset notes
-        if self.notes_text is not None:
-            self.notes_text.setPlainText("")
     
     # --- Query building methods ---
     def build_query_criteria(self):
@@ -444,7 +431,6 @@ class QueryInputsPanel(QWidget):
             'earmark': self.get_earmark(),
             'selected_type_ids': self.get_selected_type_ids(),
             'selected_categories': self.get_selected_categories(),
-            'notes': self.get_notes().strip()
         }
     
     def apply_query_criteria(self, criteria):
@@ -481,9 +467,6 @@ class QueryInputsPanel(QWidget):
                 else:
                     btn.setChecked(False)
                     self.category_panel.selected.discard(cat["category_id"])
-        
-        if 'notes' in criteria:
-            self.set_notes(criteria['notes'])
     
     # --- Validation methods ---
     def validate_inputs(self):
@@ -526,7 +509,6 @@ class QueryInputsPanel(QWidget):
             criteria['earmark'],
             criteria['selected_type_ids'],
             criteria['selected_categories'],
-            criteria['notes']
         ])
     
     def get_search_mode(self):

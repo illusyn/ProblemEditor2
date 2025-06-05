@@ -18,7 +18,7 @@ class ProblemSetDB:
         self.conn.commit()
 
     def get_all_sets(self):
-        self.cur.execute('SELECT set_id, name, description, ordered FROM problem_sets ORDER BY name COLLATE NOCASE')
+        self.cur.execute('SELECT set_id, name, description, is_ordered FROM problem_sets ORDER BY name COLLATE NOCASE')
         return self.cur.fetchall()
 
     def add_set(self, name, description='', ordered=False):

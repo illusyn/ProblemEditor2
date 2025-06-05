@@ -1,7 +1,10 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QCheckBox, QLabel, QLineEdit, QPushButton, QMessageBox
 from db.problem_set_db import ProblemSetDB
+from PyQt5.QtCore import pyqtSignal
 
 class SetPanelQt(QWidget):
+    request_selected_problem_ids = pyqtSignal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
         print("[DEBUG] SetPanelQt created:", self)
@@ -88,32 +91,8 @@ class SetPanelQt(QWidget):
         db.close()
         self.refresh_sets()
 
-    def set_get_selected_problem_ids_callback(self, callback):
-        self._get_selected_problem_ids_callback = callback
-
     def add_selected_problems_to_sets(self):
         print("[DEBUG] add_selected_problems_to_sets called on:", self)
-        if self._get_selected_problem_ids_callback is None:
-            QMessageBox.warning(self, "Add to Set", "Cannot access selected problems (no callback set)")
-            return
-        problem_ids = self._get_selected_problem_ids_callback()
-        if not problem_ids:
-            QMessageBox.warning(self, "Add to Set", "No problems selected.")
-            return
-        set_ids = self.get_selected_set_ids()
-        if not set_ids:
-            QMessageBox.warning(self, "Add to Set", "No sets selected.")
-            return
-        # Add problems to sets
-        db = ProblemSetDB()
-        added = 0
-        already = 0
-        for set_id in set_ids:
-            for pid in problem_ids:
-                result = db.add_problem_to_set(set_id, pid)
-                if result:
-                    added += 1
-                else:
-                    already += 1
-        QMessageBox.information(self, "Add to Set", f"Added {added} problems to {len(set_ids)} set(s). Already present: {already}.")
-        db.close() 
+        self.request_selected_problem_ids.emit()
+        # The controller should handle the rest (e.g., actually adding problems to sets)
+        # Optionally, you can add a slot to receive the selected IDs if needed 
