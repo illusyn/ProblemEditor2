@@ -2,10 +2,11 @@ from PyQt5.QtWidgets import QScrollArea, QWidget, QVBoxLayout, QHBoxLayout, QLin
 from db.problem_set_db import ProblemSetDB
 from ui_qt.neumorphic_components import NeumorphicButton
 from ui_qt.style_config import BUTTON_FONT_SIZE, BUTTON_MIN_HEIGHT, BUTTON_MIN_WIDTH, FONT_FAMILY, SECTION_LABEL_FONT_SIZE, NEUMORPH_TEXT_COLOR
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QFont
 
 class SetEditorPanelQt(QWidget):
+    add_selected_problems_to_set = pyqtSignal(list, object)  # selected_problems, selected_set_id
     def __init__(self, parent=None):
         super().__init__(parent)
         # self.setStyleSheet("background: #ccffcc;")
@@ -137,19 +138,4 @@ class SetEditorPanelQt(QWidget):
             selected_problems = []
         selected_set_id = self.get_selected_set_id()
         print("[DEBUG] on_add_selected_problem_to_set: selected_set_id:", selected_set_id)
-        if not selected_problems or not selected_set_id:
-            QMessageBox.warning(self, "Add to Set", "Please select a problem and a set.")
-            return
-        from db.problem_set_db import ProblemSetDB
-        db = ProblemSetDB()
-        added = 0
-        already = 0
-        for prob in selected_problems:
-            pid = prob.get('problem_id')
-            result = db.add_problem_to_set(selected_set_id, pid)
-            if result:
-                added += 1
-            else:
-                already += 1
-        QMessageBox.information(self, "Add to Set", f"Added {added} problem(s) to set. Already present: {already}.")
-        db.close() 
+        self.add_selected_problems_to_set.emit(selected_problems, selected_set_id) 

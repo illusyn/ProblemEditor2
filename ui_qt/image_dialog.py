@@ -6,19 +6,20 @@ This module provides dialog windows for image operations, including advanced ima
 
 from PyQt5.QtWidgets import QDialog, QVBoxLayout, QHBoxLayout, QLabel, QLineEdit, QDoubleSpinBox, QSpinBox, QCheckBox, QPushButton, QSlider
 from PyQt5.QtGui import QPixmap, QImage
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from pathlib import Path
 from PIL import Image
 import os
 
 class ImageSizeAdjustDialog(QDialog):
     """Dialog for adjusting image height (in cm) with aspect ratio, PyQt5 version."""
-    def __init__(self, parent, image_path, current_height_cm=6.0, apply_callback=None, margin_top=0.0, margin_left=0.0, margin_bottom=0.0):
+    applied = pyqtSignal(float, dict)  # height_cm, margin_values
+    request_preview_update = pyqtSignal()
+    def __init__(self, parent, image_path, current_height_cm=6.0, margin_top=0.0, margin_left=0.0, margin_bottom=0.0):
         super().__init__(parent)
         self.setWindowTitle("Adjust Image Height")
         self.setMinimumSize(600, 600)
         self.image_path = image_path
-        self.apply_callback = apply_callback
         self.result = None
         self._debounce_timer = QTimer(self)
         self._debounce_timer.setSingleShot(True)
@@ -127,11 +128,8 @@ class ImageSizeAdjustDialog(QDialog):
         self._debounce_timer.start()
 
     def _on_user_paused(self):
-        if self.apply_callback:
-            self.apply_callback(self.height_spin.value())
-        parent = self.parent()
-        if hasattr(parent, 'update_preview'):
-            parent.update_preview()
+        self.applied.emit(self.height_spin.value(), self.get_margin_values())
+        self.request_preview_update.emit()
 
     def _update_preview(self):
         try:
@@ -192,14 +190,12 @@ class ImageSizeAdjustDialog(QDialog):
             print(f"Preview error: {e}")
 
     def _on_apply(self):
-        if self.apply_callback:
-            self.apply_callback(self.height_spin.value())
+        self.applied.emit(self.height_spin.value(), self.get_margin_values())
         self._update_preview()
 
     def _on_ok(self):
         self.result = self.height_spin.value()
-        if self.apply_callback:
-            self.apply_callback(self.height_spin.value())
+        self.applied.emit(self.height_spin.value(), self.get_margin_values())
         self.accept()
 
     def get_result(self):
