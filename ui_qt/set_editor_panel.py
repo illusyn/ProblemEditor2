@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QScrollArea, QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton, QMessageBox, QLabel, QTableWidget, QTableWidgetItem, QAbstractItemView, QStyledItemDelegate, QStyle, QGridLayout
 from db.problem_set_db import ProblemSetDB
 from ui_qt.neumorphic_components import NeumorphicButton
-from ui_qt.style_config import BUTTON_FONT_SIZE, BUTTON_MIN_HEIGHT, BUTTON_MIN_WIDTH, FONT_FAMILY, SECTION_LABEL_FONT_SIZE, NEUMORPH_TEXT_COLOR, NEUMORPH_BG_COLOR, NEUMORPH_SHADOW_DARK, NEUMORPH_SHADOW_LIGHT, CATEGORY_BTN_SELECTED_COLOR, NEUMORPH_RADIUS
+from ui_qt.style_config import BUTTON_MIN_HEIGHT, BUTTON_MIN_WIDTH, FONT_FAMILY, SECTION_LABEL_FONT_SIZE, NEUMORPH_TEXT_COLOR, NEUMORPH_BG_COLOR, NEUMORPH_SHADOW_DARK, NEUMORPH_SHADOW_LIGHT, CATEGORY_BTN_SELECTED_COLOR, NEUMORPH_RADIUS, SET_EDITOR_CONTROL_BUTTON_FONT_SIZE, SET_EDITOR_BUTTON_FONT_SIZE, SET_EDITOR_LABEL_FONT_SIZE, SET_EDITOR_HEAD_FONT_SIZE
 from PyQt5.QtCore import Qt, pyqtSignal, QRect
 from PyQt5.QtGui import QFont, QColor, QBrush, QPen, QPainter
 from ui_qt.category_panel import NeumorphicToolButton
@@ -42,7 +42,7 @@ class NeumorphicTileDelegate(QStyledItemDelegate):
 
         # Draw text
         painter.setPen(QColor(NEUMORPH_TEXT_COLOR))
-        font = QFont(FONT_FAMILY, BUTTON_FONT_SIZE, QFont.Bold)
+        font = QFont(FONT_FAMILY, SET_EDITOR_BUTTON_FONT_SIZE, QFont.Bold)
         painter.setFont(font)
         text = index.data(Qt.DisplayRole)
         painter.drawText(rect, Qt.AlignCenter, text)
@@ -54,14 +54,23 @@ class SetEditorPanelQt(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
         # self.setStyleSheet("background: #ccffcc;")
-        main_layout = QHBoxLayout(self)
-        self.setLayout(main_layout)
+        outer_layout = QVBoxLayout(self)
+        self.setLayout(outer_layout)
+        # Title label
+        title_label = QLabel("Set Editor")
+        title_label.setFont(QFont(FONT_FAMILY, SET_EDITOR_HEAD_FONT_SIZE, QFont.Bold))
+        title_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR};")
+        title_label.setAlignment(Qt.AlignHCenter)
+        outer_layout.addWidget(title_label, alignment=Qt.AlignHCenter)
+        # Main content layout
+        main_layout = QHBoxLayout()
+        outer_layout.addLayout(main_layout)
 
         # --- Left column: label, entry, buttons ---
         left_col = QVBoxLayout()
         # Set Name label
         name_label = QLabel("Set Name")
-        name_label.setFont(QFont(FONT_FAMILY, BUTTON_FONT_SIZE, QFont.Bold))
+        name_label.setFont(QFont(FONT_FAMILY, SET_EDITOR_LABEL_FONT_SIZE, QFont.Bold))
         name_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR};")
         left_col.addWidget(name_label, alignment=Qt.AlignHCenter)
         # Set Name entry
@@ -69,7 +78,7 @@ class SetEditorPanelQt(QWidget):
         # self.name_edit.setPlaceholderText("Enter set name")
         self.name_edit.setFixedWidth(256)
         entry_font = self.name_edit.font()
-        entry_font.setPointSize(BUTTON_FONT_SIZE)
+        entry_font.setPointSize(SET_EDITOR_LABEL_FONT_SIZE)
         self.name_edit.setFont(entry_font)
         left_col.addWidget(self.name_edit)
         # Button stack (vertical)
@@ -79,7 +88,7 @@ class SetEditorPanelQt(QWidget):
         self.create_btn.setMinimumWidth(256)
         self.create_btn.setMaximumWidth(256)
         font = self.create_btn.font()
-        font.setPointSize(BUTTON_FONT_SIZE)
+        font.setPointSize(SET_EDITOR_CONTROL_BUTTON_FONT_SIZE)
         self.create_btn.setFont(font)
         self.create_btn.clicked.connect(self.create_set)
         left_col.addWidget(self.create_btn, alignment=Qt.AlignLeft)
@@ -90,7 +99,7 @@ class SetEditorPanelQt(QWidget):
         self.add_to_set_btn.setMinimumWidth(256)
         self.add_to_set_btn.setMaximumWidth(256)
         font = self.add_to_set_btn.font()
-        font.setPointSize(BUTTON_FONT_SIZE)
+        font.setPointSize(SET_EDITOR_CONTROL_BUTTON_FONT_SIZE)
         self.add_to_set_btn.setFont(font)
         self.add_to_set_btn.clicked.connect(self.on_add_selected_problem_to_set)
         left_col.addWidget(self.add_to_set_btn, alignment=Qt.AlignLeft)
@@ -101,7 +110,7 @@ class SetEditorPanelQt(QWidget):
         self.delete_btn.setMinimumWidth(256)
         self.delete_btn.setMaximumWidth(256)
         font = self.delete_btn.font()
-        font.setPointSize(BUTTON_FONT_SIZE)
+        font.setPointSize(SET_EDITOR_CONTROL_BUTTON_FONT_SIZE)
         self.delete_btn.setFont(font)
         self.delete_btn.clicked.connect(self.delete_selected_set)
         left_col.addWidget(self.delete_btn, alignment=Qt.AlignLeft)
@@ -164,7 +173,7 @@ class SetEditorPanelQt(QWidget):
         for idx, (set_id, name, *_) in enumerate(sets):
             row = idx // cols
             col = idx % cols
-            btn = NeumorphicToolButton(name, font_size=BUTTON_FONT_SIZE)
+            btn = NeumorphicToolButton(name, font_size=SET_EDITOR_BUTTON_FONT_SIZE)
             btn.setMinimumWidth(215)
             btn.setMaximumWidth(215)
             btn.setCheckable(True)
