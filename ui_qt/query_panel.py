@@ -34,7 +34,7 @@ class QueryPanel(QWidget):
         print("[DEBUG] QueryInputsPanel sizeHint:", self.query_inputs_panel.sizeHint())
 
         # Set a maximum height for QueryPanel to prevent huge minimum size
-        self.setMaximumHeight(1500)
+        # self.setMaximumHeight(900)
 
         # Connect query button to emit signal (placeholder logic)
         self.query_button.clicked.connect(self.query_clicked.emit)
@@ -44,16 +44,13 @@ class QueryPanel(QWidget):
         query_grid = QGridLayout()
         query_grid.setSpacing(8)
 
-        self.browse_all_button = self.create_neumorphic_button("Browse All")
-        self.browse_all_button.setMinimumWidth(CONTROL_BTN_WIDTH)
-
         self.reset_button = self.create_neumorphic_button("Reset")
         self.reset_button.setMinimumWidth(CONTROL_BTN_WIDTH)
 
         self.query_button = self.create_neumorphic_button("Query")
         self.query_button.setMinimumWidth(CONTROL_BTN_WIDTH)
 
-        buttons = [self.browse_all_button, self.reset_button, self.query_button]
+        buttons = [self.reset_button, self.query_button]
         # Only add Preview button if not in main editor context
         if self.show_preview_and_nav_buttons:
             self.next_match_button = self.create_neumorphic_button("Next Match")

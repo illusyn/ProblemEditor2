@@ -92,6 +92,7 @@ class FileManager(QObject):
         Returns:
             bool: True if successful, False otherwise
         """
+       
         try:
             content = self.app.editor.get_content()
             with open(filepath, "w", encoding="utf-8") as file:

@@ -92,7 +92,7 @@ class MainWindow(QMainWindow):
         self.left_panel.query_panel.prev_match_button.clicked.connect(self.show_previous_problem)
         self.left_panel.preview_button.clicked.connect(self.update_preview)
         self.left_panel.query_panel.reset_button.clicked.connect(self.reset_fields)
-        self.left_panel.query_panel.browse_all_button.clicked.connect(self.browse_all_problems)
+        self.left_panel.save_problem_button.clicked.connect(self.save_current_problem)
         # Add Problem Browser 2 screen
         self.problem_manager_screen = ProblemManager(laptop_mode=laptop_mode)
         self.stacked_widget.addWidget(self.problem_manager_screen)
@@ -182,11 +182,19 @@ class MainWindow(QMainWindow):
             if earmark_filter and not p.get('earmark', 0):
                 continue
             results.append(p)
-        if not results:
+        # Always order results by problem_id ascending
+        if not (problem_id or search_text or selected_cats or earmark_filter):
+            self.current_results = sorted(problems, key=lambda p: int(p.get('problem_id', 0)))
+            self.current_result_index = 0
+            if self.current_results:
+                self.load_problem_into_ui(self.current_results[0])
+            else:
+                QMessageBox.information(self, "Query", "No problems found in the database.")
+        elif not results:
             self.current_results = []
             self.current_result_index = -1
         else:
-            self.current_results = results
+            self.current_results = sorted(results, key=lambda p: int(p.get('problem_id', 0)))
             self.current_result_index = 0
             self.load_problem_into_ui(self.current_results[0])
 
@@ -406,8 +414,12 @@ class MainWindow(QMainWindow):
         notes = self.left_panel.get_notes().strip()
         categories = [cat["name"] for cat in self.left_panel.category_panel.get_selected_categories()]
         earmark = 1 if self.left_panel.get_earmark() else 0
-        selected_types = self.left_panel.get_selected_type_ids()
+        selected_type_ids = self.left_panel.get_selected_type_ids()
+        # Map type IDs to type names for saving
+        type_id_to_name = {t['type_id']: t['name'] for t in self.left_panel.problem_type_panel.types}
+        selected_type_names = [type_id_to_name[tid] for tid in selected_type_ids if tid in type_id_to_name]
         db = MathProblemDB(self.problem_db.db_path)
+        print(f"======================>Saving self.problem_db.db_path: {self.problem_db.db_path}")
         try:
             if problem_id:
                 # Update problem
@@ -427,8 +439,8 @@ class MainWindow(QMainWindow):
                     db.add_problem_to_category(int(problem_id), cat_name)
                 # Update types
                 db.cur.execute("DELETE FROM problem_problem_types WHERE problem_id=?", (problem_id,))
-                for type_id in selected_types:
-                    db.add_problem_to_type(int(problem_id), type_id)
+                for type_name in selected_type_names:
+                    db.add_problem_to_type(int(problem_id), type_name)
                 # Update image mapping
                 update_problem_image_map(int(problem_id), content, db)
                 db.conn.commit()
@@ -445,8 +457,8 @@ class MainWindow(QMainWindow):
                 if not success:
                     QMessageBox.critical(self, "Save Problem", f"Failed to add problem: {new_id}")
                     return
-                for type_id in selected_types:
-                    db.add_problem_to_type(int(new_id), type_id)
+                for type_name in selected_type_names:
+                    db.add_problem_to_type(int(new_id), type_name)
                 # Update image mapping
                 update_problem_image_map(int(new_id), content, db)
                 db.conn.commit()
@@ -466,18 +478,6 @@ class MainWindow(QMainWindow):
     def show_editor_screen(self):
         self.stacked_widget.setCurrentWidget(self.editor_container)
         self.menuBar().setVisible(True)
-
-    def browse_all_problems(self):
-        self.current_results = self.problem_db.get_problems_list(limit=1000000)[1]
-        for p in self.current_results:
-            p['id'] = p['problem_id']
-        self.current_results.sort(key=lambda p: p['id'])
-        self.current_result_index = 0
-        if self.current_results:
-            self.load_problem_into_ui(self.current_results[0])
-            self.show_editor_screen()
-        else:
-            QMessageBox.information(self, "Browse All", "No problems found in the database.")
 
     def show_problem_manager_screen(self):
         self.stacked_widget.setCurrentWidget(self.problem_manager_screen)

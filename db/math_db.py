@@ -128,6 +128,16 @@ class MathProblemDB:
             )
         ''')
         
+        # Problem-image mapping table
+        self.cur.execute('''
+            CREATE TABLE IF NOT EXISTS problem_image_map (
+                problem_id INTEGER NOT NULL,
+                image_name TEXT NOT NULL,
+                PRIMARY KEY (problem_id, image_name),
+                FOREIGN KEY (problem_id) REFERENCES problems(problem_id) ON DELETE CASCADE
+            )
+        ''')
+        
         # Create indices for faster querying
         self.cur.execute('''
             CREATE INDEX IF NOT EXISTS idx_problem_images_problem_id 
@@ -416,7 +426,7 @@ class MathProblemDB:
                 params.extend([search_pattern, search_pattern, search_pattern])
             
             # Add ordering, limit and offset
-            query += " ORDER BY p.last_modified DESC LIMIT ? OFFSET ?"
+            query += " ORDER BY p.problem_id ASC LIMIT ? OFFSET ?"
             params.extend([limit, offset])
             
             # Execute query

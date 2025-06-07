@@ -288,6 +288,14 @@ class QueryInputsPanel(QWidget):
         # --- Sets Panel (for filtering) ---
         self.set_panel = SetInputsPanelQt()
         main_layout.addWidget(self.set_panel)
+        # --- Notes field ---
+        notes_label = QLabel("Notes")
+        notes_label.setFont(QFont(FONT_FAMILY, LABEL_FONT_SIZE, QFont.Bold))
+        notes_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; padding: 0px; margin: 0px; background: {WINDOW_BG_COLOR};")
+        main_layout.addWidget(notes_label)
+        from ui_qt.neumorphic_components import NeumorphicTextEdit
+        self.notes_text = NeumorphicTextEdit()
+        main_layout.addWidget(self.notes_text)
     
     def _create_basic_inputs(self, main_layout):
         """Create the basic input fields (Problem ID, Search Text, Answer)"""
@@ -535,3 +543,11 @@ class QueryInputsPanel(QWidget):
 
     def set_selected_set_ids(self, set_ids):
         self.set_panel.set_selected_set_ids(set_ids)
+
+    def set_notes(self, text):
+        """Set the notes input value"""
+        self.notes_text.setPlainText(text)
+
+    def get_notes(self):
+        """Get the notes input value"""
+        return self.notes_text.toPlainText()
