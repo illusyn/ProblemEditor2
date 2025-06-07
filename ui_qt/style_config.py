@@ -9,12 +9,14 @@ from PyQt5.QtGui import QPainter, QColor, QBrush, QFont
 from PyQt5.QtCore import Qt
 
 # --- Base (unscaled) values ---
+# Font Sizes
+BASE_SECTION_LABEL_FONT_SIZE = 20
+BASE_CONTROL_BTN_FONT_SIZE = 16
+BASE_BUTTON_FONT_SIZE = 15
 BASE_LABEL_FONT_SIZE = 14
-BASE_SECTION_LABEL_FONT_SIZE = 17
-BASE_BUTTON_FONT_SIZE = 16
-BASE_ENTRY_FONT_SIZE = 16
-BASE_NOTES_FONT_SIZE = 16
-BASE_CONTROL_BTN_FONT_SIZE = 14
+BASE_ENTRY_FONT_SIZE = 13
+BASE_NOTES_FONT_SIZE = 13
+
 BASE_CONTROL_BTN_WIDTH = 240
 BASE_CONTROL_BTN_HEIGHT = 56
 BASE_ENTRY_HEIGHT = 44
@@ -138,7 +140,14 @@ def set_scale(profile="main"):
 
 # Set initial scale (choose "main" or "laptop")
 set_scale("main")
-print(f"===================BUTTON_MIN_WIDTH: {BUTTON_MIN_WIDTH}")
+
+print(f"===================SECTION_LABEL_FONT_SIZE: {SECTION_LABEL_FONT_SIZE}")
+print(f"===================CONTROL_BTN_FONT_SIZE: {CONTROL_BTN_FONT_SIZE}")
+print(f"===================BUTTON_FONT_SIZE: {BUTTON_FONT_SIZE}")
+print(f"===================LABEL_FONT_SIZE: {LABEL_FONT_SIZE}")
+print(f"===================ENTRY_FONT_SIZE: {ENTRY_FONT_SIZE}")
+print(f"===================NOTES_FONT_SIZE: {NOTES_FONT_SIZE}")
+
 # Font settings
 FONT_FAMILY = "Courier"  # Base font family
 FONT_WEIGHT = "Bold"     # Base font weight
@@ -285,8 +294,6 @@ ENTRY_MIN_HEIGHT = int(44 * _scale)
 ENTRY_PADDING_LEFT = int(14 * _scale)
 TEXTEDIT_PADDING = int(16 * _scale)
 SHADOW_RECT_ADJUST = int(8 * _scale)  # Used for rect.adjusted(8, 8, -8, -8)
-
-CONTROL_BTN_FONT_SIZE = int(14 * _scale)
 
 def _load_palette_name():
     config_path = os.path.join(os.getcwd(), "default_config.json")

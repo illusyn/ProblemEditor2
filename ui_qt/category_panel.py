@@ -20,8 +20,7 @@ class NeumorphicToolButton(QToolButton):
         self.setMinimumWidth(CATEGORY_BTN_WIDTH)
         self.setMinimumHeight(CATEGORY_BTN_HEIGHT)
         self.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR};")
-        print(f"[DEBUG] NeumorphicToolButton created: text='{text}', minimumHeight={self.minimumHeight()}, sizeHint={self.sizeHint().height()}, font={self.font_family} {self.font_size}")
-
+ 
     def paintEvent(self, event):
         painter = QPainter(self)
         try:
@@ -85,7 +84,6 @@ class CategoryPanelQt(QWidget):
             btn.clicked.connect(lambda checked, cid=cat["category_id"]: self.toggle_category(cid))
             layout.addWidget(btn, idx // 2, idx % 2)
             self.buttons[cat["category_id"]] = btn
-            print(f"[DEBUG] CategoryPanelQt: Added button for category '{cat['name']}', height={btn.height()}, sizeHint={btn.sizeHint().height()}")
 
     def toggle_category(self, category_id):
         btn = self.buttons[category_id]
