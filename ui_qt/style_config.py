@@ -242,11 +242,11 @@ NOTES_PADDING = int(16 * _scale)
 # Layout and sizing
 CONTROL_BTN_WIDTH = int(240 * _scale)
 CONTROL_BTN_HEIGHT = int(56 * _scale)
-ENTRY_HEIGHT = int(44 * _scale)
-NOTES_MIN_HEIGHT = int(100 * _scale)
-PADDING = int(30 * _scale)
-SPACING = int(28 * _scale)
-SECTION_SPACING = int(18 * _scale)
+ENTRY_HEIGHT = int(48 * _scale)
+NOTES_MIN_HEIGHT = int(1 * _scale)
+PADDING = int(10 * _scale)
+SPACING = int(10 * _scale)
+SECTION_SPACING = int(28 * _scale)
 
 # Entry field specific widths
 PROB_ID_ENTRY_WIDTH = int(120 * _scale)

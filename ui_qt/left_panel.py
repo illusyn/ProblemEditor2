@@ -29,6 +29,7 @@ class LeftPanel(QWidget):
             self.setFixedWidth(600)
         else:
             self.setFixedWidth(780)
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
         
         self.setStyleSheet(f"background-color: {WINDOW_BG_COLOR};")
         
@@ -51,6 +52,7 @@ class LeftPanel(QWidget):
         # --- QueryPanel (contains query controls and inputs) ---
         self.query_panel = QueryPanel(laptop_mode=self.laptop_mode)
         main_layout.addWidget(self.query_panel)
+        main_layout.addStretch(1)
         # Wire up problem_display_panel for set panel add-to-set button
         parent_widget = self.parent()
         if parent_widget is not None and hasattr(parent_widget, 'problem_display_panel'):
@@ -62,7 +64,7 @@ class LeftPanel(QWidget):
         self.problem_browser2_button = self.create_neumorphic_button("Problem Browser")
         self.problem_browser2_button.setMinimumWidth(CONTROL_BTN_WIDTH)
         top_row.addWidget(self.problem_browser2_button)
-        top_row.addStretch()
+        top_row.addStretch(1)
         self.save_problem_button = self.create_neumorphic_button("Save Problem")
         self.save_problem_button.setMinimumWidth(CONTROL_BTN_WIDTH)
         top_row.addWidget(self.save_problem_button)

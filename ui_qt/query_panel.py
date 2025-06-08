@@ -1,5 +1,5 @@
 # query_panel.py
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGridLayout
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QSizePolicy
 from PyQt5.QtCore import pyqtSignal
 from ui_qt.query_inputs_panel import QueryInputsPanel
 from ui_qt.neumorphic_components import NeumorphicButton
@@ -15,6 +15,7 @@ class QueryPanel(QWidget):
         self.laptop_mode = laptop_mode
         self.show_preview_and_nav_buttons = show_preview_and_nav_buttons
         self.setStyleSheet(f"background-color: {WINDOW_BG_COLOR};")
+        self.setSizePolicy(self.sizePolicy().horizontalPolicy(), QSizePolicy.Minimum)
         self._init_ui()
 
     def _init_ui(self):

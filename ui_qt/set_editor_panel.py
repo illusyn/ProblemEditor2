@@ -1,6 +1,6 @@
-from PyQt5.QtWidgets import QScrollArea, QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton, QMessageBox, QLabel, QTableWidget, QTableWidgetItem, QAbstractItemView, QStyledItemDelegate, QStyle, QGridLayout
+from PyQt5.QtWidgets import QScrollArea, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QMessageBox, QLabel, QTableWidget, QTableWidgetItem, QAbstractItemView, QStyledItemDelegate, QStyle, QGridLayout, QFrame
 from db.problem_set_db import ProblemSetDB
-from ui_qt.neumorphic_components import NeumorphicButton
+from ui_qt.neumorphic_components import NeumorphicButton, NeumorphicEntry, NeumorphicTextEdit
 from ui_qt.style_config import BUTTON_MIN_HEIGHT, BUTTON_MIN_WIDTH, FONT_FAMILY, SECTION_LABEL_FONT_SIZE, NEUMORPH_TEXT_COLOR, NEUMORPH_BG_COLOR, NEUMORPH_SHADOW_DARK, NEUMORPH_SHADOW_LIGHT, CATEGORY_BTN_SELECTED_COLOR, NEUMORPH_RADIUS, SET_EDITOR_CONTROL_BUTTON_FONT_SIZE, SET_EDITOR_BUTTON_FONT_SIZE, SET_EDITOR_LABEL_FONT_SIZE, SET_EDITOR_HEAD_FONT_SIZE
 from PyQt5.QtCore import Qt, pyqtSignal, QRect
 from PyQt5.QtGui import QFont, QColor, QBrush, QPen, QPainter
@@ -53,9 +53,16 @@ class SetEditorPanelQt(QWidget):
     add_selected_problems_to_set = pyqtSignal(list, object)  # selected_problems, selected_set_id
     def __init__(self, parent=None):
         super().__init__(parent)
-        # self.setStyleSheet("background: #ccffcc;")
-        outer_layout = QVBoxLayout(self)
-        self.setLayout(outer_layout)
+        # --- Wrap all contents in a QFrame with border ---
+        self.outer_frame = QFrame()
+        self.outer_frame.setFrameShape(QFrame.StyledPanel)
+        self.outer_frame.setStyleSheet('QFrame { border: 2px solid #888; border-radius: 12px; background: transparent; }')
+        outer_layout = QVBoxLayout(self.outer_frame)
+        outer_layout.setContentsMargins(8, 8, 8, 8)
+        outer_layout.setSpacing(12)
+        self.setLayout(QVBoxLayout())
+        self.layout().setContentsMargins(0, 0, 0, 0)
+        self.layout().addWidget(self.outer_frame)
         # Title label
         title_label = QLabel("Set Editor")
         title_label.setFont(QFont(FONT_FAMILY, SET_EDITOR_HEAD_FONT_SIZE, QFont.Bold))
@@ -66,77 +73,61 @@ class SetEditorPanelQt(QWidget):
         main_layout = QHBoxLayout()
         outer_layout.addLayout(main_layout)
 
-        # --- Left column: label, entry, buttons ---
-        left_col = QVBoxLayout()
-        # Set Name label
+        # --- Top row: set name entry and buttons ---
+        top_row = QHBoxLayout()
         name_label = QLabel("Set Name")
         name_label.setFont(QFont(FONT_FAMILY, SET_EDITOR_LABEL_FONT_SIZE, QFont.Bold))
         name_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR};")
-        left_col.addWidget(name_label, alignment=Qt.AlignHCenter)
-        # Set Name entry
-        self.name_edit = QLineEdit()
-        # self.name_edit.setPlaceholderText("Enter set name")
+        top_row.addWidget(name_label)
+        self.name_edit = NeumorphicEntry()
         self.name_edit.setFixedWidth(256)
         entry_font = self.name_edit.font()
         entry_font.setPointSize(SET_EDITOR_LABEL_FONT_SIZE)
         self.name_edit.setFont(entry_font)
-        left_col.addWidget(self.name_edit)
-        # Button stack (vertical)
+        top_row.addWidget(self.name_edit)
         self.create_btn = NeumorphicButton("Create Set")
         self.create_btn.setMinimumHeight(BUTTON_MIN_HEIGHT)
         self.create_btn.setMaximumHeight(BUTTON_MIN_HEIGHT)
-        self.create_btn.setMinimumWidth(256)
-        self.create_btn.setMaximumWidth(256)
+        self.create_btn.setMinimumWidth(140)
+        self.create_btn.setMaximumWidth(180)
         font = self.create_btn.font()
         font.setPointSize(SET_EDITOR_CONTROL_BUTTON_FONT_SIZE)
         self.create_btn.setFont(font)
         self.create_btn.clicked.connect(self.create_set)
-        left_col.addWidget(self.create_btn, alignment=Qt.AlignLeft)
-
+        top_row.addWidget(self.create_btn)
         self.add_to_set_btn = NeumorphicButton("Add Problems to Set")
         self.add_to_set_btn.setMinimumHeight(BUTTON_MIN_HEIGHT)
         self.add_to_set_btn.setMaximumHeight(BUTTON_MIN_HEIGHT)
-        self.add_to_set_btn.setMinimumWidth(256)
-        self.add_to_set_btn.setMaximumWidth(256)
+        self.add_to_set_btn.setMinimumWidth(180)
+        self.add_to_set_btn.setMaximumWidth(220)
         font = self.add_to_set_btn.font()
         font.setPointSize(SET_EDITOR_CONTROL_BUTTON_FONT_SIZE)
         self.add_to_set_btn.setFont(font)
         self.add_to_set_btn.clicked.connect(self.on_add_selected_problem_to_set)
-        left_col.addWidget(self.add_to_set_btn, alignment=Qt.AlignLeft)
-
+        top_row.addWidget(self.add_to_set_btn)
         self.delete_btn = NeumorphicButton("Delete Selected Set")
         self.delete_btn.setMinimumHeight(BUTTON_MIN_HEIGHT)
         self.delete_btn.setMaximumHeight(BUTTON_MIN_HEIGHT)
-        self.delete_btn.setMinimumWidth(256)
-        self.delete_btn.setMaximumWidth(256)
+        self.delete_btn.setMinimumWidth(180)
+        self.delete_btn.setMaximumWidth(220)
         font = self.delete_btn.font()
         font.setPointSize(SET_EDITOR_CONTROL_BUTTON_FONT_SIZE)
         self.delete_btn.setFont(font)
         self.delete_btn.clicked.connect(self.delete_selected_set)
-        left_col.addWidget(self.delete_btn, alignment=Qt.AlignLeft)
-        left_col.addStretch(1)
-        main_layout.addLayout(left_col)
+        top_row.addWidget(self.delete_btn)
+        top_row.addStretch(1)
+        outer_layout.addLayout(top_row)
 
-        # --- Right column: scrollable neumorphic set selector ---
+        # --- Set grid: full width below top row ---
         self.set_grid_widget = QWidget()
         self.set_grid_layout = QGridLayout(self.set_grid_widget)
         self.set_grid_layout.setSpacing(16)
         self.set_grid_layout.setContentsMargins(0, 0, 0, 0)
-        # Wrap grid in a scroll area
         self.set_scroll_area = QScrollArea()
         self.set_scroll_area.setWidgetResizable(True)
         self.set_scroll_area.setWidget(self.set_grid_widget)
         self.set_scroll_area.setStyleSheet('border: none;')
-        # Calculate tile/button height (match category panel)
-        tile_width = 215
-        tile_height = BUTTON_MIN_HEIGHT if 'BUTTON_MIN_HEIGHT' in globals() else 56
-        visible_rows = 3
-        visible_cols = 3
-        spacing = self.set_grid_layout.spacing()
-        grid_height = visible_rows * tile_height + (visible_rows - 1) * spacing
-        grid_width = visible_cols * tile_width + (visible_cols - 1) * spacing
-        self.set_scroll_area.setFixedSize(grid_width + self.set_scroll_area.verticalScrollBar().sizeHint().width(), grid_height)
-        main_layout.addWidget(self.set_scroll_area, stretch=1)
+        outer_layout.addWidget(self.set_scroll_area, stretch=1)
         self.set_buttons = {}  # set_id: button
         self.selected_set_id = None
         self.refresh_sets()

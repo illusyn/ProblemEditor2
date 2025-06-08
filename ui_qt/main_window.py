@@ -16,7 +16,6 @@ from pathlib import Path
 import os
 from converters.image_converter import ImageConverter
 from ui_qt.style_config import active_palette, MultiShadowButton, WINDOW_BG_COLOR, FONT_FAMILY, BUTTON_FONT_SIZE, LABEL_FONT_SIZE, NOTES_FONT_SIZE
-print(f"---------------WINDOW_BG_COLOR: {WINDOW_BG_COLOR}")
 from PyQt5.QtGui import QFont
 from ui_qt.problem_manager import ProblemManager
 from ui_qt.problem_display_panel import ProblemDisplayPanel
@@ -76,6 +75,7 @@ class MainWindow(QMainWindow):
         file_menu.addAction(export_action)
 
         self.setMenuBar(menubar)
+        self.menuBar().setVisible(False)
 
         # Central widget and layout
         self.stacked_widget = QStackedWidget(self)
@@ -127,7 +127,8 @@ class MainWindow(QMainWindow):
         self.stacked_widget.addWidget(self.editor_container)
         # Show editor by default
         self.stacked_widget.setCurrentWidget(self.editor_container)
-        self.menuBar().setVisible(True)
+        # Set fixed height for LeftPanel after layout is set up
+        self.left_panel.setFixedHeight(self.left_panel.sizeHint().height())
 
     def update_preview(self):
         """Update the preview with current editor content, ensuring all images are available for LaTeX."""
@@ -477,11 +478,9 @@ class MainWindow(QMainWindow):
 
     def show_editor_screen(self):
         self.stacked_widget.setCurrentWidget(self.editor_container)
-        self.menuBar().setVisible(True)
 
     def show_problem_manager_screen(self):
         self.stacked_widget.setCurrentWidget(self.problem_manager_screen)
-        self.menuBar().setVisible(True)
 
     def on_add_selected_problems_to_sets(self):
         selected_problems = self.problem_display_panel.get_selected_problems()
@@ -503,3 +502,11 @@ class MainWindow(QMainWindow):
                 else:
                     already += 1
         QMessageBox.information(self, "Add to Set", f"Added {added} problems to {len(selected_sets)} set(s). Already present: {already}.") 
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        max_height = int(self.height() * 2 / 3)
+        if hasattr(self, 'editor_panel'):
+            self.editor_panel.setMaximumHeight(max_height)
+        if hasattr(self, 'preview_panel'):
+            self.preview_panel.setMaximumHeight(max_height) 

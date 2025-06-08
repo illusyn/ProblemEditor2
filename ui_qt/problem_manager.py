@@ -33,8 +33,12 @@ class ProblemManager(QWidget):
         left_vbox.addLayout(btn_row)
         self.query_panel = QueryPanel(laptop_mode=laptop_mode, show_preview_and_nav_buttons=False)
         left_vbox.addWidget(self.query_panel, stretch=1)
-        self.set_editor_panel = SetEditorPanelQt(self)
-        left_vbox.addWidget(self.set_editor_panel)
+        # Remove SetEditorPanelQt and Add-to-Set button from here
+        # Add-to-Set logic will be handled in SetEditorPanelQt
+        # If using a QWidget for the left panel, set its background to transparent for debugging
+        # If not, set the background of the parent widget of left_vbox to transparent
+        # Example (if left_panel_widget exists):
+        # left_panel_widget.setStyleSheet('background: transparent;')
         content_layout.addWidget(left_panel_widget, stretch=2)  # 40%
         # --- Right side: Problem display only ---
         right_panel = QWidget()
@@ -54,12 +58,6 @@ class ProblemManager(QWidget):
         self.selected_set_ids = set()
         print(f"-------------------->set():{set()}")
         self.problem_display_panel.selection_changed.connect(self.on_problems_selected)
-        # Remove SetPanelQt and Add-to-Set button from here
-        # Add-to-Set logic will be handled in SetEditorPanelQt
-        # If using a QWidget for the left panel, set its background to transparent for debugging
-        # If not, set the background of the parent widget of left_vbox to transparent
-        # Example (if left_panel_widget exists):
-        # left_panel_widget.setStyleSheet('background: transparent;')
 
     def get_selected_problem_ids(self):
         return [p.get('problem_id') for p in self.problem_display_panel.get_selected_problems()]

@@ -9,7 +9,7 @@ This module contains ALL query-related input components:
 
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QLabel, QTextEdit, 
-    QLineEdit, QPushButton, QCheckBox, QScrollArea, QSizePolicy, QGroupBox, QComboBox
+    QLineEdit, QPushButton, QCheckBox, QScrollArea, QSizePolicy, QGroupBox, QComboBox, QFrame, QStackedWidget
 )
 from PyQt5.QtGui import QFont, QColor, QPainter, QBrush, QLinearGradient
 from PyQt5.QtCore import Qt
@@ -31,136 +31,8 @@ from ui_qt.style_config import (
 )
 from db.problem_set_db import ProblemSetDB
 from ui_qt.set_inputs_panel import SetInputsPanelQt
-
-class NeumorphicButton(QPushButton):
-    def __init__(self, text, parent=None, radius=NEUMORPH_RADIUS, bg_color=NEUMORPH_BG_COLOR, 
-                 shadow_dark=NEUMORPH_SHADOW_DARK, shadow_light=NEUMORPH_SHADOW_LIGHT, 
-                 font_family=FONT_FAMILY, font_size=BUTTON_FONT_SIZE, font_color=BUTTON_FONT_COLOR):
-        super().__init__(text, parent)
-        self.radius = radius
-        self.bg_color = bg_color
-        self.shadow_dark = shadow_dark
-        self.shadow_light = shadow_light
-        self.font_family = font_family
-        self.font_size = font_size
-        self.font_color = font_color
-        self.setFont(QFont(self.font_family, self.font_size, QFont.Bold))
-        self.setStyleSheet("background: transparent; border: none;")
-        self.setMinimumHeight(BUTTON_MIN_HEIGHT)
-        self.setMinimumWidth(BUTTON_MIN_WIDTH)
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        try:
-            painter.setRenderHint(QPainter.Antialiasing)
-            rect = self.rect().adjusted(SHADOW_RECT_ADJUST, SHADOW_RECT_ADJUST, -SHADOW_RECT_ADJUST, -SHADOW_RECT_ADJUST)
-            # Multi-layered blurred shadow (bottom-right)
-            for i, alpha in zip(SHADOW_OFFSETS, [40, 60, 90]):
-                shadow = QColor(self.shadow_dark)
-                shadow.setAlpha(alpha)
-                painter.setBrush(QBrush(shadow))
-                painter.setPen(Qt.NoPen)
-                painter.drawRoundedRect(rect.translated(i, i), self.radius, self.radius)
-            # Multi-layered highlight (top-left)
-            for i, alpha in zip(SHADOW_OFFSETS, [30, 50, 80]):
-                highlight = QColor(self.shadow_light)
-                highlight.setAlpha(alpha)
-                painter.setBrush(QBrush(highlight))
-                painter.drawRoundedRect(rect.translated(-i, -i), self.radius, self.radius)
-            # Solid background (highlight if checked)
-            if self.isCheckable() and self.isChecked():
-                painter.setBrush(QBrush(QColor(CATEGORY_BTN_SELECTED_COLOR)))
-            else:
-                painter.setBrush(QBrush(QColor(self.bg_color)))
-            painter.drawRoundedRect(rect, self.radius, self.radius)
-            # Text
-            painter.setPen(QColor(self.font_color))
-            painter.setFont(QFont(self.font_family, self.font_size, QFont.Bold))
-            painter.drawText(rect, Qt.AlignCenter, self.text())
-        finally:
-            painter.end()
-
-class NeumorphicEntry(QLineEdit):
-    def __init__(self, parent=None, radius=ENTRY_BORDER_RADIUS, bg_color=ENTRY_BG_COLOR, 
-                 shadow_dark=NEUMORPH_SHADOW_DARK, shadow_light=NEUMORPH_SHADOW_LIGHT, 
-                 font_family=FONT_FAMILY, font_size=ENTRY_FONT_SIZE, font_color=ENTRY_FONT_COLOR):
-        super().__init__(parent)
-        self.radius = radius
-        self.bg_color = bg_color
-        self.shadow_dark = shadow_dark
-        self.shadow_light = shadow_light
-        self.font_family = font_family
-        self.font_size = font_size
-        self.font_color = font_color
-        self.setFont(QFont(self.font_family, self.font_size, QFont.Bold))
-        self.setStyleSheet(f"background: transparent; border: none; color: {self.font_color}; padding-left: {ENTRY_PADDING_LEFT}px;")
-        self.setMinimumHeight(ENTRY_MIN_HEIGHT)
-
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        try:
-            painter.setRenderHint(QPainter.Antialiasing)
-            rect = self.rect().adjusted(SHADOW_RECT_ADJUST, SHADOW_RECT_ADJUST, -SHADOW_RECT_ADJUST, -SHADOW_RECT_ADJUST)
-            # Sunken effect: shadow top-left, highlight bottom-right
-            for i, alpha in zip(SHADOW_OFFSETS, [40, 60, 90]):
-                shadow = QColor(self.shadow_dark)
-                shadow.setAlpha(alpha)
-                painter.setBrush(QBrush(shadow))
-                painter.setPen(Qt.NoPen)
-                painter.drawRoundedRect(rect.translated(-i, -i), self.radius, self.radius)
-            for i, alpha in zip(SHADOW_OFFSETS, [30, 50, 80]):
-                highlight = QColor(self.shadow_light)
-                highlight.setAlpha(alpha)
-                painter.setBrush(QBrush(highlight))
-                painter.drawRoundedRect(rect.translated(i, i), self.radius, self.radius)
-            # Solid background (no gradient)
-            painter.setBrush(QBrush(QColor(self.bg_color)))
-            painter.drawRoundedRect(rect, self.radius, self.radius)
-            # Call base class paint for text/cursor
-            super().paintEvent(event)
-        finally:
-            painter.end()
-
-class NeumorphicTextEdit(QTextEdit):
-    def __init__(self, parent=None, radius=NOTES_BORDER_RADIUS, bg_color=NOTES_BG_COLOR, 
-                 shadow_dark=NEUMORPH_SHADOW_DARK, shadow_light=NEUMORPH_SHADOW_LIGHT, 
-                 font_family=FONT_FAMILY, font_size=NOTES_FONT_SIZE, font_color=NOTES_FONT_COLOR):
-        super().__init__(parent)
-        self.radius = radius
-        self.bg_color = bg_color
-        self.shadow_dark = shadow_dark
-        self.shadow_light = shadow_light
-        self.font_family = font_family
-        self.font_size = font_size
-        self.font_color = font_color
-        self.setFont(QFont(self.font_family, self.font_size, QFont.Bold))
-        self.setStyleSheet(f"background: transparent; border: none; color: {self.font_color}; padding: {TEXTEDIT_PADDING}px;")
-        self.setFixedHeight(NOTES_FIXED_HEIGHT)  # Use centralized height
-
-    def paintEvent(self, event):
-        painter = QPainter(self.viewport())
-        try:
-            painter.setRenderHint(QPainter.Antialiasing)
-            rect = self.rect().adjusted(SHADOW_RECT_ADJUST, SHADOW_RECT_ADJUST, -SHADOW_RECT_ADJUST, -SHADOW_RECT_ADJUST)
-            # Multi-layered blurred shadow (bottom-right)
-            for i, alpha in zip(SHADOW_OFFSETS, [40, 60, 90]):
-                shadow = QColor(self.shadow_dark)
-                shadow.setAlpha(alpha)
-                painter.setBrush(QBrush(shadow))
-                painter.setPen(Qt.NoPen)
-                painter.drawRoundedRect(rect.translated(i, i), self.radius, self.radius)
-            # Multi-layered highlight (top-left)
-            for i, alpha in zip(SHADOW_OFFSETS, [30, 50, 80]):
-                highlight = QColor(self.shadow_light)
-                highlight.setAlpha(alpha)
-                painter.setBrush(QBrush(highlight))
-                painter.drawRoundedRect(rect.translated(-i, -i), self.radius, self.radius)
-            # Solid background (no gradient)
-            painter.setBrush(QBrush(QColor(self.bg_color)))
-            painter.drawRoundedRect(rect, self.radius, self.radius)
-            super().paintEvent(event)
-        finally:
-            painter.end()
+from ui_qt.set_editor_panel import SetEditorPanelQt
+from ui_qt.neumorphic_components import NeumorphicButton, NeumorphicEntry, NeumorphicTextEdit
 
 class ProblemTypePanelQt(QWidget):
     def __init__(self, parent=None, types=None):
@@ -184,7 +56,7 @@ class ProblemTypePanelQt(QWidget):
             btn.clicked.connect(lambda checked, tid=t["type_id"]: self.toggle_type(tid))
             layout.addWidget(btn)
             self.buttons[t["type_id"]] = btn
-        layout.addStretch()
+        # layout.addStretch()
         self.setLayout(layout)
 
     def toggle_type(self, type_id):
@@ -216,16 +88,19 @@ class QueryInputsPanel(QWidget):
         super().__init__(parent)
         self.setStyleSheet('background: transparent;')
         self.laptop_mode = laptop_mode
-        # --- Wrap all contents in a QGroupBox ---
-        from PyQt5.QtWidgets import QGroupBox, QVBoxLayout
-        self.outer_groupbox = QGroupBox("")
-        outer_layout = QVBoxLayout(self.outer_groupbox)
-        outer_layout.setContentsMargins(8, 8, 8, 8)
+        # --- Wrap all contents in a QFrame with border ---
+        self.outer_frame = QFrame()
+        self.outer_frame.setFrameShape(QFrame.StyledPanel)
+        self.outer_frame.setStyleSheet('QFrame { border: 2px solid #888; border-radius: 12px; background: transparent; }')
+        self.outer_frame.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
+        outer_layout = QVBoxLayout(self.outer_frame)
+        outer_layout.setContentsMargins(0, 0, 0, 0)
         outer_layout.setSpacing(SPACING)
         self.init_ui(outer_layout)
+        self.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.addWidget(self.outer_groupbox)
+        main_layout.addWidget(self.outer_frame)
     
     def init_ui(self, main_layout=None):
         """Initialize the UI components"""
@@ -234,21 +109,23 @@ class QueryInputsPanel(QWidget):
             main_layout.setContentsMargins(0, 0, 0, 0)  # No extra margins
             main_layout.setSpacing(SPACING)
         
-        # --- Basic Inputs Row (Problem ID, Search Text, Answer) ---
-        self._create_basic_inputs(main_layout)
+        # --- Group box for basic inputs and earmark/problem type row ---
+        self.query_inputs_groupbox = QGroupBox("")
+        groupbox_layout = QVBoxLayout(self.query_inputs_groupbox)
+        groupbox_layout.setContentsMargins(0, 0, 0, 0)
+        groupbox_layout.setSpacing(0)
         
-        # Add spacing before advanced inputs
-        main_layout.addSpacing(4)
+        # --- Basic Inputs Row (Problem ID, Search Text, Answer) ---
+        self._create_basic_inputs(groupbox_layout)
         
         # --- Earmark checkbox and Problem type buttons on the same row ---
         earmark_and_types_row = QHBoxLayout()
-        earmark_and_types_row.setSpacing(16)
+        earmark_and_types_row.setSpacing(8)
         earmark_and_types_row.setContentsMargins(0, 0, 0, 0)
         self.earmark_checkbox = QCheckBox("Earmark")
         self.earmark_checkbox.setFont(QFont(FONT_FAMILY, LABEL_FONT_SIZE, QFont.Bold))
         self.earmark_checkbox.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; margin-left: 10px;")
         earmark_and_types_row.addWidget(self.earmark_checkbox)
-        
         from db.math_db import MathProblemDB
         db = MathProblemDB()
         types = db.cur.execute("SELECT type_id, name FROM problem_types ORDER BY name").fetchall()
@@ -257,45 +134,71 @@ class QueryInputsPanel(QWidget):
         self.problem_type_panel = ProblemTypePanelQt(types=type_dicts)
         self.problem_type_panel.setContentsMargins(0, 0, 0, 0)
         self.problem_type_panel.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-        earmark_and_types_row.addSpacing(12)
+        earmark_and_types_row.addSpacing(1)
         earmark_and_types_row.addWidget(self.problem_type_panel)
-        earmark_and_types_row.addStretch(20)
-        main_layout.addLayout(earmark_and_types_row)
+        earmark_and_types_row.addStretch(2)
+        groupbox_layout.addLayout(earmark_and_types_row)
         
-        main_layout.addSpacing(40)  # Add space after problem type buttons
+        main_layout.addWidget(self.query_inputs_groupbox)
+        main_layout.addSpacing(2)
         
         # Remove or reduce spacing before Math Domains
-        main_layout.addSpacing(-40)  # Minimal spacing
+        # main_layout.addSpacing(-20)  # Back to previous value
         
         # --- Math Domains Section ---
+        self.domains_groupbox = QGroupBox("")
+        domains_groupbox_layout = QVBoxLayout(self.domains_groupbox)
+        domains_groupbox_layout.setContentsMargins(0, 0, 0, 0)
+        domains_groupbox_layout.setSpacing(0)
         domains_label = QLabel("Math Domains")
         domains_label.setFont(QFont(FONT_FAMILY, SECTION_LABEL_FONT_SIZE, QFont.Bold))
-        domains_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; padding-top: 0px; padding-bottom: 0px; margin-top: 0px; margin-bottom: 0px; background: {WINDOW_BG_COLOR};")
-        domains_label.setMaximumHeight(16)
+        domains_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; padding-top: 4px; padding-bottom: 4px; margin-top: 0px; margin-bottom: 0px; background: {WINDOW_BG_COLOR};")
+        domains_label.setMinimumHeight(30)
         domains_label.setAlignment(Qt.AlignCenter)
-        main_layout.addWidget(domains_label)
-        
+        domains_groupbox_layout.addWidget(domains_label)
         self.category_panel = CategoryPanelQt()
         self.category_groupbox = QGroupBox("")
-        self.category_groupbox.setMinimumHeight(440)
+        self.category_groupbox.setMinimumHeight(400)
         category_layout = QVBoxLayout(self.category_groupbox)
         category_layout.setContentsMargins(0, 0, 0, 0)
         category_layout.setSpacing(0)
-        category_layout.addWidget(self.category_panel)
+        self.category_frame = QFrame()
+        self.category_frame.setFrameShape(QFrame.StyledPanel)
+        self.category_frame.setStyleSheet('QFrame { border: 2px solid #888; border-radius: 12px; background: transparent; }')
+        frame_layout = QVBoxLayout(self.category_frame)
+        frame_layout.setContentsMargins(0, 0, 0, 0)
+        frame_layout.setSpacing(0)
+        frame_layout.addWidget(self.category_panel)
+        self.category_frame.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
+        category_layout.addWidget(self.category_frame)
         self.category_groupbox.setLayout(category_layout)
-        main_layout.addWidget(self.category_groupbox)
+        domains_groupbox_layout.addWidget(self.category_groupbox)
+        main_layout.addWidget(self.domains_groupbox)
         
         # --- Sets Panel (for filtering) ---
         self.set_panel = SetInputsPanelQt()
-        main_layout.addWidget(self.set_panel)
-        # --- Notes field ---
-        notes_label = QLabel("Notes")
-        notes_label.setFont(QFont(FONT_FAMILY, LABEL_FONT_SIZE, QFont.Bold))
-        notes_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; padding: 0px; margin: 0px; background: {WINDOW_BG_COLOR};")
-        main_layout.addWidget(notes_label)
-        from ui_qt.neumorphic_components import NeumorphicTextEdit
-        self.notes_text = NeumorphicTextEdit()
-        main_layout.addWidget(self.notes_text)
+
+        # --- Toggle Set Editor Button and QStackedWidget ---
+        self.toggle_set_editor_btn = QPushButton("Open Set Editor")
+        self.toggle_set_editor_btn.setFont(QFont(FONT_FAMILY, LABEL_FONT_SIZE, QFont.Bold))
+        self.toggle_set_editor_btn.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; margin: 8px 0px 8px 0px;")
+        main_layout.addWidget(self.toggle_set_editor_btn)
+
+        self.set_stack = QStackedWidget()
+        self.set_stack.addWidget(self.set_panel)
+        self.set_editor_panel = SetEditorPanelQt()
+        self.set_stack.addWidget(self.set_editor_panel)
+        main_layout.addWidget(self.set_stack)
+
+        # Button logic to toggle between set selector and set editor
+        def toggle_set_editor():
+            if self.set_stack.currentIndex() == 0:
+                self.set_stack.setCurrentIndex(1)
+                self.toggle_set_editor_btn.setText("Close Set Editor")
+            else:
+                self.set_stack.setCurrentIndex(0)
+                self.toggle_set_editor_btn.setText("Open Set Editor")
+        self.toggle_set_editor_btn.clicked.connect(toggle_set_editor)
     
     def _create_basic_inputs(self, main_layout):
         """Create the basic input fields (Problem ID, Search Text, Answer)"""
@@ -328,10 +231,10 @@ class QueryInputsPanel(QWidget):
             lbl.setMinimumHeight(LABEL_FONT_SIZE + 4)  # Ensure label is always visible
             
             col.addWidget(lbl, alignment=Qt.AlignLeft)
-            col.addSpacing(8)  # More space between label and entry
+            col.addSpacing(1)  #@@ # More space between label and entry
             
             # Set entry height and add to column
-            entry.setMinimumHeight(36)  # Entry field height
+            entry.setMinimumHeight(36)  # Entry field height KEEP
             col.addWidget(entry)
             input_row.addLayout(col)  # <-- Add each column to the row
         
@@ -546,8 +449,10 @@ class QueryInputsPanel(QWidget):
 
     def set_notes(self, text):
         """Set the notes input value"""
-        self.notes_text.setPlainText(text)
+        # self.notes_text.setPlainText(text)
+        pass
 
     def get_notes(self):
         """Get the notes input value"""
-        return self.notes_text.toPlainText()
+        # return self.notes_text.toPlainText()
+        return ""
