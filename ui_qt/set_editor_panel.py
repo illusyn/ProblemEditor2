@@ -5,6 +5,7 @@ from ui_qt.style_config import BUTTON_MIN_HEIGHT, BUTTON_MIN_WIDTH, FONT_FAMILY,
 from PyQt5.QtCore import Qt, pyqtSignal, QRect
 from PyQt5.QtGui import QFont, QColor, QBrush, QPen, QPainter
 from ui_qt.category_panel import NeumorphicToolButton
+from ui_qt.set_selector_grid import SetSelectorGridQt
 
 class NeumorphicTileDelegate(QStyledItemDelegate):
     def paint(self, painter, option, index):
@@ -119,18 +120,12 @@ class SetEditorPanelQt(QWidget):
         outer_layout.addLayout(top_row)
 
         # --- Set grid: full width below top row ---
-        self.set_grid_widget = QWidget()
-        self.set_grid_layout = QGridLayout(self.set_grid_widget)
-        self.set_grid_layout.setSpacing(16)
-        self.set_grid_layout.setContentsMargins(0, 0, 0, 0)
-        self.set_scroll_area = QScrollArea()
-        self.set_scroll_area.setWidgetResizable(True)
-        self.set_scroll_area.setWidget(self.set_grid_widget)
-        self.set_scroll_area.setStyleSheet('border: none;')
-        outer_layout.addWidget(self.set_scroll_area, stretch=1)
-        self.set_buttons = {}  # set_id: button
-        self.selected_set_id = None
-        self.refresh_sets()
+        self.set_selector_grid = SetSelectorGridQt()
+        outer_layout.addWidget(self.set_selector_grid, stretch=1)
+        # Wire up selection logic
+        def on_set_selected(set_id):
+            self.selected_set_id = set_id
+        self.set_selector_grid.set_selected.connect(on_set_selected)
 
     def create_set(self):
         name = self.name_edit.text().strip()
@@ -148,43 +143,7 @@ class SetEditorPanelQt(QWidget):
         db.close()
 
     def refresh_sets(self):
-        # Remove old buttons
-        for btn in getattr(self, 'set_buttons', {}).values():
-            self.set_grid_layout.removeWidget(btn)
-            btn.deleteLater()
-        self.set_buttons = {}
-        db = ProblemSetDB()
-        sets = db.get_all_sets()
-        db.close()
-        if not sets:
-            label = QLabel("No sets defined.")
-            self.set_grid_layout.addWidget(label, 0, 0)
-            return
-        cols = 3
-        for idx, (set_id, name, *_) in enumerate(sets):
-            row = idx // cols
-            col = idx % cols
-            btn = NeumorphicToolButton(name, font_size=SET_EDITOR_BUTTON_FONT_SIZE)
-            btn.setMinimumWidth(215)
-            btn.setMaximumWidth(215)
-            btn.setCheckable(True)
-            btn.setChecked(self.selected_set_id == set_id)
-            btn.clicked.connect(lambda checked, sid=set_id: self.on_set_selected(sid, checked))
-            self.set_grid_layout.addWidget(btn, row, col)
-            self.set_buttons[set_id] = btn
-
-    def on_set_selected(self, set_id, checked):
-        if checked:
-            # Uncheck all others
-            for sid, btn in self.set_buttons.items():
-                if sid != set_id:
-                    btn.setChecked(False)
-            self.selected_set_id = set_id
-        else:
-            self.selected_set_id = None
-
-    def get_selected_set_id(self):
-        return self.selected_set_id
+        self.set_selector_grid.refresh_sets()
 
     def delete_selected_set(self):
         selected_id = self.get_selected_set_id()
@@ -211,4 +170,7 @@ class SetEditorPanelQt(QWidget):
             selected_problems = []
         selected_set_id = self.get_selected_set_id()
         print("[DEBUG] on_add_selected_problem_to_set: selected_set_id:", selected_set_id)
-        self.add_selected_problems_to_set.emit(selected_problems, selected_set_id) 
+        self.add_selected_problems_to_set.emit(selected_problems, selected_set_id)
+
+    def get_selected_set_id(self):
+        return self.set_selector_grid.get_selected_set_id() 

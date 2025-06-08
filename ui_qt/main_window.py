@@ -15,7 +15,7 @@ import re
 from pathlib import Path
 import os
 from converters.image_converter import ImageConverter
-from ui_qt.style_config import active_palette, MultiShadowButton, WINDOW_BG_COLOR, FONT_FAMILY, BUTTON_FONT_SIZE, LABEL_FONT_SIZE, NOTES_FONT_SIZE
+from ui_qt.style_config import active_palette, MultiShadowButton, WINDOW_BG_COLOR, FONT_FAMILY, BUTTON_FONT_SIZE, LABEL_FONT_SIZE, NOTES_FONT_SIZE, LEFT_PANEL_WIDTH
 from PyQt5.QtGui import QFont
 from ui_qt.problem_manager import ProblemManager
 from ui_qt.problem_display_panel import ProblemDisplayPanel
@@ -85,7 +85,8 @@ class MainWindow(QMainWindow):
         editor_layout = QHBoxLayout(self.editor_container)
         self.left_panel = LeftPanel(laptop_mode=laptop_mode)
         if not laptop_mode:
-            self.left_panel.setFixedWidth(780)
+            self.left_panel.setFixedWidth(LEFT_PANEL_WIDTH)
+            print(f"================>>>[DEBUG] LEFT_PANEL_WIDTH: {LEFT_PANEL_WIDTH}")
         editor_layout.addWidget(self.left_panel)
         self.left_panel.query_panel.query_clicked.connect(self.on_query)
         self.left_panel.query_panel.next_match_button.clicked.connect(self.show_next_problem)
@@ -118,7 +119,7 @@ class MainWindow(QMainWindow):
         editor_panel_container.setLayout(editor_vlayout)
         editor_layout.addWidget(editor_panel_container, stretch=2)
         self.preview_panel = PreviewPanel(config_manager=self.config_manager)
-        editor_layout.addWidget(self.preview_panel, stretch=3)
+        editor_layout.addWidget(self.preview_panel, stretch=2)
         self.preview_panel.set_main_window(self)
         self.current_results = []
         self.current_result_index = -1

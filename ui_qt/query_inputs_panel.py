@@ -33,6 +33,7 @@ from db.problem_set_db import ProblemSetDB
 from ui_qt.set_inputs_panel import SetInputsPanelQt
 from ui_qt.set_editor_panel import SetEditorPanelQt
 from ui_qt.neumorphic_components import NeumorphicButton, NeumorphicEntry, NeumorphicTextEdit
+from ui_qt.set_selector_grid import SetSelectorGridQt
 
 class ProblemTypePanelQt(QWidget):
     def __init__(self, parent=None, types=None):
@@ -175,9 +176,6 @@ class QueryInputsPanel(QWidget):
         domains_groupbox_layout.addWidget(self.category_groupbox)
         main_layout.addWidget(self.domains_groupbox)
         
-        # --- Sets Panel (for filtering) ---
-        self.set_panel = SetInputsPanelQt()
-
         # --- Toggle Set Editor Button and QStackedWidget ---
         self.toggle_set_editor_btn = QPushButton("Open Set Editor")
         self.toggle_set_editor_btn.setFont(QFont(FONT_FAMILY, LABEL_FONT_SIZE, QFont.Bold))
@@ -185,12 +183,13 @@ class QueryInputsPanel(QWidget):
         main_layout.addWidget(self.toggle_set_editor_btn)
 
         self.set_stack = QStackedWidget()
-        self.set_stack.addWidget(self.set_panel)
+        self.set_selector_grid = SetSelectorGridQt()
+        self.set_stack.addWidget(self.set_selector_grid)  # Page 0: set selector for filtering
         self.set_editor_panel = SetEditorPanelQt()
-        self.set_stack.addWidget(self.set_editor_panel)
+        self.set_stack.addWidget(self.set_editor_panel)   # Page 1: set editor
         main_layout.addWidget(self.set_stack)
 
-        # Button logic to toggle between set selector and set editor
+        # Toggle between set selector and set editor
         def toggle_set_editor():
             if self.set_stack.currentIndex() == 0:
                 self.set_stack.setCurrentIndex(1)
@@ -199,6 +198,7 @@ class QueryInputsPanel(QWidget):
                 self.set_stack.setCurrentIndex(0)
                 self.toggle_set_editor_btn.setText("Open Set Editor")
         self.toggle_set_editor_btn.clicked.connect(toggle_set_editor)
+        self.set_stack.setCurrentIndex(0)
     
     def _create_basic_inputs(self, main_layout):
         """Create the basic input fields (Problem ID, Search Text, Answer)"""
@@ -442,10 +442,10 @@ class QueryInputsPanel(QWidget):
 
     # --- Set methods ---
     def get_selected_set_ids(self):
-        return self.set_panel.get_selected_set_ids()
+        return self.set_editor_panel.get_selected_set_id()
 
     def set_selected_set_ids(self, set_ids):
-        self.set_panel.set_selected_set_ids(set_ids)
+        self.set_editor_panel.set_selected_set_id(set_ids)
 
     def set_notes(self, text):
         """Set the notes input value"""
@@ -456,3 +456,8 @@ class QueryInputsPanel(QWidget):
         """Get the notes input value"""
         # return self.notes_text.toPlainText()
         return ""
+
+    # Connect set selector signal (for filtering)
+    def on_set_selected(self, set_id):
+        # TODO: implement filtering logic for selected set
+        print(f"[DEBUG] Set selected for filtering: {set_id}")
