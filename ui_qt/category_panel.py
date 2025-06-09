@@ -94,4 +94,10 @@ class CategoryPanelQt(QWidget):
 
     def get_selected_categories(self):
         # Return list of selected category dicts
-        return [cat for cat in self.categories if cat["category_id"] in self.selected] 
+        return [cat for cat in self.categories if cat["category_id"] in self.selected]
+
+    def clear_selection(self):
+        """Clear all selected categories"""
+        for btn in self.buttons.values():
+            btn.setChecked(False)
+        self.selected.clear() 
