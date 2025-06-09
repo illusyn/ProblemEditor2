@@ -89,6 +89,7 @@ class QueryInputsPanel(QWidget):
         super().__init__(parent)
         self.setStyleSheet('background: transparent;')
         self.laptop_mode = laptop_mode
+        self._selected_set_id = None
         # --- Wrap all contents in a QFrame with border ---
         self.outer_frame = QFrame()
         self.outer_frame.setFrameShape(QFrame.StyledPanel)
@@ -143,9 +144,6 @@ class QueryInputsPanel(QWidget):
         main_layout.addWidget(self.query_inputs_groupbox)
         main_layout.addSpacing(2)
         
-        # Remove or reduce spacing before Math Domains
-        # main_layout.addSpacing(-20)  # Back to previous value
-        
         # --- Math Domains Section ---
         self.domains_groupbox = QGroupBox("")
         domains_groupbox_layout = QVBoxLayout(self.domains_groupbox)
@@ -159,7 +157,7 @@ class QueryInputsPanel(QWidget):
         domains_groupbox_layout.addWidget(domains_label)
         self.category_panel = CategoryPanelQt()
         self.category_groupbox = QGroupBox("")
-        self.category_groupbox.setMinimumHeight(400)
+        self.category_groupbox.setMinimumHeight(300)
         category_layout = QVBoxLayout(self.category_groupbox)
         category_layout.setContentsMargins(0, 0, 0, 0)
         category_layout.setSpacing(0)
@@ -176,29 +174,37 @@ class QueryInputsPanel(QWidget):
         domains_groupbox_layout.addWidget(self.category_groupbox)
         main_layout.addWidget(self.domains_groupbox)
         
-        # --- Toggle Set Editor Button and QStackedWidget ---
-        self.toggle_set_editor_btn = QPushButton("Open Set Editor")
-        self.toggle_set_editor_btn.setFont(QFont(FONT_FAMILY, LABEL_FONT_SIZE, QFont.Bold))
-        self.toggle_set_editor_btn.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; margin: 8px 0px 8px 0px;")
-        main_layout.addWidget(self.toggle_set_editor_btn)
-
-        self.set_stack = QStackedWidget()
+        # --- Set Selector and Set Editor Section (QStackedWidget) ---
+        self.set_selector_groupbox = QGroupBox("")
+        set_selector_layout = QVBoxLayout(self.set_selector_groupbox)
+        set_selector_layout.setContentsMargins(0, 0, 0, 0)
+        set_selector_layout.setSpacing(0)
+        set_selector_label = QLabel("Problem Sets")
+        set_selector_label.setFont(QFont(FONT_FAMILY, SECTION_LABEL_FONT_SIZE, QFont.Bold))
+        set_selector_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; padding-top: 4px; padding-bottom: 4px; margin-top: 0px; margin-bottom: 0px; background: {WINDOW_BG_COLOR};")
+        set_selector_label.setMinimumHeight(30)
+        set_selector_label.setAlignment(Qt.AlignCenter)
+        set_selector_layout.addWidget(set_selector_label)
         self.set_selector_grid = SetSelectorGridQt()
-        self.set_stack.addWidget(self.set_selector_grid)  # Page 0: set selector for filtering
+        self.set_selector_grid.setMinimumHeight(150)
+        set_selector_layout.addWidget(self.set_selector_grid)
+        self.set_selector_groupbox.setLayout(set_selector_layout)
+
+        # Set Editor Panel
         self.set_editor_panel = SetEditorPanelQt()
-        self.set_stack.addWidget(self.set_editor_panel)   # Page 1: set editor
+
+        # QStackedWidget to hold both
+        self.set_stack = QStackedWidget()
+        self.set_stack.addWidget(self.set_selector_groupbox)  # index 0
+        self.set_stack.addWidget(self.set_editor_panel)       # index 1
+
+        # Toggle button
+        self.toggle_set_editor_btn = QPushButton("Open Set Editor")
+        self.toggle_set_editor_btn.clicked.connect(self.toggle_set_editor_view)
+        main_layout.addWidget(self.toggle_set_editor_btn)
         main_layout.addWidget(self.set_stack)
 
-        # Toggle between set selector and set editor
-        def toggle_set_editor():
-            if self.set_stack.currentIndex() == 0:
-                self.set_stack.setCurrentIndex(1)
-                self.toggle_set_editor_btn.setText("Close Set Editor")
-            else:
-                self.set_stack.setCurrentIndex(0)
-                self.toggle_set_editor_btn.setText("Open Set Editor")
-        self.toggle_set_editor_btn.clicked.connect(toggle_set_editor)
-        self.set_stack.setCurrentIndex(0)
+        self.set_selector_grid.set_selected.connect(self.on_set_selected)
     
     def _create_basic_inputs(self, main_layout):
         """Create the basic input fields (Problem ID, Search Text, Answer)"""
@@ -245,219 +251,172 @@ class QueryInputsPanel(QWidget):
         return NeumorphicEntry(
             radius=ENTRY_BORDER_RADIUS,
             bg_color=ENTRY_BG_COLOR,
-            shadow_dark=QColor(NEUMORPH_SHADOW_DARK),
-            shadow_light=QColor(NEUMORPH_SHADOW_LIGHT),
+            shadow_dark=NEUMORPH_SHADOW_DARK,
+            shadow_light=NEUMORPH_SHADOW_LIGHT,
             font_family=FONT_FAMILY,
             font_size=ENTRY_FONT_SIZE,
             font_color=ENTRY_FONT_COLOR
         )
     
-    # --- Basic input field methods ---
     def get_problem_id(self):
-        """Get the problem ID input value"""
         return self.problem_id_entry.text()
-
+    
     def set_problem_id(self, value):
-        """Set the problem ID input value"""
-        self.problem_id_entry.setText(value)
-
+        self.problem_id_entry.setText(str(value))
+    
     def get_answer(self):
-        """Get the answer input value"""
         return self.answer_entry.text()
-
+    
     def set_answer(self, value):
-        """Set the answer input value"""
-        self.answer_entry.setText(value)
-
+        self.answer_entry.setText(str(value))
+    
     def get_search_text(self):
-        """Get the search text input value"""
         return self.search_text_entry.text()
-
+    
     def set_search_text(self, value):
-        """Set the search text input value"""
-        self.search_text_entry.setText(value)
+        self.search_text_entry.setText(str(value))
     
-    # --- Earmark methods ---
     def get_earmark(self):
-        """Get earmark checkbox state"""
         return self.earmark_checkbox.isChecked()
-
-    def set_earmark(self, value):
-        """Set earmark checkbox state"""
-        self.earmark_checkbox.setChecked(bool(value))
     
-    # --- Problem type methods ---
+    def set_earmark(self, value):
+        self.earmark_checkbox.setChecked(value)
+    
     def get_selected_type_ids(self):
-        """Get list of selected problem type IDs"""
         return self.problem_type_panel.get_selected_type_ids()
-
+    
     def set_selected_type_ids(self, type_ids):
-        """Set selected problem type IDs"""
         self.problem_type_panel.set_selected_type_ids(type_ids)
     
-    # --- Category methods ---
     def get_selected_categories(self):
-        """Get list of selected category dictionaries"""
         return self.category_panel.get_selected_categories()
     
     def clear_category_selection(self):
-        """Clear all category selections"""
-        for btn in self.category_panel.buttons.values():
-            btn.setChecked(False)
-        self.category_panel.selected.clear()
+        self.category_panel.clear_selection()
     
-    # --- Reset functionality ---
     def reset_all_inputs(self):
-        """Reset all query inputs to default state"""
-        # Reset basic inputs
+        """Reset all input fields to their default state"""
         self.problem_id_entry.setText("")
         self.search_text_entry.setText("")
         self.answer_entry.setText("")
-        
-        # Reset earmark
         self.earmark_checkbox.setChecked(False)
-        
-        # Reset problem types
-        for btn in self.problem_type_panel.buttons.values():
-            btn.setChecked(False)
-        self.problem_type_panel.selected.clear()
-        
-        # Reset categories
+        self.problem_type_panel.set_selected_type_ids([])
         self.clear_category_selection()
+        self.set_selector_grid.clear_selection()
+        if hasattr(self, 'notes_edit'):
+            self.notes_edit.setText("")
     
-    # --- Query building methods ---
     def build_query_criteria(self):
-        """
-        Build a dictionary of query criteria from current input state
-        
-        Returns:
-            dict: Query criteria with all inputs
-        """
-        return {
-            # Basic inputs
-            'problem_id': self.get_problem_id().strip(),
-            'search_text': self.get_search_text().strip(),
-            'answer': self.get_answer().strip(),
-            # Advanced inputs
-            'earmark': self.get_earmark(),
-            'selected_type_ids': self.get_selected_type_ids(),
-            'selected_categories': self.get_selected_categories(),
-        }
+        """Build query criteria from current input values"""
+        criteria = {}
+        if self.get_problem_id():
+            criteria['problem_id'] = self.get_problem_id()
+        if self.get_search_text():
+            criteria['search_text'] = self.get_search_text()
+        if self.get_answer():
+            criteria['answer'] = self.get_answer()
+        if self.get_earmark():
+            criteria['earmark'] = True
+        type_ids = self.get_selected_type_ids()
+        if type_ids:
+            criteria['type_ids'] = type_ids
+        categories = self.get_selected_categories()
+        if categories:
+            criteria['categories'] = categories
+        set_ids = self.get_selected_sets()
+        if set_ids:
+            criteria['set_ids'] = set_ids
+        return criteria
     
     def apply_query_criteria(self, criteria):
-        """
-        Apply query criteria to set the input state
-        
-        Args:
-            criteria (dict): Query criteria dictionary
-        """
-        # Apply basic inputs
+        """Apply query criteria to input fields"""
+        self.reset_all_inputs()
         if 'problem_id' in criteria:
             self.set_problem_id(criteria['problem_id'])
         if 'search_text' in criteria:
             self.set_search_text(criteria['search_text'])
         if 'answer' in criteria:
             self.set_answer(criteria['answer'])
-        
-        # Apply advanced inputs
         if 'earmark' in criteria:
             self.set_earmark(criteria['earmark'])
-        
-        if 'selected_type_ids' in criteria:
-            self.set_selected_type_ids(criteria['selected_type_ids'])
-        
-        if 'selected_categories' in criteria:
-            # Set categories by name
-            category_names = [cat['name'] if isinstance(cat, dict) else cat 
-                            for cat in criteria['selected_categories']]
-            for cat in self.category_panel.categories:
-                btn = self.category_panel.buttons[cat["category_id"]]
-                if cat["name"] in category_names:
-                    btn.setChecked(True)
-                    self.category_panel.selected.add(cat["category_id"])
-                else:
-                    btn.setChecked(False)
-                    self.category_panel.selected.discard(cat["category_id"])
+        if 'type_ids' in criteria:
+            self.set_selected_type_ids(criteria['type_ids'])
+        if 'categories' in criteria:
+            for category in criteria['categories']:
+                self.category_panel.select_category(category)
+        if 'set_ids' in criteria:
+            self.set_selected_sets(criteria['set_ids'])
     
-    # --- Validation methods ---
     def validate_inputs(self):
-        """
-        Validate current input state
-        
-        Returns:
-            tuple: (is_valid, error_message)
-        """
-        criteria = self.build_query_criteria()
-        
-        # Check for problem ID format if provided
-        if criteria['problem_id']:
+        """Validate input values"""
+        errors = []
+        problem_id = self.get_problem_id()
+        if problem_id:
             try:
-                int(criteria['problem_id'])
+                int(problem_id)
             except ValueError:
-                return False, "Problem ID must be a valid number"
-        
-        # Check if at least one search criterion is provided
-        has_criteria = any([
-            criteria['problem_id'],
-            criteria['search_text'],
-            criteria['earmark'],
-            criteria['selected_type_ids'],
-            criteria['selected_categories']
-        ])
-        
-        if not has_criteria:
-            return False, "Please provide at least one search criterion"
-        
-        return True, "Valid"
+                errors.append("Problem ID must be a number")
+        return errors
     
     def has_any_input(self):
-        """Check if any input field has content"""
-        criteria = self.build_query_criteria()
-        return any([
-            criteria['problem_id'],
-            criteria['search_text'], 
-            criteria['answer'],
-            criteria['earmark'],
-            criteria['selected_type_ids'],
-            criteria['selected_categories'],
-        ])
+        """Check if any input field has a value"""
+        return (
+            bool(self.get_problem_id()) or
+            bool(self.get_search_text()) or
+            bool(self.get_answer()) or
+            self.get_earmark() or
+            bool(self.get_selected_type_ids()) or
+            bool(self.get_selected_categories()) or
+            bool(self.get_selected_sets())
+        )
     
     def get_search_mode(self):
-        """
-        Determine the current search mode based on inputs
-        
-        Returns:
-            str: 'direct_id', 'text_search', 'filtered_search', or 'browse_all'
-        """
-        criteria = self.build_query_criteria()
-        
-        if criteria['problem_id']:
-            return 'direct_id'
-        elif criteria['search_text']:
-            return 'text_search'
-        elif any([criteria['earmark'], criteria['selected_type_ids'], criteria['selected_categories']]):
-            return 'filtered_search'
-        else:
-            return 'browse_all'
+        """Get the current search mode based on inputs"""
+        if self.get_problem_id():
+            return 'id'
+        elif self.get_search_text():
+            return 'text'
+        elif self.get_answer():
+            return 'answer'
+        elif self.get_earmark():
+            return 'earmark'
+        elif self.get_selected_type_ids():
+            return 'type'
+        elif self.get_selected_categories():
+            return 'category'
+        elif self.get_selected_sets():
+            return 'set'
+        return None
+    
+    def get_selected_sets(self):
+        """Get the list of selected set IDs"""
+        return self.set_selector_grid.get_selected_sets()
 
-    # --- Set methods ---
     def get_selected_set_ids(self):
-        return self.set_editor_panel.get_selected_set_id()
+        """Alias for get_selected_sets() for backward compatibility"""
+        return self.get_selected_sets()
 
-    def set_selected_set_ids(self, set_ids):
-        self.set_editor_panel.set_selected_set_id(set_ids)
-
-    def set_notes(self, text):
-        """Set the notes input value"""
-        # self.notes_text.setPlainText(text)
+    def set_selected_sets(self, set_ids):
+        """Set which sets are selected"""
+        # If you want to implement this, add a set_selected_sets method to SetSelectorGridQt
         pass
-
+    
+    def set_notes(self, text):
+        """Set the notes text"""
+        pass  # No notes field in this panel
+    
     def get_notes(self):
-        """Get the notes input value"""
-        # return self.notes_text.toPlainText()
-        return ""
-
-    # Connect set selector signal (for filtering)
+        """Get the notes text"""
+        return ""  # No notes field in this panel
+    
     def on_set_selected(self, set_id):
-        # TODO: implement filtering logic for selected set
-        print(f"[DEBUG] Set selected for filtering: {set_id}")
+        """Handle set selection"""
+        self._selected_set_id = set_id
+
+    def toggle_set_editor_view(self):
+        if self.set_stack.currentIndex() == 0:
+            self.set_stack.setCurrentIndex(1)
+            self.toggle_set_editor_btn.setText("Back to Set Selector")
+        else:
+            self.set_stack.setCurrentIndex(0)
+            self.toggle_set_editor_btn.setText("Open Set Editor")
