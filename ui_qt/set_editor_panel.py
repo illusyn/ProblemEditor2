@@ -54,25 +54,18 @@ class SetEditorPanelQt(QWidget):
     add_selected_problems_to_set = pyqtSignal(list, object)  # selected_problems, selected_set_id
     def __init__(self, parent=None):
         super().__init__(parent)
-        # --- Wrap all contents in a QFrame with border ---
-        self.outer_frame = QFrame()
-        self.outer_frame.setFrameShape(QFrame.StyledPanel)
-        self.outer_frame.setStyleSheet('QFrame { border: 2px solid #888; border-radius: 12px; background: transparent; }')
-        outer_layout = QVBoxLayout(self.outer_frame)
-        outer_layout.setContentsMargins(8, 8, 8, 8)
-        outer_layout.setSpacing(12)
-        self.setLayout(QVBoxLayout())
-        self.layout().setContentsMargins(0, 0, 0, 0)
-        self.layout().addWidget(self.outer_frame)
+        # --- Directly use main layout for all contents (no QFrame border) ---
+        main_layout = QVBoxLayout(self)
+        main_layout.setContentsMargins(8, 8, 8, 8)
+        main_layout.setSpacing(12)
         # Title label
         title_label = QLabel("Set Editor")
         title_label.setFont(QFont(FONT_FAMILY, SET_EDITOR_HEAD_FONT_SIZE, QFont.Bold))
         title_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR};")
         title_label.setAlignment(Qt.AlignHCenter)
-        outer_layout.addWidget(title_label, alignment=Qt.AlignHCenter)
+        main_layout.addWidget(title_label, alignment=Qt.AlignHCenter)
         # Main content layout
-        main_layout = QHBoxLayout()
-        outer_layout.addLayout(main_layout)
+        main_layout.addLayout(main_layout)
 
         # --- Top row: set name entry and buttons ---
         top_row = QHBoxLayout()
@@ -117,11 +110,11 @@ class SetEditorPanelQt(QWidget):
         self.delete_btn.clicked.connect(self.delete_selected_set)
         top_row.addWidget(self.delete_btn)
         top_row.addStretch(1)
-        outer_layout.addLayout(top_row)
+        main_layout.addLayout(top_row)
 
         # --- Set grid: full width below top row ---
         self.set_selector_grid = SetSelectorGridQt()
-        outer_layout.addWidget(self.set_selector_grid, stretch=1)
+        main_layout.addWidget(self.set_selector_grid, stretch=1)
         # Wire up selection logic
         def on_set_selected(set_id):
             self.selected_set_id = set_id
