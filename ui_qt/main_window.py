@@ -154,6 +154,7 @@ class MainWindow(QMainWindow):
 
     def on_query(self):
         selected_set_ids = self.left_panel.query_panel.query_inputs_panel.get_selected_set_ids()
+        print(f"^^^^^^^^^^^^^^^^[DEBUG] MainWindow.on_query: selected_set_ids = {selected_set_ids}")
         selected_set_id = selected_set_ids[0] if selected_set_ids else None
         problem_id = self.left_panel.get_problem_id().strip()
         earmark_filter = self.left_panel.get_earmark()
