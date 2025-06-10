@@ -129,7 +129,7 @@ class QueryInputsPanel(QWidget):
         earmark_and_types_row.addWidget(self.earmark_checkbox)
         from db.math_db import MathProblemDB
         db = MathProblemDB()
-        types = db.cur.execute("SELECT type_id, name FROM problem_types ORDER BY name").fetchall()
+        types = db.cur.execute("SELECT type_id, name FROM problem_types ORDER BY type_id").fetchall()
         db.close()
         type_dicts = [{"type_id": row[0], "name": row[1]} for row in types]
         self.problem_type_panel = ProblemTypePanelQt(types=type_dicts)
@@ -232,7 +232,7 @@ class QueryInputsPanel(QWidget):
             lbl.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
             lbl.setMinimumHeight(LABEL_FONT_SIZE + 4)  # Ensure label is always visible
             
-            col.addWidget(lbl, alignment=Qt.AlignLeft)
+            col.addWidget(lbl, alignment=Qt.AlignHCenter)
             col.addSpacing(1)  #@@ # More space between label and entry
             
             # Set entry height and add to column

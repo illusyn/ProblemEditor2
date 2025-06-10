@@ -3,7 +3,7 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QSizePolicy
 from PyQt5.QtCore import pyqtSignal
 from ui_qt.query_inputs_panel import QueryInputsPanel
 from ui_qt.neumorphic_components import NeumorphicButton
-from ui_qt.style_config import CONTROL_BTN_FONT_SIZE, CONTROL_BTN_WIDTH, SPACING, PADDING, WINDOW_BG_COLOR
+from ui_qt.style_config import CONTROL_BTN_FONT_SIZE, CONTROL_BTN_WIDTH, SPACING, PADDING, WINDOW_BG_COLOR, BUTTON_TEXT_PADDING
 from db.math_db import MathProblemDB
 
 class QueryPanel(QWidget):
@@ -46,21 +46,25 @@ class QueryPanel(QWidget):
         query_grid.setSpacing(8)
 
         self.reset_button = self.create_neumorphic_button("Reset")
-        self.reset_button.setMinimumWidth(CONTROL_BTN_WIDTH)
-
         self.query_button = self.create_neumorphic_button("Query")
-        self.query_button.setMinimumWidth(CONTROL_BTN_WIDTH)
 
         buttons = [self.reset_button, self.query_button]
         # Only add Preview button if not in main editor context
         if self.show_preview_and_nav_buttons:
             self.next_match_button = self.create_neumorphic_button("Next Match")
-            self.next_match_button.setMinimumWidth(CONTROL_BTN_WIDTH)
             self.prev_match_button = self.create_neumorphic_button("Previous Match")
-            self.prev_match_button.setMinimumWidth(CONTROL_BTN_WIDTH)
             buttons += [self.next_match_button, self.prev_match_button]
+        
+        # Override the default minimum width and let buttons size to content with padding
+        for btn in buttons:
+            btn.setMinimumWidth(0)  # Remove minimum width constraint
+            # Calculate appropriate width based on text + padding
+            fm = btn.fontMetrics()
+            text_width = fm.horizontalAdvance(btn.text()) if hasattr(fm, 'horizontalAdvance') else fm.width(btn.text())
+            btn.setFixedWidth(text_width + (BUTTON_TEXT_PADDING * 2))  # Padding on each side
+        # Put all buttons on one row
         for i, btn in enumerate(buttons):
-            query_grid.addWidget(btn, i // 3, i % 3)
+            query_grid.addWidget(btn, 0, i)
         main_layout.addLayout(query_grid)
 
     def create_neumorphic_button(self, text, parent=None):

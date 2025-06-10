@@ -15,7 +15,7 @@ from ui_qt.neumorphic_components import NeumorphicButton
 from ui_qt.style_config import (
     FONT_FAMILY, CONTROL_BTN_FONT_SIZE, WINDOW_BG_COLOR, 
     BUTTON_BORDER_RADIUS, BUTTON_BG_COLOR, BUTTON_FONT_COLOR, CONTROL_BTN_WIDTH, 
-    PADDING, SPACING
+    PADDING, SPACING, BUTTON_TEXT_PADDING
 )
 from ui_qt.query_panel import QueryPanel
 
@@ -62,15 +62,21 @@ class LeftPanel(QWidget):
         """Create the top row with Problem Browser 2, Save Problem, and Preview buttons"""
         top_row = QHBoxLayout()
         self.problem_browser2_button = self.create_neumorphic_button("Problem Browser")
-        self.problem_browser2_button.setMinimumWidth(CONTROL_BTN_WIDTH)
+        self.save_problem_button = self.create_neumorphic_button("Save Problem")
+        self.preview_button = self.create_neumorphic_button("Preview")
+        
+        # Override default minimum width and size buttons to content with padding
+        buttons = [self.problem_browser2_button, self.save_problem_button, self.preview_button]
+        for btn in buttons:
+            btn.setMinimumWidth(0)  # Remove minimum width constraint
+            # Calculate appropriate width based on text + padding
+            fm = btn.fontMetrics()
+            text_width = fm.horizontalAdvance(btn.text()) if hasattr(fm, 'horizontalAdvance') else fm.width(btn.text())
+            btn.setFixedWidth(text_width + (BUTTON_TEXT_PADDING * 2))  # Padding on each side
+        
         top_row.addWidget(self.problem_browser2_button)
         top_row.addStretch(1)
-        self.save_problem_button = self.create_neumorphic_button("Save Problem")
-        self.save_problem_button.setMinimumWidth(CONTROL_BTN_WIDTH)
         top_row.addWidget(self.save_problem_button)
-        # Add Preview button to the far right
-        self.preview_button = self.create_neumorphic_button("Preview")
-        self.preview_button.setMinimumWidth(CONTROL_BTN_WIDTH)
         top_row.addWidget(self.preview_button)
         main_layout.addLayout(top_row)
 

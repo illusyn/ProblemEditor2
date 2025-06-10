@@ -75,6 +75,7 @@ class ProblemManager(QWidget):
 
     def on_query(self):
         criteria = self.query_panel.query_inputs_panel.build_query_criteria()
+        print(f"[DEBUG] Query criteria: {criteria}")
         selected_set_ids = self.query_panel.query_inputs_panel.get_selected_set_ids()
         selected_set_id = selected_set_ids[0] if selected_set_ids else None
         from db.math_db import MathProblemDB
@@ -92,6 +93,7 @@ class ProblemManager(QWidget):
                 print("[ERROR] get_problems_list failed:", problems)
                 problems = []
         db.close()
+        print(f"[DEBUG] Total problems before filtering: {len(problems)}")
         # Filter by Problem ID
         problem_id = criteria.get('problem_id', '').strip()
         if problem_id:
@@ -101,11 +103,13 @@ class ProblemManager(QWidget):
         if earmark:
             problems = [p for p in problems if p.get('earmark', 0)]
         # Filter by Problem Types
-        selected_type_ids = criteria.get('selected_type_ids', [])
+        selected_type_ids = criteria.get('type_ids', [])
         if selected_type_ids:
+            print(f"[DEBUG] Filtering by type_ids: {selected_type_ids}")
             problems = [p for p in problems if any(t['type_id'] in selected_type_ids for t in p.get('types', []))]
+            print(f"[DEBUG] Problems after type filtering: {len(problems)}")
         # Filter by Categories
-        selected_categories = criteria.get('selected_categories', [])
+        selected_categories = criteria.get('categories', [])
         if selected_categories:
             selected_cat_names = {cat['name'] for cat in selected_categories}
             problems = [p for p in problems if selected_cat_names.issubset({c['name'] for c in p.get('categories', [])})]
