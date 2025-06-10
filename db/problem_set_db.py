@@ -3,16 +3,13 @@ import sqlite3
 class ProblemSetDB:
     def __init__(self, db_path='db/math_problems.db'):
         self.conn = sqlite3.connect(db_path)
+        self.conn.execute("PRAGMA foreign_keys = ON")
         self.cur = self.conn.cursor()
         self._ensure_table()
         self._ensure_problem_types()
 
     def _ensure_table(self):
-        # Drop existing tables if they exist to ensure clean schema
-        self.cur.execute('DROP TABLE IF EXISTS problem_set_member')
-        self.cur.execute('DROP TABLE IF EXISTS problem_sets')
-        
-        # Create problem_sets table
+        # Create problem_sets table (only if it doesn't exist)
         self.cur.execute('''
             CREATE TABLE IF NOT EXISTS problem_sets (
                 set_id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -22,7 +19,7 @@ class ProblemSetDB:
             )
         ''')
         
-        # Create problem_set_member table
+        # Create problem_set_member table (only if it doesn't exist)
         self.cur.execute('''
             CREATE TABLE IF NOT EXISTS problem_set_member (
                 set_id INTEGER,
@@ -34,18 +31,25 @@ class ProblemSetDB:
             )
         ''')
         
-        # Add some default sets if none exist
-        self.cur.execute('SELECT COUNT(*) FROM problem_sets')
-        if self.cur.fetchone()[0] == 0:
-            default_sets = [
-                ('Basic Problems', 'Basic math problems for beginners'),
-                ('Advanced Problems', 'More challenging math problems'),
-                ('Practice Set 1', 'First practice set'),
-                ('Practice Set 2', 'Second practice set'),
-                ('Review Problems', 'Problems for review')
-            ]
-            for name, desc in default_sets:
-                self.cur.execute('INSERT INTO problem_sets (name, description) VALUES (?, ?)', (name, desc))
+        # Check if this is a fresh database (no rows have ever been inserted)
+        # by checking the autoincrement counter
+        self.cur.execute("SELECT seq FROM sqlite_sequence WHERE name='problem_sets'")
+        result = self.cur.fetchone()
+        
+        # Only add default sets if the table has never had any rows
+        if result is None:
+            self.cur.execute('SELECT COUNT(*) FROM problem_sets')
+            if self.cur.fetchone()[0] == 0:
+                default_sets = [
+                    ('Basic Problems', 'Basic math problems for beginners'),
+                    ('Advanced Problems', 'More challenging math problems'),
+                    ('Practice Set 1', 'First practice set'),
+                    ('Practice Set 2', 'Second practice set'),
+                    ('Review Problems', 'Problems for review')
+                ]
+                for name, desc in default_sets:
+                    self.cur.execute('INSERT INTO problem_sets (name, description) VALUES (?, ?)', (name, desc))
+                print("[DEBUG] Added default problem sets to fresh database")
         
         self.conn.commit()
 
@@ -82,8 +86,38 @@ class ProblemSetDB:
         self.conn.commit()
 
     def delete_set(self, set_id):
-        self.cur.execute('DELETE FROM problem_sets WHERE set_id=?', (set_id,))
-        self.conn.commit()
+        try:
+            print(f"Deleting set_id: {set_id}")
+            
+            # Check if set exists
+            self.cur.execute('SELECT name FROM problem_sets WHERE set_id=?', (set_id,))
+            result = self.cur.fetchone()
+            if not result:
+                raise ValueError(f"Set with ID {set_id} does not exist")
+            
+            set_name = result[0]
+            print(f"Deleting set '{set_name}' (ID: {set_id})")
+            
+            # Delete members first (due to foreign key constraints)
+            self.cur.execute('DELETE FROM problem_set_member WHERE set_id=?', (set_id,))
+            members_deleted = self.cur.rowcount
+            print(f"Deleted {members_deleted} problem set members")
+            
+            # Delete the set itself
+            self.cur.execute('DELETE FROM problem_sets WHERE set_id=?', (set_id,))
+            sets_deleted = self.cur.rowcount
+            
+            if sets_deleted == 0:
+                raise ValueError(f"No set was deleted (set_id: {set_id})")
+            
+            self.conn.commit()
+            print(f"Successfully deleted set '{set_name}' (ID: {set_id})")
+            return True
+            
+        except Exception as e:
+            print(f"Error deleting set {set_id}: {e}")
+            self.conn.rollback()
+            raise e
 
     def update_set_details(self, set_id, name, description, ordered):
         self.cur.execute('UPDATE problem_sets SET name=?, description=?, is_ordered=? WHERE set_id=?', (name, description, int(ordered), set_id))

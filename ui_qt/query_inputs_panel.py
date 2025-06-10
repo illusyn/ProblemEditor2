@@ -92,8 +92,8 @@ class QueryInputsPanel(QWidget):
         self._selected_set_id = None
         # --- Wrap all contents in a QFrame with border ---
         self.outer_frame = QFrame()
-        self.outer_frame.setFrameShape(QFrame.StyledPanel)
-        self.outer_frame.setStyleSheet('QFrame { border: 2px solid #888; border-radius: 12px; background: transparent; }')
+        self.outer_frame.setFrameShape(QFrame.NoFrame)
+        self.outer_frame.setStyleSheet('QFrame { border: none; }')
         self.outer_frame.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Minimum)
         outer_layout = QVBoxLayout(self.outer_frame)
         outer_layout.setContentsMargins(0, 0, 0, 0)
@@ -112,14 +112,13 @@ class QueryInputsPanel(QWidget):
             main_layout.setSpacing(SPACING)
         
         # --- Group box for basic inputs and earmark/problem type row ---
-        self.query_inputs_groupbox = QGroupBox("")
-        groupbox_layout = QVBoxLayout(self.query_inputs_groupbox)
+        # self.query_inputs_groupbox = QGroupBox("")
+        # self.query_inputs_groupbox.setStyleSheet("QGroupBox { border: 6px solid red; border-radius: 12px; background: transparent; } QGroupBox::title { color: transparent; }")
+        groupbox_layout = QVBoxLayout()
         groupbox_layout.setContentsMargins(0, 0, 0, 0)
         groupbox_layout.setSpacing(0)
-        
         # --- Basic Inputs Row (Problem ID, Search Text, Answer) ---
         self._create_basic_inputs(groupbox_layout)
-        
         # --- Earmark checkbox and Problem type buttons on the same row ---
         earmark_and_types_row = QHBoxLayout()
         earmark_and_types_row.setSpacing(8)
@@ -140,13 +139,14 @@ class QueryInputsPanel(QWidget):
         earmark_and_types_row.addWidget(self.problem_type_panel)
         earmark_and_types_row.addStretch(2)
         groupbox_layout.addLayout(earmark_and_types_row)
-        
-        main_layout.addWidget(self.query_inputs_groupbox)
+        main_layout.addLayout(groupbox_layout)
         main_layout.addSpacing(2)
         
         # --- Math Domains Section ---
-        self.domains_groupbox = QGroupBox("")
-        domains_groupbox_layout = QVBoxLayout(self.domains_groupbox)
+        # self.domains_groupbox = QGroupBox("")
+        # self.domains_groupbox.setStyleSheet("QGroupBox { border: 6px solid blue; border-radius: 12px; background: transparent; } QGroupBox::title { color: transparent; }")
+        domains_widget = QWidget()
+        domains_groupbox_layout = QVBoxLayout(domains_widget)
         domains_groupbox_layout.setContentsMargins(0, 0, 0, 0)
         domains_groupbox_layout.setSpacing(0)
         domains_label = QLabel("Math Domains")
@@ -156,27 +156,22 @@ class QueryInputsPanel(QWidget):
         domains_label.setAlignment(Qt.AlignCenter)
         domains_groupbox_layout.addWidget(domains_label)
         self.category_panel = CategoryPanelQt()
-        self.category_groupbox = QGroupBox("")
-        self.category_groupbox.setMinimumHeight(300)
-        category_layout = QVBoxLayout(self.category_groupbox)
-        category_layout.setContentsMargins(0, 0, 0, 0)
-        category_layout.setSpacing(0)
         self.category_frame = QFrame()
         self.category_frame.setFrameShape(QFrame.StyledPanel)
-        self.category_frame.setStyleSheet('QFrame { border: 2px solid #888; border-radius: 12px; background: transparent; }')
+        # self.category_frame.setStyleSheet('QFrame { border: 2px solid #888; border-radius: 12px; background: transparent; }')
         frame_layout = QVBoxLayout(self.category_frame)
         frame_layout.setContentsMargins(0, 0, 0, 0)
         frame_layout.setSpacing(0)
         frame_layout.addWidget(self.category_panel)
         self.category_frame.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
-        category_layout.addWidget(self.category_frame)
-        self.category_groupbox.setLayout(category_layout)
-        domains_groupbox_layout.addWidget(self.category_groupbox)
-        main_layout.addWidget(self.domains_groupbox)
+        domains_groupbox_layout.addWidget(self.category_frame)
+        main_layout.addWidget(domains_widget)
         
         # --- Set Selector and Set Editor Section (QStackedWidget) ---
-        self.set_selector_groupbox = QGroupBox("")
-        set_selector_layout = QVBoxLayout(self.set_selector_groupbox)
+        # self.set_selector_groupbox = QGroupBox("")
+        # self.set_selector_groupbox.setStyleSheet("QGroupBox { border: 6px solid green; border-radius: 12px; background: transparent; } QGroupBox::title { color: transparent; }")
+        set_selector_widget = QWidget()
+        set_selector_layout = QVBoxLayout(set_selector_widget)
         set_selector_layout.setContentsMargins(0, 0, 0, 0)
         set_selector_layout.setSpacing(0)
         set_selector_label = QLabel("Problem Sets")
@@ -186,16 +181,17 @@ class QueryInputsPanel(QWidget):
         set_selector_label.setAlignment(Qt.AlignCenter)
         set_selector_layout.addWidget(set_selector_label)
         self.set_selector_grid = SetSelectorGridQt()
-        self.set_selector_grid.setMinimumHeight(150)
+        # Set height for 5 rows: 5 rows * 40px height + 4 gaps * 10px spacing + some padding
+        self.set_selector_grid.setMinimumHeight(250)
         set_selector_layout.addWidget(self.set_selector_grid)
-        self.set_selector_groupbox.setLayout(set_selector_layout)
+        # self.set_selector_groupbox.setLayout(set_selector_layout)
 
         # Set Editor Panel
         self.set_editor_panel = SetEditorPanelQt()
 
         # QStackedWidget to hold both
         self.set_stack = QStackedWidget()
-        self.set_stack.addWidget(self.set_selector_groupbox)  # index 0
+        self.set_stack.addWidget(set_selector_widget)  # index 0
         self.set_stack.addWidget(self.set_editor_panel)       # index 1
 
         # Toggle button
@@ -418,5 +414,7 @@ class QueryInputsPanel(QWidget):
             self.set_stack.setCurrentIndex(1)
             self.toggle_set_editor_btn.setText("Back to Set Selector")
         else:
+            # Refresh the set selector grid to reflect any changes made in the editor
+            self.set_selector_grid.refresh_sets()
             self.set_stack.setCurrentIndex(0)
             self.toggle_set_editor_btn.setText("Open Set Editor")

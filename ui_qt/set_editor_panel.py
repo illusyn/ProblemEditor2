@@ -114,16 +114,52 @@ class SetEditorPanelQt(QWidget):
 
         # --- Set grid: full width below top row ---
         self.set_selector_grid = SetSelectorGridQt()
+        # Set height for 5 rows to match the main set selector
+        self.set_selector_grid.setMinimumHeight(250)
         main_layout.addWidget(self.set_selector_grid, stretch=1)
+        # Initialize selected_set_id
+        self.selected_set_id = None
+        
         # Wire up selection logic
-        def on_set_selected(set_id):
-            self.selected_set_id = set_id
+        def on_set_selected(set_id, is_selected):
+            if is_selected:
+                self.selected_set_id = set_id
+                print(f"[DEBUG] Set selected: {set_id}")
+            else:
+                # If deselecting the currently selected set, clear selection
+                if self.selected_set_id == set_id:
+                    self.selected_set_id = None
+                    print(f"[DEBUG] Set deselected: {set_id}")
         self.set_selector_grid.set_selected.connect(on_set_selected)
 
     def create_set(self):
         name = self.name_edit.text().strip()
         if not name:
-            QMessageBox.warning(self, "Create Set", "Set name cannot be empty.")
+            warning_box = QMessageBox(self)
+            warning_box.setWindowTitle("Create Set")
+            warning_box.setText("Set name cannot be empty.")
+            warning_box.setIcon(QMessageBox.Warning)
+            warning_box.setStyleSheet("""
+                QMessageBox { 
+                    background-color: #f0f0f3; 
+                    color: #031282; 
+                    font-size: 14px;
+                }
+                QLabel { 
+                    color: #031282; 
+                    font-size: 14px;
+                    padding: 10px;
+                }
+                QPushButton { 
+                    color: #031282; 
+                    background-color: #e0e0e0; 
+                    border: 1px solid #cccccc;
+                    padding: 5px 15px;
+                    font-size: 12px;
+                    min-width: 60px;
+                }
+            """)
+            warning_box.exec_()
             return
         db = ProblemSetDB()
         try:
@@ -132,7 +168,31 @@ class SetEditorPanelQt(QWidget):
             self.name_edit.clear()
             self.refresh_sets()
         except Exception as e:
-            QMessageBox.warning(self, "Create Set", f"Could not create set: {e}")
+            error_box = QMessageBox(self)
+            error_box.setWindowTitle("Create Set")
+            error_box.setText(f"Could not create set: {e}")
+            error_box.setIcon(QMessageBox.Critical)
+            error_box.setStyleSheet("""
+                QMessageBox { 
+                    background-color: #f0f0f3; 
+                    color: #031282; 
+                    font-size: 14px;
+                }
+                QLabel { 
+                    color: #031282; 
+                    font-size: 14px;
+                    padding: 10px;
+                }
+                QPushButton { 
+                    color: #031282; 
+                    background-color: #e0e0e0; 
+                    border: 1px solid #cccccc;
+                    padding: 5px 15px;
+                    font-size: 12px;
+                    min-width: 60px;
+                }
+            """)
+            error_box.exec_()
         db.close()
 
     def refresh_sets(self):
@@ -141,19 +201,111 @@ class SetEditorPanelQt(QWidget):
     def delete_selected_set(self):
         selected_id = self.get_selected_set_id()
         if not selected_id:
-            QMessageBox.warning(self, "Delete Set", "No set selected for deletion.")
+            warning_box = QMessageBox(self)
+            warning_box.setWindowTitle("Delete Set")
+            warning_box.setText("No set selected for deletion.")
+            warning_box.setIcon(QMessageBox.Warning)
+            warning_box.setStyleSheet("""
+                QMessageBox { 
+                    background-color: #f0f0f3; 
+                    color: #031282; 
+                    font-size: 14px;
+                }
+                QLabel { 
+                    color: #031282; 
+                    font-size: 14px;
+                    padding: 10px;
+                }
+                QPushButton { 
+                    color: #031282; 
+                    background-color: #e0e0e0; 
+                    border: 1px solid #cccccc;
+                    padding: 5px 15px;
+                    font-size: 12px;
+                    min-width: 60px;
+                }
+            """)
+            warning_box.exec_()
             return
-        reply = QMessageBox.question(
-            self, "Delete Set",
-            f"Are you sure you want to delete the selected set? This cannot be undone.",
-            QMessageBox.Yes | QMessageBox.No
-        )
+        
+        print(f"[DEBUG] Selected set ID for deletion: {selected_id}")
+        
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle("Delete Set")
+        msg_box.setText("Are you sure you want to delete the selected set? This cannot be undone.")
+        msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        msg_box.setStyleSheet("""
+            QMessageBox { 
+                background-color: #f0f0f3; 
+                color: #031282; 
+                font-size: 14px;
+            }
+            QLabel { 
+                color: #031282; 
+                font-size: 14px;
+                padding: 10px;
+            }
+            QPushButton { 
+                color: #031282; 
+                background-color: #e0e0e0; 
+                border: 1px solid #cccccc;
+                padding: 5px 15px;
+                font-size: 12px;
+                min-width: 60px;
+            }
+            QPushButton:hover {
+                background-color: #d0d0d3;
+            }
+            QPushButton:pressed {
+                background-color: #c0c0c3;
+            }
+        """)
+        reply = msg_box.exec_()
         if reply != QMessageBox.Yes:
             return
-        db = ProblemSetDB()
-        db.delete_set(selected_id)
-        db.close()
-        self.refresh_sets()
+        
+        try:
+            db = ProblemSetDB()
+            print(f"[DEBUG] About to delete set_id: {selected_id}")
+            db.delete_set(selected_id)
+            db.close()
+            print(f"[DEBUG] Successfully deleted set_id: {selected_id}")
+            
+            # Clear the selection after deletion
+            self.set_selector_grid.clear_selection()
+            self.selected_set_id = None
+            
+            # Refresh the grid
+            self.refresh_sets()
+        except Exception as e:
+            print(f"[DEBUG] Error deleting set: {e}")
+            error_box = QMessageBox(self)
+            error_box.setWindowTitle("Delete Set")
+            error_box.setText(f"Error deleting set: {str(e)}")
+            error_box.setIcon(QMessageBox.Critical)
+            error_box.setStyleSheet("""
+                QMessageBox { 
+                    background-color: #f0f0f3; 
+                    color: #031282; 
+                    font-size: 14px;
+                }
+                QLabel { 
+                    color: #031282; 
+                    font-size: 14px;
+                    padding: 10px;
+                }
+                QPushButton { 
+                    color: #031282; 
+                    background-color: #e0e0e0; 
+                    border: 1px solid #cccccc;
+                    padding: 5px 15px;
+                    font-size: 12px;
+                    min-width: 60px;
+                }
+            """)
+            error_box.exec_()
+            if 'db' in locals():
+                db.close()
 
     def on_add_selected_problem_to_set(self):
         parent = self.parent()
@@ -166,4 +318,16 @@ class SetEditorPanelQt(QWidget):
         self.add_selected_problems_to_set.emit(selected_problems, selected_set_id)
 
     def get_selected_set_id(self):
-        return self.set_selector_grid.get_selected_set_id() 
+        # Use the tracked selected_set_id, but also check the grid for consistency
+        grid_selected = self.set_selector_grid.get_selected_sets()
+        
+        print(f"[DEBUG] get_selected_set_id: tracked={self.selected_set_id}, grid_selected={grid_selected}")
+        
+        if self.selected_set_id is not None and self.selected_set_id in grid_selected:
+            return self.selected_set_id
+        elif grid_selected:
+            # Update our tracking if grid has selection but we don't
+            self.selected_set_id = grid_selected[0]
+            return self.selected_set_id
+        else:
+            return None 

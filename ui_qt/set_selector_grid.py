@@ -24,6 +24,7 @@ class SetSelectorGridQt(QWidget):
     def __init__(self):
         super().__init__()
         self.selected_sets = set()
+        self.button_to_set_id = {}  # Map button to set_id for easier access
         self.init_ui()
         
     def init_ui(self):
@@ -63,6 +64,9 @@ class SetSelectorGridQt(QWidget):
             btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
             btn.clicked.connect(lambda checked, sid=set_id: self.toggle_set(sid, checked))
             
+            # Store mapping
+            self.button_to_set_id[btn] = set_id
+            
             # Add to grid
             self.grid_layout.addWidget(btn, row, col)
             
@@ -82,11 +86,30 @@ class SetSelectorGridQt(QWidget):
         layout.addWidget(scroll)
     
     def toggle_set(self, set_id, is_selected):
-        """Toggle selection of a set"""
+        """Toggle selection of a set (single selection only)"""
+        print(f"[DEBUG] toggle_set called: set_id={set_id}, is_selected={is_selected}")
+        
         if is_selected:
+            # Clear any existing selection first (single selection mode)
+            cleared_sets = []
+            for btn, btn_set_id in self.button_to_set_id.items():
+                if btn_set_id != set_id and btn.isChecked():
+                    btn.setChecked(False)
+                    self.selected_sets.discard(btn_set_id)
+                    cleared_sets.append(btn_set_id)
+            
+            if cleared_sets:
+                print(f"[DEBUG] Cleared previous selections: {cleared_sets}")
+            
+            # Add the new selection
+            self.selected_sets.clear()  # Ensure only one selection
             self.selected_sets.add(set_id)
+            print(f"[DEBUG] Added selection: {set_id}")
         else:
             self.selected_sets.discard(set_id)
+            print(f"[DEBUG] Removed selection: {set_id}")
+        
+        print(f"[DEBUG] Current selected_sets: {list(self.selected_sets)}")
         self.set_selected.emit(set_id, is_selected)
     
     def get_selected_sets(self):
@@ -97,7 +120,54 @@ class SetSelectorGridQt(QWidget):
         """Clear all selections"""
         self.selected_sets.clear()
         # Uncheck all buttons
-        for i in range(self.grid_layout.count()):
+        for btn in self.button_to_set_id.keys():
+            btn.setChecked(False)
+    
+    def refresh_sets(self):
+        print("[DEBUG] refresh_sets() called")
+        
+        # Remove all widgets from the grid layout
+        widget_count = self.grid_layout.count()
+        print(f"[DEBUG] Removing {widget_count} widgets from grid")
+        
+        for i in reversed(range(self.grid_layout.count())):
             widget = self.grid_layout.itemAt(i).widget()
-            if isinstance(widget, NeumorphicButton):
-                widget.setChecked(False) 
+            if widget is not None:
+                widget.setParent(None)
+        
+        # Clear mappings and selections
+        self.selected_sets.clear()
+        self.button_to_set_id.clear()
+        
+        # Load sets from database
+        db = ProblemSetDB()
+        sets = db.get_all_sets()
+        db.close()
+        
+        print(f"[DEBUG] Loaded {len(sets)} sets from database: {[s[1] for s in sets]}")
+        
+        row = 0
+        col = 0
+        max_cols = 2
+        
+        for set_data in sets:
+            set_id, set_name, description, is_ordered = set_data
+            print(f"[DEBUG] Creating button for set: {set_name} (ID: {set_id})")
+            
+            btn = NeumorphicButton(set_name)
+            btn.setCheckable(True)
+            btn.setMinimumHeight(40)
+            btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+            btn.clicked.connect(lambda checked, sid=set_id: self.toggle_set(sid, checked))
+            
+            # Store mapping
+            self.button_to_set_id[btn] = set_id
+            
+            self.grid_layout.addWidget(btn, row, col)
+            col += 1
+            if col >= max_cols:
+                col = 0
+                row += 1
+        
+        self.grid_layout.setRowStretch(row + 1, 1)
+        print(f"[DEBUG] refresh_sets() completed, grid now has {len(self.button_to_set_id)} buttons") 
