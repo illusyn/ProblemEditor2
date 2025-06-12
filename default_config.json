@@ -1,14 +1,26 @@
 {
-    "palette_name": "DarkBlue",
-    "variables": {
-      "default_format": "\\medskip\\mydefaultsize",
-      "section_header": "\\section*{#CONTENT#}",
-      "subsection_header": "\\subsection*{#CONTENT#}"
+    "image": {
+        "default_max_height": 800,
+        "caption_behavior": "none",
+        "indent_points": 48
+    },
+    "editor": {
+        "font_size": 12
     },
     "preview": {
-      "font_family": "Calibri",
-      "font_size": 14,
-      "math_font_family": "Cambria Math",
-      "math_font_size": 14
+        "font_size": 17,
+        "font_family": "Calibri",
+        "math_font_family": "Cambria Math",
+        "math_font_size": 16,
+        "zoom_level": 80
+    },
+    "appearance": {
+        "theme": "light"
+    },
+    "palette_name": "DarkBlue",
+    "variables": {
+        "default_format": "\\medskip\\mydefaultsize",
+        "section_header": "\\section*{#CONTENT#}",
+        "subsection_header": "\\subsection*{#CONTENT#}"
     }
 }
