@@ -126,36 +126,39 @@ class PreviewManager:
                 print(f"Extracting image: {image_name}")
                 # Remove any extra whitespace or newlines
                 image_name = image_name.strip()
+                # Unescape LaTeX escaped characters in filename
+                actual_image_name = image_name.replace('\\_', '_')
                 
-                # Get the image from the database
-                success, img = self.app.image_converter.image_db.get_image(image_name)
+                # Get the image from the database using the unescaped filename
+                success, img = self.app.image_converter.image_db.get_image(actual_image_name)
                 
                 if not success:
                     # Try with common image extensions if the name doesn't have one
-                    if '.' not in image_name:
+                    if '.' not in actual_image_name:
                         extensions = ['.png', '.jpg', '.jpeg', '.gif']
                         for ext in extensions:
-                            success, img = self.app.image_converter.image_db.get_image(image_name + ext)
+                            success, img = self.app.image_converter.image_db.get_image(actual_image_name + ext)
                             if success:
-                                image_name = image_name + ext
+                                actual_image_name = actual_image_name + ext
                                 break
                 
                 if not success:
-                    self.app.status_var.set(f"Error retrieving image from database: {image_name}")
+                    self.app.status_var.set(f"Error retrieving image from database: {actual_image_name}")
                     print(f"Failed to retrieve image from database: {img}")
                     return False
                 
                 # Save to both main directory and images subdirectory for LaTeX compatibility
                 try:
+                    # Save using the actual (unescaped) filename
                     # Save to main directory
-                    main_path = dest_dir / image_name
+                    main_path = dest_dir / actual_image_name
                     # Get format from file extension or use PNG as default
-                    format_ext = os.path.splitext(image_name)[1][1:].upper() or 'PNG'
+                    format_ext = os.path.splitext(actual_image_name)[1][1:].upper() or 'PNG'
                     img.save(str(main_path), format=format_ext)
                     print(f"Saved image to: {main_path}")
                     
                     # Save to images subdirectory
-                    subdir_path = images_dir / image_name
+                    subdir_path = images_dir / actual_image_name
                     img.save(str(subdir_path), format=format_ext)
                     print(f"Saved image to: {subdir_path}")
                 except Exception as e:

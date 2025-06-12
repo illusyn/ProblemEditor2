@@ -114,10 +114,17 @@ class ImageConverter:
         """
         # Create a default label if none provided
         if not label:
-            label = f"fig:{Path(image_path).stem}"
+            # Ensure we're working with just the filename
+            stem = Path(image_path).stem
+            # Remove any non-alphanumeric characters except underscore and hyphen
+            safe_stem = ''.join(c for c in stem if c.isalnum() or c in '-_')
+            label = f"fig:{safe_stem}"
 
         # Use only filename instead of full path to avoid LaTeX issues
         image_filename = Path(image_path).name
+        # Escape underscores in the filename for LaTeX
+        # Underscores are common in our generated filenames and need to be escaped
+        image_filename = image_filename.replace('_', '\\_')
 
         # Get the configured maximum height (default to 800 if not configured)
         max_height = 800
