@@ -264,10 +264,14 @@ DEFAULT_LABEL_PADDING = f"padding-bottom: {int(4*_scale)}px;"
 # Layout spacing adjustments
 NOTES_FIXED_HEIGHT = int(75 * _scale)
 
-# Shadow and highlight effects
-SHADOW_OFFSETS = [int(x*_scale) for x in [8, 6, 4]]  # Multiple layers for depth
-SHADOW_ALPHAS = [40, 60, 90]  # Increasing opacity for each layer
-HIGHLIGHT_ALPHAS = [30, 50, 80]  # Slightly less intense than shadows
+# Enhanced shadow and highlight effects for more pronounced neumorphism
+SHADOW_OFFSETS = [int(x*_scale) for x in [12, 8, 6, 4]]  # More layers with greater depth
+SHADOW_ALPHAS = [35, 50, 70, 95]  # Increasing opacity for each layer
+HIGHLIGHT_OFFSETS = [int(x*_scale) for x in [10, 6, 4, 2]]  # Separate offsets for highlights
+HIGHLIGHT_ALPHAS = [40, 60, 85, 110]  # More intense highlights for better contrast
+
+# Blue-tinted shadow color to complement navy blue text (#031282)
+NEUMORPH_SHADOW_BLUE = "#9ba3c7"  # Subtle blue-gray shadow that harmonizes with navy text
 
 # Math Domains specific
 MATH_DOMAINS_BG = NEUMORPH_BG_COLOR
