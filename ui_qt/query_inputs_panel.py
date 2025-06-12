@@ -247,8 +247,7 @@ class QueryInputsPanel(QWidget):
         return NeumorphicEntry(
             radius=ENTRY_BORDER_RADIUS,
             bg_color=ENTRY_BG_COLOR,
-            shadow_dark=NEUMORPH_SHADOW_DARK,
-            shadow_light=NEUMORPH_SHADOW_LIGHT,
+            # Let NeumorphicEntry use its default blue-tinted shadow
             font_family=FONT_FAMILY,
             font_size=ENTRY_FONT_SIZE,
             font_color=ENTRY_FONT_COLOR

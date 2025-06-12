@@ -76,14 +76,12 @@ class ImageDetailsDialog(QDialog):
     
     def get_result(self):
         """Get the dialog result"""
-        if self.result() == QDialog.Accepted:
-            return {
-                "caption": self.caption_edit.text(),
-                "label": self.label_edit.text(),
-                "width": self.width_spin.value(),
-                "filename": self.image_info["filename"]
-            }
-        return None
+        return {
+            "caption": self.caption_edit.text(),
+            "label": self.label_edit.text(),
+            "width": self.width_spin.value(),
+            "filename": self.image_info["filename"]
+        }
 
 class ImageManagerQt:
     """Manages image operations for the Simplified Math Editor (PyQt5 version)"""
@@ -157,7 +155,8 @@ class ImageManagerQt:
             )
             
             # Insert at cursor position
-            self.app.editor.insert_text(latex_figure)
+            cursor = self.app.editor_panel.text_edit.textCursor()
+            cursor.insertText(latex_figure)
             
             # Update preview
             self.app.update_preview()
@@ -234,7 +233,8 @@ class ImageManagerQt:
             )
             
             # Insert at cursor position
-            self.app.editor.insert_text(latex_figure)
+            cursor = self.app.editor_panel.text_edit.textCursor()
+            cursor.insertText(latex_figure)
             
             # Update preview
             self.app.update_preview()
@@ -264,11 +264,20 @@ class ImageManagerQt:
             dict or None: Dictionary with image details or None if cancelled
         """
         # Create preview image for dialog
-        if 'path' in image_info:
-            img = Image.open(image_info['path'])
-            img.thumbnail((300, 300))  # Resize for preview
-            qimg = QImage(img.tobytes(), img.width, img.height, img.width * 3, QImage.Format_RGB888)
-            image_info['preview'] = qimg
+        if 'filename' in image_info:
+            # Get image from database
+            success, img = self.image_db.get_image(image_info['filename'])
+            if success:
+                img.thumbnail((300, 300))  # Resize for preview
+                # Convert PIL image to QImage
+                if img.mode == 'RGBA':
+                    qimg = QImage(img.tobytes(), img.width, img.height, img.width * 4, QImage.Format_RGBA8888)
+                else:
+                    # Convert to RGB if not already
+                    if img.mode != 'RGB':
+                        img = img.convert('RGB')
+                    qimg = QImage(img.tobytes(), img.width, img.height, img.width * 3, QImage.Format_RGB888)
+                image_info['preview'] = qimg
         
         # Show dialog
         dialog = ImageDetailsDialog(self.app, image_info)

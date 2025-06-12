@@ -10,12 +10,13 @@ from PyQt5.QtGui import QFont, QColor, QPainter, QBrush
 from PyQt5.QtCore import Qt
 from ui_qt.style_config import (
     FONT_FAMILY, BUTTON_FONT_SIZE, ENTRY_FONT_SIZE, NOTES_FONT_SIZE,
-    NEUMORPH_BG_COLOR, NEUMORPH_SHADOW_DARK, NEUMORPH_SHADOW_LIGHT, 
+    NEUMORPH_BG_COLOR, NEUMORPH_SHADOW_DARK, NEUMORPH_SHADOW_LIGHT, NEUMORPH_SHADOW_BLUE,
     NEUMORPH_RADIUS, BUTTON_BORDER_RADIUS, BUTTON_BG_COLOR, BUTTON_FONT_COLOR, 
     ENTRY_BORDER_RADIUS, ENTRY_BG_COLOR, ENTRY_FONT_COLOR, NOTES_BG_COLOR, 
     NOTES_FONT_COLOR, NOTES_BORDER_RADIUS, BUTTON_MIN_WIDTH, BUTTON_MIN_HEIGHT, 
     ENTRY_MIN_HEIGHT, ENTRY_PADDING_LEFT, TEXTEDIT_PADDING, SHADOW_RECT_ADJUST, 
-    SHADOW_OFFSETS, NOTES_FIXED_HEIGHT, CATEGORY_BTN_SELECTED_COLOR
+    SHADOW_OFFSETS, SHADOW_ALPHAS, HIGHLIGHT_OFFSETS, HIGHLIGHT_ALPHAS, 
+    NOTES_FIXED_HEIGHT, CATEGORY_BTN_SELECTED_COLOR
 )
 
 class NeumorphicButton(QPushButton):
@@ -29,7 +30,7 @@ class NeumorphicButton(QPushButton):
         # Use provided values or defaults
         self.radius = radius or NEUMORPH_RADIUS
         self.bg_color = bg_color or NEUMORPH_BG_COLOR
-        self.shadow_dark = shadow_dark or NEUMORPH_SHADOW_DARK
+        self.shadow_dark = shadow_dark or NEUMORPH_SHADOW_BLUE  # Use blue-tinted shadow
         self.shadow_light = shadow_light or NEUMORPH_SHADOW_LIGHT
         self.font_family = font_family or FONT_FAMILY
         self.font_size = font_size or BUTTON_FONT_SIZE
@@ -49,20 +50,20 @@ class NeumorphicButton(QPushButton):
             rect = self.rect().adjusted(SHADOW_RECT_ADJUST, SHADOW_RECT_ADJUST, 
                                       -SHADOW_RECT_ADJUST, -SHADOW_RECT_ADJUST)
             
-            # Multi-layered blurred shadow (bottom-right)
-            for i, alpha in zip(SHADOW_OFFSETS, [40, 60, 90]):
+            # Enhanced multi-layered blurred shadow (bottom-right)
+            for offset, alpha in zip(SHADOW_OFFSETS, SHADOW_ALPHAS):
                 shadow = QColor(self.shadow_dark)
                 shadow.setAlpha(alpha)
                 painter.setBrush(QBrush(shadow))
                 painter.setPen(Qt.NoPen)
-                painter.drawRoundedRect(rect.translated(i, i), self.radius, self.radius)
+                painter.drawRoundedRect(rect.translated(offset, offset), self.radius, self.radius)
             
-            # Multi-layered highlight (top-left)
-            for i, alpha in zip(SHADOW_OFFSETS, [30, 50, 80]):
+            # Enhanced multi-layered highlight (top-left)
+            for offset, alpha in zip(HIGHLIGHT_OFFSETS, HIGHLIGHT_ALPHAS):
                 highlight = QColor(self.shadow_light)
                 highlight.setAlpha(alpha)
                 painter.setBrush(QBrush(highlight))
-                painter.drawRoundedRect(rect.translated(-i, -i), self.radius, self.radius)
+                painter.drawRoundedRect(rect.translated(-offset, -offset), self.radius, self.radius)
             
             # Solid background (highlight if checked)
             if self.isCheckable() and self.isChecked():
@@ -89,7 +90,7 @@ class NeumorphicEntry(QLineEdit):
         # Use provided values or defaults
         self.radius = radius or ENTRY_BORDER_RADIUS
         self.bg_color = bg_color or ENTRY_BG_COLOR
-        self.shadow_dark = shadow_dark or NEUMORPH_SHADOW_DARK
+        self.shadow_dark = shadow_dark or NEUMORPH_SHADOW_BLUE  # Use blue-tinted shadow
         self.shadow_light = shadow_light or NEUMORPH_SHADOW_LIGHT
         self.font_family = font_family or FONT_FAMILY
         self.font_size = font_size or ENTRY_FONT_SIZE
@@ -107,19 +108,19 @@ class NeumorphicEntry(QLineEdit):
             rect = self.rect().adjusted(SHADOW_RECT_ADJUST, SHADOW_RECT_ADJUST, 
                                       -SHADOW_RECT_ADJUST, -SHADOW_RECT_ADJUST)
             
-            # Sunken effect: shadow top-left, highlight bottom-right
-            for i, alpha in zip(SHADOW_OFFSETS, [40, 60, 90]):
+            # Enhanced sunken effect: shadow top-left, highlight bottom-right
+            for offset, alpha in zip(SHADOW_OFFSETS, SHADOW_ALPHAS):
                 shadow = QColor(self.shadow_dark)
                 shadow.setAlpha(alpha)
                 painter.setBrush(QBrush(shadow))
                 painter.setPen(Qt.NoPen)
-                painter.drawRoundedRect(rect.translated(-i, -i), self.radius, self.radius)
+                painter.drawRoundedRect(rect.translated(-offset, -offset), self.radius, self.radius)
             
-            for i, alpha in zip(SHADOW_OFFSETS, [30, 50, 80]):
+            for offset, alpha in zip(HIGHLIGHT_OFFSETS, HIGHLIGHT_ALPHAS):
                 highlight = QColor(self.shadow_light)
                 highlight.setAlpha(alpha)
                 painter.setBrush(QBrush(highlight))
-                painter.drawRoundedRect(rect.translated(i, i), self.radius, self.radius)
+                painter.drawRoundedRect(rect.translated(offset, offset), self.radius, self.radius)
             
             # Solid background (no gradient)
             painter.setBrush(QBrush(QColor(self.bg_color)))
@@ -141,7 +142,7 @@ class NeumorphicTextEdit(QTextEdit):
         # Use provided values or defaults
         self.radius = radius or NOTES_BORDER_RADIUS
         self.bg_color = bg_color or NOTES_BG_COLOR
-        self.shadow_dark = shadow_dark or NEUMORPH_SHADOW_DARK
+        self.shadow_dark = shadow_dark or NEUMORPH_SHADOW_BLUE  # Use blue-tinted shadow
         self.shadow_light = shadow_light or NEUMORPH_SHADOW_LIGHT
         self.font_family = font_family or FONT_FAMILY
         self.font_size = font_size or NOTES_FONT_SIZE
@@ -162,20 +163,20 @@ class NeumorphicTextEdit(QTextEdit):
             rect = self.rect().adjusted(SHADOW_RECT_ADJUST, SHADOW_RECT_ADJUST, 
                                       -SHADOW_RECT_ADJUST, -SHADOW_RECT_ADJUST)
             
-            # Multi-layered blurred shadow (bottom-right)
-            for i, alpha in zip(SHADOW_OFFSETS, [40, 60, 90]):
+            # Enhanced multi-layered blurred shadow (bottom-right)
+            for offset, alpha in zip(SHADOW_OFFSETS, SHADOW_ALPHAS):
                 shadow = QColor(self.shadow_dark)
                 shadow.setAlpha(alpha)
                 painter.setBrush(QBrush(shadow))
                 painter.setPen(Qt.NoPen)
-                painter.drawRoundedRect(rect.translated(i, i), self.radius, self.radius)
+                painter.drawRoundedRect(rect.translated(offset, offset), self.radius, self.radius)
             
-            # Multi-layered highlight (top-left)
-            for i, alpha in zip(SHADOW_OFFSETS, [30, 50, 80]):
+            # Enhanced multi-layered highlight (top-left)
+            for offset, alpha in zip(HIGHLIGHT_OFFSETS, HIGHLIGHT_ALPHAS):
                 highlight = QColor(self.shadow_light)
                 highlight.setAlpha(alpha)
                 painter.setBrush(QBrush(highlight))
-                painter.drawRoundedRect(rect.translated(-i, -i), self.radius, self.radius)
+                painter.drawRoundedRect(rect.translated(-offset, -offset), self.radius, self.radius)
             
             # Solid background (no gradient)
             painter.setBrush(QBrush(QColor(self.bg_color)))

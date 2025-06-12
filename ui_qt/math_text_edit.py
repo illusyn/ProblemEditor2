@@ -15,6 +15,13 @@ try:
 except ImportError:
     EN_DICT = None
 
+try:
+    from english_words import english_words_set
+    # Convert to lowercase for easier comparison
+    ENGLISH_WORDS = {word.lower() for word in english_words_set}
+except ImportError:
+    ENGLISH_WORDS = None
+
 UNICODE_LATEX_MAP = {
     "π": r"\pi",
     "Π": r"\Pi",
@@ -53,7 +60,7 @@ class MathTextEdit(QTextEdit):
         self.customContextMenuRequested.connect(self.show_context_menu)
         # Shortcuts
         QShortcut(QKeySequence("Ctrl+F"), self, self.insert_fraction)
-        QShortcut(QKeySequence("Ctrl+Shift+D"), self, self.insert_degree)
+        QShortcut(QKeySequence("Ctrl+D"), self, self.insert_degree)
         QShortcut(QKeySequence("Ctrl+R"), self, self.insert_half_power)
         QShortcut(QKeySequence("Ctrl+S"), self, self.insert_sqrt)
         QShortcut(QKeySequence("Ctrl+L"), self, self.paste_latex)
@@ -63,13 +70,30 @@ class MathTextEdit(QTextEdit):
         QShortcut(QKeySequence("Ctrl+Shift+R"), self, self.insert_half_power_dollars)
         QShortcut(QKeySequence("Ctrl+Shift+S"), self, self.insert_sqrt_dollars)
         QShortcut(QKeySequence("Ctrl+P"), self, self.insert_problem_section)
-        QShortcut(QKeySequence("Ctrl+T"), self, self.insert_text_section)
+        QShortcut(QKeySequence("Ctrl+Alt+T"), self, self.insert_text_section)  # Changed from Ctrl+T
+        QShortcut(QKeySequence("Ctrl+Shift+N"), self, self.insert_vspace)
+        # New triangle shortcuts
+        QShortcut(QKeySequence("Ctrl+T"), self, self.insert_triangle)
+        QShortcut(QKeySequence("Ctrl+Shift+T"), self, self.insert_triangle_dollars)
+        # Overline shortcuts
+        QShortcut(QKeySequence("Ctrl+O"), self, self.overline_selection)
+        QShortcut(QKeySequence("Ctrl+Shift+O"), self, self.overline_selection_dollars)
+        # Wide hat shortcuts
+        QShortcut(QKeySequence("Alt+A"), self, self.widehat_selection)
+        QShortcut(QKeySequence("Alt+Shift+A"), self, self.widehat_selection_dollars)
+        # Angle shortcuts - Note: This will override the default Select All (Ctrl+A)
+        QShortcut(QKeySequence("Ctrl+A"), self, self.insert_angle)
+        QShortcut(QKeySequence("Ctrl+Shift+A"), self, self.insert_angle_dollars)
 
     def show_context_menu(self, pos):
         menu = self.createStandardContextMenu()
         menu.addSeparator()
         menu.addAction("Paste LaTeX as Equation", self.paste_latex)
         menu.addAction("Wrap Math", self.wrap_math_selection)
+        menu.addAction("Overline Selection", self.overline_selection)
+        menu.addAction("Overline Selection (with $)", self.overline_selection_dollars)
+        menu.addAction("Wide Hat Selection", self.widehat_selection)
+        menu.addAction("Wide Hat Selection (with $)", self.widehat_selection_dollars)
         menu.exec_(self.mapToGlobal(pos))
 
     def paste_latex(self):
@@ -94,55 +118,62 @@ class MathTextEdit(QTextEdit):
         cursor.insertText(wrapped)
 
     def _wrap_math_runs_exclude_words(self, text):
-        unit_pattern = r"cm|mm|m|kg|g|s|ms|K|N|J|W|V|A|Hz|rad|deg|mol|Pa|bar|atm|L|h|min|d|yr|eV|u|au|pc|ly|sr|T|C|F|S|Ω|ohm|lx|lm|cd|Bq|Gy|Sv|kat|cal|hp|psi|lb|oz|ton|gal|qt|pt|cup|tbsp|tsp|yd|mi|nmi|acre|ha|angstrom"
-        math_symbols = r"[\+\-\=\*/\^<>]|<=|>=|!=|\\leq|\\geq|\\neq|\\approx|\\sim|\\cdot|\\div|\\times|\\pm|\\mp|\\to|\\rightarrow|\\left|\\right|\\infty|\\sqrt|\\frac"
-        variable_pattern = r"[A-Z]{2,}|[a-z]{2,}|[a-zA-Z]"
-        number_pattern = r"\d+(?:\.\d+)?"
-        math_symbols_extended = math_symbols + r"|‖"
-        math_token_check = re.compile(rf"{variable_pattern}|{number_pattern}|{math_symbols_extended}")
-        segments = re.findall(r"[a-zA-Z']+|[^a-zA-Z']+", text)
-        result = []
-        buffer = ''
+        """
+        Wrap mathematical expressions in dollar signs while excluding English words.
+        This function processes selected text and wraps math content while preserving
+        punctuation and English words outside of the math delimiters.
+        """
+        # First, let's handle the simple case where the entire selection is wrapped
+        if text.startswith('$') and text.endswith('$'):
+            return text
+            
+        # Helper function to check if token is an English word
         def is_english_word(token):
-            if EN_DICT:
-                return EN_DICT.check(token.lower())
-            return token.lower() in {'square', 'feet', 'perimeter', 'that', 'has', 'is', 'the', 'a', 'an', 'and', 'or', 'to', 'of', 'in', 'on', 'for', 'by', 'with', 'as', 'at', 'from', 'it', 'this', 'be', 'are', 'was', 'were', 'which', 'but', 'not', 'so', 'if', 'then', 'than', 'when', 'where', 'who', 'what', 'how', 'why', 'can', 'will', 'would', 'should', 'could', 'may', 'might', 'must', 'do', 'does', 'did', 'have', 'had', 'having', 'get', 'got', 'make', 'made', 'see', 'seen', 'go', 'went', 'gone', 'come', 'came', 'say', 'said', 'use', 'used', 'using', 'about', 'into', 'over', 'under', 'after', 'before', 'between', 'each', 'all', 'some', 'any', 'no', 'yes', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten', 'first', 'second', 'third', 'last', 'next', 'other', 'more', 'most', 'less', 'least', 'many', 'much', 'few', 'every', 'either', 'neither', 'both', 'just', 'even', 'still', 'yet', 'already', 'always', 'never', 'sometimes', 'often', 'usually', 'again', 'new', 'old', 'young', 'long', 'short', 'high', 'low', 'big', 'small', 'large', 'great', 'little', 'same', 'different', 'own', 'part', 'whole', 'place', 'thing', 'way', 'day', 'week', 'month', 'year', 'time', 'number', 'problem', 'solution', 'question', 'answer', 'example', 'line', 'point', 'segment', 'angle', 'triangle', 'circle', 'rectangle', 'parallelogram', 'rhombus', 'trapezoid', 'polygon', 'area', 'volume', 'length', 'width', 'height', 'radius', 'diameter', 'side', 'base', 'altitude', 'vertex', 'vertices', 'edge', 'edges', 'face', 'faces', 'solid', 'figure', 'diagram', 'graph', 'table', 'chart', 'value', 'values', 'expression', 'equation', 'inequality', 'system', 'set', 'subset', 'element', 'elements', 'member', 'members', 'function', 'domain', 'range', 'input', 'output', 'variable', 'constant', 'coefficient', 'term', 'terms', 'factor', 'factors', 'multiple', 'multiples', 'divisor', 'divisors', 'quotient', 'remainder', 'product', 'sum', 'difference', 'average', 'mean', 'median', 'mode', 'probability', 'percent', 'fraction', 'decimal', 'integer', 'whole', 'natural', 'rational', 'irrational', 'real', 'complex', 'positive', 'negative', 'zero', 'prime', 'composite', 'even', 'odd', 'congruent', 'similar', 'parallel', 'perpendicular', 'right', 'acute', 'obtuse', 'scalene', 'isosceles', 'equilateral'}
-        for seg in segments:
-            if seg.isalpha() and is_english_word(seg):
-                if buffer:
-                    m = re.match(r'^(\s*)(.*?)(\s*)$', buffer)
-                    leading_space = m.group(1)
-                    math_part = m.group(2)
-                    trailing_space = m.group(3)
-                    if math_part:
-                        if math_token_check.search(math_part):
-                            if not re.match(r"^\$.*\$$", math_part):
-                                result.append(f"{leading_space}${math_part}${trailing_space}")
-                            else:
-                                result.append(f"{leading_space}{math_part}{trailing_space}")
-                        else:
-                            result.append(f"{leading_space}{math_part}{trailing_space}")
-                    else:
-                        result.append(buffer)
-                    buffer = ''
-                result.append(seg)
+            if not token or not token.isalpha():
+                return False
+            if ENGLISH_WORDS:
+                return token.lower() in ENGLISH_WORDS
+            # Fallback for when english-words package is not installed
+            return False
+        
+        # Use a more sophisticated regex to find mathematical expressions
+        # This regex looks for:
+        # 1. Expressions in parentheses with numbers: (0, 6)
+        # 2. Single variables: x, y, c
+        # 3. Mathematical expressions: x^2, πr^2
+        # 4. Numbers: 10, 3.14
+        math_pattern = r'\([^)]*\d[^)]*\)|[a-zA-Z]\^[\d.]+|[a-zA-Z]+\d+|\d+\.?\d*|[a-zA-Z](?![a-zA-Z])|[\+\-\*/=<>]|\\[a-zA-Z]+|π|θ|α|β|γ|δ|ε|λ|μ|σ|τ|φ|ω'
+        
+        # Split text into tokens while preserving spaces
+        tokens = re.split(r'(\s+)', text)
+        result = []
+        
+        for token in tokens:
+            # Skip empty tokens or whitespace
+            if not token or token.isspace():
+                result.append(token)
+                continue
+                
+            # Check if it's already wrapped in dollars
+            if token.startswith('$') and token.endswith('$'):
+                result.append(token)
+                continue
+            
+            # Check for sentence-ending punctuation at the end
+            trailing_punct = ''
+            if token and token[-1] in ',.;:!?':
+                trailing_punct = token[-1]
+                token = token[:-1]
+            
+            # If it's an English word, don't wrap it
+            if is_english_word(token):
+                result.append(token + trailing_punct)
+            # If it contains mathematical patterns, wrap it
+            elif re.search(math_pattern, token):
+                result.append(f'${token}$' + trailing_punct)
             else:
-                buffer += seg
-        if buffer:
-            m = re.match(r'^(\s*)(.*?)(\s*)$', buffer)
-            leading_space = m.group(1)
-            math_part = m.group(2)
-            trailing_space = m.group(3)
-            if math_part:
-                if math_token_check.search(math_part):
-                    if not re.match(r"^\$.*\$$", math_part):
-                        result.append(f"{leading_space}${math_part}${trailing_space}")
-                    else:
-                        result.append(f"{leading_space}{math_part}{trailing_space}")
-                else:
-                    result.append(f"{leading_space}{math_part}{trailing_space}")
-            else:
-                result.append(buffer)
+                result.append(token + trailing_punct)
+                
         return ''.join(result)
 
     def insert_fraction(self):
@@ -186,6 +217,53 @@ class MathTextEdit(QTextEdit):
 
     def insert_text_section(self):
         self.insertPlainText("#text\n")
+    
+    def insert_vspace(self):
+        self.insertPlainText(r"\\[2mm]")
+    
+    def insert_triangle(self):
+        self.insertPlainText(r"\bigtriangleup")
+    
+    def insert_triangle_dollars(self):
+        self.insertPlainText(r"$\bigtriangleup$")
+    
+    def overline_selection(self):
+        cursor = self.textCursor()
+        if cursor.hasSelection():
+            selected_text = cursor.selectedText()
+            cursor.insertText(f"\\overline{{{selected_text}}}")
+        else:
+            self.insertPlainText("\\overline{}")
+    
+    def overline_selection_dollars(self):
+        cursor = self.textCursor()
+        if cursor.hasSelection():
+            selected_text = cursor.selectedText()
+            cursor.insertText(f"$\\overline{{{selected_text}}}$")
+        else:
+            self.insertPlainText("$\\overline{}$")
+    
+    def widehat_selection(self):
+        cursor = self.textCursor()
+        if cursor.hasSelection():
+            selected_text = cursor.selectedText()
+            cursor.insertText(f"\\widehat{{{selected_text}}}")
+        else:
+            self.insertPlainText("\\widehat{}")
+    
+    def widehat_selection_dollars(self):
+        cursor = self.textCursor()
+        if cursor.hasSelection():
+            selected_text = cursor.selectedText()
+            cursor.insertText(f"$\\widehat{{{selected_text}}}$")
+        else:
+            self.insertPlainText("$\\widehat{}$")
+    
+    def insert_angle(self):
+        self.insertPlainText(r"\angle")
+    
+    def insert_angle_dollars(self):
+        self.insertPlainText(r"$\angle$")
 
     def insertFromMimeData(self, source):
         # Override paste to clean text

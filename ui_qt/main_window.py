@@ -101,7 +101,7 @@ class MainWindow(QMainWindow):
         # Connect return_to_editor signal
         self.problem_manager_screen.return_to_editor.connect(self.show_editor_screen)
         self.problem_db = MathProblemDB()
-        self.editor_panel = EditorPanel()
+        self.editor_panel = EditorPanel(main_window=self)
         editor_vlayout = QVBoxLayout()
         editor_vlayout.addWidget(self.editor_panel)
         nav_layout = QHBoxLayout()
@@ -140,10 +140,12 @@ class MainWindow(QMainWindow):
         image_dir = os.path.join(os.getcwd(), "temp", "images")
         os.makedirs(image_dir, exist_ok=True)
         for filename in image_filenames:
-            image_path = os.path.join(image_dir, filename)
+            # Unescape LaTeX escaped characters in filename
+            actual_filename = filename.replace('\\_', '_')
+            image_path = os.path.join(image_dir, actual_filename)
             if not os.path.exists(image_path):
-                # Try to export from database
-                success, result = self.image_manager.image_db.export_to_file(filename, image_path)
+                # Try to export from database using the unescaped filename
+                success, result = self.image_manager.image_db.export_to_file(actual_filename, image_path)
                 if not success:
                     QMessageBox.critical(self, "Image Error", f"Could not extract image '{filename}' from database: {result}")
                     self.status_bar.showMessage(f"Image missing: {filename}")
@@ -274,7 +276,11 @@ class MainWindow(QMainWindow):
             # Find the closest image to cursor
             closest_match = min(matches, key=lambda m: abs(m.start() - position))
             image_filename = closest_match.group(1)
-            width, left, top, bottom, align = self.parse_latex_settings(content, image_filename)
+            # Store the LaTeX-escaped version for later use
+            latex_image_filename = image_filename
+            # Unescape for file operations
+            image_filename_unescaped = image_filename.replace('\\_', '_')
+            width, left, top, bottom, align = self.parse_latex_settings(content, latex_image_filename)
             # Prepare image_info dict
             image_info = {
                 'filename': image_filename,
@@ -298,45 +304,34 @@ class MainWindow(QMainWindow):
                         height_cm = float(height_match.group(1))
                     except Exception:
                         height_cm = 6.0
-            # Construct full image path
+            # Construct full image path using unescaped filename
             image_dir = os.path.join(os.getcwd(), "temp", "images")
-            image_path = os.path.join(image_dir, image_filename)
+            image_path = os.path.join(image_dir, image_filename_unescaped)
             if not os.path.exists(image_path):
-                image_path = image_filename
-            # Define the apply callback
-            def apply_callback(height_cm):
-                margin_vals = dialog.get_margin_values()
+                image_path = image_filename_unescaped
+            # Show adjustment dialog, passing margin values
+            dialog = ImageSizeAdjustDialog(
+                self,
+                image_path=image_path,
+                current_height_cm=height_cm,
+                margin_top=top,
+                margin_left=left,
+                margin_bottom=bottom
+            )
+            
+            # Connect the applied signal to update the editor and preview
+            def on_applied(height_cm, margin_vals):
                 new_content = self._update_latex_image_margins_and_height(
-                    content, image_filename, height_cm,
+                    content, latex_image_filename, height_cm,
                     margin_left=margin_vals['left'],
                     margin_bottom=margin_vals['bottom'],
                     margin_top=margin_vals['top']
                 )
                 self.editor_panel.text_edit.setPlainText(new_content)
                 self.update_preview()
-
-            # Show adjustment dialog, passing margin values
-            dialog = ImageSizeAdjustDialog(
-                self,
-                image_path=image_path,
-                current_height_cm=height_cm,
-                apply_callback=apply_callback,
-                margin_top=top,
-                margin_left=left,
-                margin_bottom=bottom
-            )
-            if dialog.exec_() == QDialog.Accepted:
-                height_cm = dialog.get_result()
-                if height_cm:
-                    margin_vals = dialog.get_margin_values()
-                    new_content = self._update_latex_image_margins_and_height(
-                        content, image_filename, height_cm,
-                        margin_left=margin_vals['left'],
-                        margin_bottom=margin_vals['bottom'],
-                        margin_top=margin_vals['top']
-                    )
-                    self.editor_panel.text_edit.setPlainText(new_content)
-                    self.update_preview()
+            
+            dialog.applied.connect(on_applied)
+            dialog.exec_()
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to adjust image: {str(e)}")
     
