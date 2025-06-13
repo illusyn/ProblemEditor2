@@ -37,7 +37,10 @@ class NeumorphicButton(QPushButton):
         self.font_color = font_color or BUTTON_FONT_COLOR
         
         # Set font and basic styling
-        self.setFont(QFont(self.font_family, self.font_size, QFont.Bold))
+        font = QFont(self.font_family)
+        font.setPointSizeF(self.font_size)
+        font.setWeight(QFont.ExtraBold)
+        self.setFont(font)
         self.setStyleSheet("background: transparent; border: none;")
         self.setMinimumHeight(BUTTON_MIN_HEIGHT)
         self.setMinimumWidth(BUTTON_MIN_WIDTH)
@@ -72,9 +75,26 @@ class NeumorphicButton(QPushButton):
                 painter.setBrush(QBrush(QColor(self.bg_color)))
             painter.drawRoundedRect(rect, self.radius, self.radius)
             
-            # Text
+            # Text - apply shadow effect only for small font sizes
+            font = QFont(self.font_family)
+            font.setPointSizeF(self.font_size)
+            font.setWeight(QFont.ExtraBold)
+            painter.setFont(font)
+            
+            # Apply shadow effect only for small fonts (14pt and below)
+            if self.font_size <= 14:
+                # Draw text shadow for bolder effect
+                shadow_color = QColor(self.font_color)
+                shadow_color.setAlpha(80)  # Semi-transparent shadow
+                
+                # Draw multiple shadow layers for thicker effect
+                shadow_offsets = [(1, 0), (0, 1), (-1, 0), (0, -1)]  # Create outline effect
+                for dx, dy in shadow_offsets:
+                    painter.setPen(shadow_color)
+                    painter.drawText(rect.translated(dx, dy), Qt.AlignCenter, self.text())
+            
+            # Draw main text on top
             painter.setPen(QColor(self.font_color))
-            painter.setFont(QFont(self.font_family, self.font_size, QFont.Bold))
             painter.drawText(rect, Qt.AlignCenter, self.text())
         finally:
             painter.end()
@@ -97,7 +117,10 @@ class NeumorphicEntry(QLineEdit):
         self.font_color = font_color or ENTRY_FONT_COLOR
         
         # Set font and basic styling
-        self.setFont(QFont(self.font_family, self.font_size, QFont.Bold))
+        font = QFont(self.font_family)
+        font.setPointSizeF(self.font_size)
+        font.setWeight(QFont.ExtraBold)
+        self.setFont(font)
         self.setStyleSheet(f"background: transparent; border: none; color: {self.font_color}; padding-left: {ENTRY_PADDING_LEFT}px;")
         self.setMinimumHeight(ENTRY_MIN_HEIGHT)
 
@@ -149,7 +172,10 @@ class NeumorphicTextEdit(QTextEdit):
         self.font_color = font_color or NOTES_FONT_COLOR
         
         # Set font and basic styling
-        self.setFont(QFont(self.font_family, self.font_size, QFont.Bold))
+        font = QFont(self.font_family)
+        font.setPointSizeF(self.font_size)
+        font.setWeight(QFont.ExtraBold)
+        self.setFont(font)
         self.setStyleSheet(f"background: transparent; border: none; color: {self.font_color}; padding: {TEXTEDIT_PADDING}px;")
         
         # Set fixed height if requested

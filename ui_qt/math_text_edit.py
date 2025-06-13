@@ -52,7 +52,8 @@ def clean_pasted_text(text):
 class MathTextEdit(QTextEdit):
     def __init__(self, parent=None):
         super().__init__(parent)
-        font = QFont(EDITOR_FONT_FAMILY, EDITOR_FONT_SIZE)
+        font = QFont(EDITOR_FONT_FAMILY)
+        font.setPointSizeF(EDITOR_FONT_SIZE)
         self.setFont(font)
         self.setStyleSheet(f"background: {EDITOR_BG_COLOR};")
         self.setMinimumSize(400, 300)

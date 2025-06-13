@@ -24,7 +24,9 @@ class PreviewPanel(QWidget):
         
         # Zoom label
         zoom_label = QLabel("Zoom:")
-        zoom_label.setFont(QFont(FONT_FAMILY, LABEL_FONT_SIZE))
+        zoom_font = QFont(FONT_FAMILY)
+        zoom_font.setPointSizeF(LABEL_FONT_SIZE)
+        zoom_label.setFont(zoom_font)
         zoom_control_layout.addWidget(zoom_label)
         
         # Zoom out button
@@ -35,7 +37,9 @@ class PreviewPanel(QWidget):
         
         # Zoom percentage label
         self.zoom_label = QLabel("100%")
-        self.zoom_label.setFont(QFont(FONT_FAMILY, LABEL_FONT_SIZE))
+        zoom_font2 = QFont(FONT_FAMILY)
+        zoom_font2.setPointSizeF(LABEL_FONT_SIZE)
+        self.zoom_label.setFont(zoom_font2)
         self.zoom_label.setMinimumWidth(60)
         self.zoom_label.setAlignment(Qt.AlignCenter)
         zoom_control_layout.addWidget(self.zoom_label)

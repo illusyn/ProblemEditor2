@@ -26,7 +26,9 @@ class ProblemCellWidget(QWidget):
         self.content_label = QLabel(content)
         self.content_label.setAlignment(Qt.AlignTop)
         self.content_label.setWordWrap(True)
-        self.content_label.setFont(QFont('Arial', font_size))
+        content_font = QFont('Arial')
+        content_font.setPointSizeF(font_size)
+        self.content_label.setFont(content_font)
         left_vbox.addWidget(self.content_label)
 
         # Build summary info (ID, Answer, Types, Cat, etc.)
@@ -63,7 +65,9 @@ class ProblemCellWidget(QWidget):
         summary_label.setTextFormat(Qt.RichText)
         summary_label.setText(summary_html)
         summary_label.setWordWrap(True)
-        summary_label.setFont(QFont('Arial', 12))
+        summary_font = QFont('Arial')
+        summary_font.setPointSizeF(12)
+        summary_label.setFont(summary_font)
         left_vbox.addWidget(summary_label)
         left_vbox.addStretch(1)
 
@@ -73,33 +77,99 @@ class ProblemCellWidget(QWidget):
         images_vbox = QVBoxLayout()
         problem_id = problem.get('problem_id', None)
         image_count = 0
+        
+        print(f"\n[DEBUG] ProblemCellWidget: Checking images for problem_id={problem_id}")
+        
         if problem_id is not None:
             db = MathProblemDB()
             try:
-                db.cur.execute("SELECT image_name FROM problem_images WHERE problem_id=?", (problem_id,))
-                image_names = [row[0] for row in db.cur.fetchall()]
-                image_manager = ImageManagerQt(self)
-                for image_name in image_names:
-                    image_path = os.path.join('temp', 'images', image_name)
-                    if not os.path.exists(image_path):
+                # Ensure temp/images directory exists
+                temp_images_dir = os.path.join('temp', 'images')
+                os.makedirs(temp_images_dir, exist_ok=True)
+                print(f"[DEBUG] Temp images directory: {os.path.abspath(temp_images_dir)}")
+                
+                # First, let's check what tables exist
+                db.cur.execute("SELECT name FROM sqlite_master WHERE type='table';")
+                tables = [row[0] for row in db.cur.fetchall()]
+                print(f"[DEBUG] Available tables in database: {tables}")
+                
+                # Check if problem_image_map table exists
+                if 'problem_image_map' in tables:
+                    # Query the problem_image_map table
+                    db.cur.execute("SELECT image_name FROM problem_image_map WHERE problem_id=?", (problem_id,))
+                    image_names = [row[0] for row in db.cur.fetchall()]
+                    print(f"[DEBUG] Images from problem_image_map: {image_names}")
+                else:
+                    print(f"[DEBUG] problem_image_map table not found!")
+                    image_names = []
+                
+                # Also check problem_images table if it exists
+                if 'problem_images' in tables and not image_names:
+                    db.cur.execute("SELECT image_name FROM problem_images WHERE problem_id=?", (problem_id,))
+                    image_names_alt = [row[0] for row in db.cur.fetchall()]
+                    print(f"[DEBUG] Images from problem_images table: {image_names_alt}")
+                    if image_names_alt:
+                        image_names = image_names_alt
+                
+                if image_names:
+                    print(f"[DEBUG] Found {len(image_names)} images for problem {problem_id}: {image_names}")
+                    image_manager = ImageManagerQt(self)
+                    
+                    # Check what images are available in the image database
+                    available_images = image_manager.image_db.get_all_image_names()
+                    print(f"[DEBUG] Available images in image database: {available_images[:5]}...")  # Show first 5
+                    
+                    for image_name in image_names:
+                        print(f"[DEBUG] Processing image: {image_name}")
+                        image_path = os.path.join(temp_images_dir, image_name)
+                        
+                        # Always try to export fresh from database
                         success, msg = image_manager.image_db.export_to_file(image_name, image_path)
                         if not success:
+                            print(f"[DEBUG] Failed to export image {image_name}: {msg}")
                             continue
-                    pixmap = QPixmap(image_path)
-                    if not pixmap.isNull():
-                        pixmap = pixmap.scaledToWidth(100, Qt.SmoothTransformation)
-                        img_label = QLabel()
-                        img_label.setPixmap(pixmap)
-                        img_label.setAlignment(Qt.AlignCenter)
-                        images_vbox.addWidget(img_label)
-                        image_count += 1
+                        
+                        print(f"[DEBUG] Successfully exported to: {image_path}")
+                        print(f"[DEBUG] File exists: {os.path.exists(image_path)}, Size: {os.path.getsize(image_path) if os.path.exists(image_path) else 'N/A'}")
+                        
+                        pixmap = QPixmap(image_path)
+                        if not pixmap.isNull():
+                            print(f"[DEBUG] Pixmap loaded successfully, size: {pixmap.width()}x{pixmap.height()}")
+                            # Scale to 100px width while maintaining aspect ratio
+                            pixmap = pixmap.scaledToWidth(100, Qt.SmoothTransformation)
+                            img_label = QLabel()
+                            img_label.setPixmap(pixmap)
+                            img_label.setAlignment(Qt.AlignCenter)
+                            img_label.setToolTip(f"Image: {image_name}")
+                            # Add border and padding for better visibility
+                            img_label.setStyleSheet("""
+                                QLabel {
+                                    border: 1px solid #ccc;
+                                    border-radius: 4px;
+                                    padding: 4px;
+                                    background-color: #f9f9f9;
+                                }
+                            """)
+                            images_vbox.addWidget(img_label)
+                            image_count += 1
+                            print(f"[DEBUG] Added image widget #{image_count}")
+                        else:
+                            print(f"[DEBUG] Invalid pixmap for image: {image_path}")
+                else:
+                    print(f"[DEBUG] No images found for problem {problem_id}")
+                            
             except Exception as e:
                 print(f"[DEBUG] ProblemCellWidget: error loading images for problem {problem_id}: {e}")
-            db.close()
+                import traceback
+                traceback.print_exc()
+            finally:
+                db.close()
         images_vbox.addStretch(1)
         # Only add the image column if there are images
         if image_count > 0:
             main_layout.addLayout(images_vbox, stretch=2)
+        else:
+            print(f"[DEBUG] No images added to display for problem {problem_id}")
 
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.setAutoFillBackground(True)
@@ -210,7 +280,9 @@ class ProblemDisplayPanel(QWidget):
             font_size = 14
         self.current_font_size = font_size
         for cell in self.problem_cells:
-            cell.content_label.setFont(QFont('Arial', font_size))
+            cell_font = QFont('Arial')
+            cell_font.setPointSizeF(font_size)
+            cell.content_label.setFont(cell_font)
 
     def load_saved_font_size(self):
         if os.path.exists(self.CONFIG_PATH):

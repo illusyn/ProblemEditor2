@@ -14,6 +14,7 @@ BASE_HEAD_1_FONT_SIZE = 20
 BASE_HEAD_2_FONT_SIZE = 18
 BASE_HEAD_3_FONT_SIZE = 15
 BASE_HEAD_4_FONT_SIZE = 13
+BASE_HEAD_5_FONT_SIZE = 12
 BASE_TEXT_1_FONT_SIZE = 14
 BASE_TEXT_2_FONT_SIZE = 13
 BASE_TEXT_3_FONT_SIZE = 12
@@ -53,6 +54,7 @@ BASE_SHADOW_RECT_ADJUST = 8
 LABEL_FONT_SIZE = None
 SECTION_LABEL_FONT_SIZE = None
 BUTTON_FONT_SIZE = None
+SMALL_BUTTON_FONT_SIZE = None
 ENTRY_FONT_SIZE = None
 NOTES_FONT_SIZE = None
 CONTROL_BTN_FONT_SIZE = None
@@ -103,7 +105,7 @@ _scale = 1.0
 def set_scale(profile="main"):
     global _scale
     _scale = SCALING_PROFILES.get(profile, 1.0)
-    global LABEL_FONT_SIZE, SECTION_LABEL_FONT_SIZE, BUTTON_FONT_SIZE, ENTRY_FONT_SIZE, NOTES_FONT_SIZE, CONTROL_BTN_FONT_SIZE
+    global LABEL_FONT_SIZE, SECTION_LABEL_FONT_SIZE, BUTTON_FONT_SIZE, SMALL_BUTTON_FONT_SIZE, ENTRY_FONT_SIZE, NOTES_FONT_SIZE, CONTROL_BTN_FONT_SIZE
     global CONTROL_BTN_WIDTH, CONTROL_BTN_HEIGHT, ENTRY_HEIGHT, NOTES_MIN_HEIGHT, PADDING, SPACING, SECTION_SPACING
     global PROB_ID_ENTRY_WIDTH, SEARCH_TEXT_ENTRY_WIDTH, ANSWER_ENTRY_WIDTH, ROW_SPACING_REDUCTION, NOTES_FIXED_HEIGHT
     global LEFT_PANEL_WIDTH, CHECKBOX_SIZE, CHECKBOX_PADDING, CHECKBOX_BORDER_RADIUS
@@ -111,17 +113,18 @@ def set_scale(profile="main"):
     global DOMAIN_GRID_SPACING, DOMAIN_BTN_WIDTH, DOMAIN_BTN_HEIGHT, SECTION_LABEL_PADDING_TOP
     global BUTTON_MIN_WIDTH, BUTTON_MIN_HEIGHT, ENTRY_MIN_HEIGHT, ENTRY_PADDING_LEFT, TEXTEDIT_PADDING, SHADOW_RECT_ADJUST
     global SET_EDITOR_BTN_FONT_SIZE, SET_EDITOR_HEAD_FONT_SIZE, SET_EDITOR_CONTROL_BUTTON_FONT_SIZE, SET_EDITOR_BUTTON_FONT_SIZE, SET_EDITOR_LABEL_FONT_SIZE
-    SECTION_LABEL_FONT_SIZE = int(BASE_HEAD_1_FONT_SIZE * _scale)
-    CONTROL_BTN_FONT_SIZE = int(BASE_HEAD_2_FONT_SIZE * _scale)
-    BUTTON_FONT_SIZE = int(BASE_HEAD_3_FONT_SIZE * _scale)
-    LABEL_FONT_SIZE = int(BASE_TEXT_1_FONT_SIZE * _scale)
-    ENTRY_FONT_SIZE = int(BASE_TEXT_2_FONT_SIZE * _scale)
+    SECTION_LABEL_FONT_SIZE = BASE_HEAD_1_FONT_SIZE * _scale
+    CONTROL_BTN_FONT_SIZE = BASE_HEAD_2_FONT_SIZE * _scale
+    BUTTON_FONT_SIZE = BASE_HEAD_3_FONT_SIZE * _scale
+    LABEL_FONT_SIZE = BASE_TEXT_1_FONT_SIZE * _scale
+    ENTRY_FONT_SIZE = BASE_TEXT_2_FONT_SIZE * _scale
+    SMALL_BUTTON_FONT_SIZE = BASE_HEAD_4_FONT_SIZE * _scale
     NOTES_FONT_SIZE = ENTRY_FONT_SIZE
-    SET_EDITOR_BTN_FONT_SIZE = int(BASE_HEAD_4_FONT_SIZE * _scale)
-    SET_EDITOR_HEAD_FONT_SIZE = int(BASE_HEAD_2_FONT_SIZE * _scale)
-    SET_EDITOR_CONTROL_BUTTON_FONT_SIZE = int(BASE_HEAD_3_FONT_SIZE * _scale)
-    SET_EDITOR_BUTTON_FONT_SIZE = int(BASE_TEXT_1_FONT_SIZE * _scale)
-    SET_EDITOR_LABEL_FONT_SIZE = int(BASE_TEXT_1_FONT_SIZE * _scale)
+    SET_EDITOR_BTN_FONT_SIZE = BASE_HEAD_4_FONT_SIZE * _scale
+    SET_EDITOR_HEAD_FONT_SIZE = BASE_HEAD_2_FONT_SIZE * _scale
+    SET_EDITOR_CONTROL_BUTTON_FONT_SIZE = BASE_HEAD_3_FONT_SIZE * _scale
+    SET_EDITOR_BUTTON_FONT_SIZE = BASE_TEXT_1_FONT_SIZE * _scale
+    SET_EDITOR_LABEL_FONT_SIZE = BASE_TEXT_1_FONT_SIZE * _scale
     CONTROL_BTN_WIDTH = int(BASE_CONTROL_BTN_WIDTH * _scale)
     CONTROL_BTN_HEIGHT = int(BASE_CONTROL_BTN_HEIGHT * _scale)
     ENTRY_HEIGHT = int(BASE_ENTRY_HEIGHT * _scale)
@@ -348,7 +351,10 @@ class MultiShadowButton(QPushButton):
     def __init__(self, text, palette, parent=None):
         super().__init__(text, parent)
         self.palette = palette
-        self.setFont(QFont(FONT_FAMILY, BUTTON_FONT_SIZE, QFont.Bold))
+        font = QFont(FONT_FAMILY)
+        font.setPointSizeF(BUTTON_FONT_SIZE)
+        font.setWeight(QFont.Bold)
+        self.setFont(font)
         self.setStyleSheet(f"""
             QPushButton {{
                 border-radius: {palette.button_radius}px;
@@ -385,7 +391,10 @@ class MultiShadowButton(QPushButton):
             painter.setPen(Qt.NoPen)
             painter.drawRoundedRect(rect, radius, radius)
             # Draw the button text and icon as usual
-            painter.setFont(QFont(FONT_FAMILY, BUTTON_FONT_SIZE, QFont.Bold))
+            paint_font = QFont(FONT_FAMILY)
+            paint_font.setPointSizeF(BUTTON_FONT_SIZE)
+            paint_font.setWeight(QFont.Bold)
+            painter.setFont(paint_font)
             super().paintEvent(event)
         finally:
             painter.end() 

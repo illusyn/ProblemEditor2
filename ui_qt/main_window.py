@@ -15,7 +15,8 @@ import re
 from pathlib import Path
 import os
 from converters.image_converter import ImageConverter
-from ui_qt.style_config import active_palette, MultiShadowButton, WINDOW_BG_COLOR, FONT_FAMILY, BUTTON_FONT_SIZE, LABEL_FONT_SIZE, NOTES_FONT_SIZE, LEFT_PANEL_WIDTH
+from ui_qt.style_config import active_palette, MultiShadowButton, WINDOW_BG_COLOR, FONT_FAMILY, BUTTON_FONT_SIZE, LABEL_FONT_SIZE, NOTES_FONT_SIZE, LEFT_PANEL_WIDTH, CONTROL_BTN_WIDTH, CONTROL_BTN_HEIGHT
+from ui_qt.neumorphic_components import NeumorphicButton
 from PyQt5.QtGui import QFont
 from ui_qt.problem_manager import ProblemManager
 from ui_qt.problem_display_panel import ProblemDisplayPanel
@@ -94,6 +95,7 @@ class MainWindow(QMainWindow):
         self.left_panel.preview_button.clicked.connect(self.update_preview)
         self.left_panel.query_panel.reset_button.clicked.connect(self.reset_fields)
         self.left_panel.save_problem_button.clicked.connect(self.save_current_problem)
+        
         # Add Problem Browser 2 screen
         self.problem_manager_screen = ProblemManager(laptop_mode=laptop_mode)
         self.stacked_widget.addWidget(self.problem_manager_screen)
@@ -102,22 +104,9 @@ class MainWindow(QMainWindow):
         self.problem_manager_screen.return_to_editor.connect(self.show_editor_screen)
         self.problem_db = MathProblemDB()
         self.editor_panel = EditorPanel(main_window=self)
-        editor_vlayout = QVBoxLayout()
-        editor_vlayout.addWidget(self.editor_panel)
-        nav_layout = QHBoxLayout()
-        delete_btn = MultiShadowButton("Delete Problem", active_palette)
-        delete_btn.setMinimumWidth(180)
-        delete_btn.setMaximumWidth(180)
-        delete_btn.setMinimumHeight(36)
-        delete_btn.setMaximumHeight(36)
-        delete_btn.setStyleSheet(delete_btn.styleSheet() + "font-size: 13px;")
-        delete_btn.clicked.connect(self.delete_current_problem)
-        delete_btn.setFont(QFont(FONT_FAMILY, BUTTON_FONT_SIZE, QFont.Bold))
-        nav_layout.addWidget(delete_btn)
-        editor_vlayout.addLayout(nav_layout)
-        editor_panel_container = QWidget()
-        editor_panel_container.setLayout(editor_vlayout)
-        editor_layout.addWidget(editor_panel_container, stretch=2)
+        # Pass the delete_current_problem method to the editor panel
+        self.editor_panel.delete_problem_callback = self.delete_current_problem
+        editor_layout.addWidget(self.editor_panel, stretch=2)
         self.preview_panel = PreviewPanel(config_manager=self.config_manager)
         editor_layout.addWidget(self.preview_panel, stretch=2)
         self.preview_panel.set_main_window(self)
@@ -130,6 +119,44 @@ class MainWindow(QMainWindow):
         self.stacked_widget.setCurrentWidget(self.editor_container)
         # Set fixed height for LeftPanel after layout is set up
         self.left_panel.setFixedHeight(self.left_panel.sizeHint().height())
+        
+        # Try connecting the signal after the UI is fully constructed
+        self._connect_set_editor_signal()
+    
+    def _connect_set_editor_signal(self):
+        """Connect the set editor panel signal - called after UI is constructed"""
+        try:
+            print("[DEBUG] _connect_set_editor_signal called")
+            # Navigate through the component hierarchy
+            if hasattr(self, 'left_panel') and self.left_panel:
+                if hasattr(self.left_panel, 'query_panel') and self.left_panel.query_panel:
+                    if hasattr(self.left_panel.query_panel, 'query_inputs_panel') and self.left_panel.query_panel.query_inputs_panel:
+                        if hasattr(self.left_panel.query_panel.query_inputs_panel, 'set_editor_panel'):
+                            set_editor = self.left_panel.query_panel.query_inputs_panel.set_editor_panel
+                            print(f"[DEBUG] Found set_editor_panel: {set_editor}")
+                            
+                            # Store reference for debugging
+                            self._set_editor_panel = set_editor
+                            
+                            # Connect the signal
+                            set_editor.add_selected_problems_to_set.connect(
+                                self.on_add_selected_problems_to_set_from_editor
+                            )
+                            print("[DEBUG] Successfully connected set_editor_panel signal!")
+                            return True
+                        else:
+                            print("[DEBUG] set_editor_panel not found in query_inputs_panel")
+                    else:
+                        print("[DEBUG] query_inputs_panel not found in query_panel")
+                else:
+                    print("[DEBUG] query_panel not found in left_panel")
+            else:
+                print("[DEBUG] left_panel not found")
+        except Exception as e:
+            print(f"[ERROR] Failed to connect set editor signal: {e}")
+            import traceback
+            traceback.print_exc()
+        return False
 
     def update_preview(self):
         """Update the preview with current editor content, ensuring all images are available for LaTeX."""
@@ -258,6 +285,32 @@ class MainWindow(QMainWindow):
         if set_panels:
             set_panel = set_panels[0]
             set_panel.request_selected_problem_ids.connect(self.on_add_selected_problems_to_sets)
+        
+        # Re-connect the set_editor_panel signal in showEvent to ensure it's connected
+        print("[DEBUG] showEvent: Re-checking set_editor_panel connection")
+        try:
+            if hasattr(self.left_panel.query_panel.query_inputs_panel, 'set_editor_panel'):
+                set_editor_panel = self.left_panel.query_panel.query_inputs_panel.set_editor_panel
+                # Disconnect any existing connections first
+                try:
+                    set_editor_panel.add_selected_problems_to_set.disconnect()
+                    print("[DEBUG] Disconnected existing connections")
+                except:
+                    pass
+                    
+                # Create a new debug wrapper for showEvent
+                def showEvent_debug_wrapper(problems, set_id):
+                    print(f"[DEBUG] showEvent wrapper received signal: problems={problems}, set_id={set_id}")
+                    self.on_add_selected_problems_to_set_from_editor(problems, set_id)
+                
+                # Now connect
+                set_editor_panel.add_selected_problems_to_set.connect(showEvent_debug_wrapper)
+                print("[DEBUG] showEvent: Successfully reconnected set_editor_panel signal to wrapper")
+        except Exception as e:
+            print(f"[ERROR] showEvent: Failed to connect set_editor_panel signal: {e}")
+            import traceback
+            traceback.print_exc()
+            
         self.showMaximized()
 
     def adjust_image_size(self):
@@ -397,13 +450,48 @@ class MainWindow(QMainWindow):
         if not problem_id:
             QMessageBox.warning(self, "Delete Problem", "No problem selected.")
             return
+        
+        # Get problem details for confirmation
         db = MathProblemDB(self.problem_db.db_path)
-        success, message = db.delete_problem(int(problem_id))
-        if success:
-            QMessageBox.information(self, "Delete Problem", message)
-            self.show_next_problem()
-        else:
-            QMessageBox.critical(self, "Delete Problem", message)
+        try:
+            problem_id_int = int(problem_id)
+            # Get the current problem content for display
+            content = self.editor_panel.text_edit.toPlainText()
+            preview_text = content[:100] + "..." if len(content) > 100 else content
+            
+            # Create confirmation dialog with problem details
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Warning)
+            msg.setWindowTitle("Confirm Delete")
+            msg.setText(f"Are you sure you want to delete Problem #{problem_id}?")
+            msg.setInformativeText(f"Preview:\n{preview_text}\n\nThis action cannot be undone.")
+            msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+            msg.setDefaultButton(QMessageBox.No)
+            
+            # Apply consistent styling
+            msg.setStyleSheet(f"""
+                QMessageBox {{
+                    background-color: {WINDOW_BG_COLOR};
+                    font-family: {FONT_FAMILY};
+                    font-size: {LABEL_FONT_SIZE}px;
+                }}
+                QMessageBox QPushButton {{
+                    min-width: 80px;
+                    min-height: 30px;
+                    font-family: {FONT_FAMILY};
+                    font-size: {BUTTON_FONT_SIZE}px;
+                }}
+            """)
+            
+            if msg.exec_() == QMessageBox.Yes:
+                success, message = db.delete_problem(problem_id_int)
+                if success:
+                    QMessageBox.information(self, "Delete Problem", f"Problem #{problem_id} has been deleted.")
+                    self.show_next_problem()
+                else:
+                    QMessageBox.critical(self, "Delete Problem", message)
+        except ValueError:
+            QMessageBox.critical(self, "Delete Problem", "Invalid problem ID.")
 
     def save_current_problem(self):
         problem_id = self.left_panel.get_problem_id().strip()
@@ -499,6 +587,59 @@ class MainWindow(QMainWindow):
                 else:
                     already += 1
         QMessageBox.information(self, "Add to Set", f"Added {added} problems to {len(selected_sets)} set(s). Already present: {already}.") 
+        db.close()
+
+    def on_add_selected_problems_to_set_from_editor(self, selected_problems, selected_set_id):
+        """Handle add problems to set from the set editor panel"""
+        print(f"[DEBUG] *** on_add_selected_problems_to_set_from_editor HANDLER CALLED ***")
+        print(f"[DEBUG] on_add_selected_problems_to_set_from_editor called: problems={selected_problems}, set_id={selected_set_id}")
+        
+        if not selected_set_id:
+            QMessageBox.warning(self, "Add to Set", "Please select a set.")
+            return
+            
+        # If no problems provided, determine which context we're in
+        if not selected_problems:
+            # Check if we're in the Problem Manager screen
+            if self.stacked_widget.currentWidget() == self.problem_manager_screen:
+                # Get selected problems from the problem display panel
+                selected_problems = self.problem_manager_screen.problem_display_panel.get_selected_problems()
+                if not selected_problems:
+                    QMessageBox.warning(self, "Add to Set", "Please select problems from the list.")
+                    return
+            else:
+                # We're in the editor screen, use the current problem being edited
+                problem_id = self.left_panel.get_problem_id().strip()
+                if not problem_id:
+                    QMessageBox.warning(self, "Add to Set", "No problem is currently loaded.")
+                    return
+                try:
+                    problem_id = int(problem_id)
+                    selected_problems = [{'problem_id': problem_id}]
+                except ValueError:
+                    QMessageBox.warning(self, "Add to Set", "Invalid problem ID.")
+                    return
+        
+        from db.problem_set_db import ProblemSetDB
+        db = ProblemSetDB()
+        added = 0
+        already = 0
+        
+        for prob in selected_problems:
+            pid = prob.get('problem_id')
+            result = db.add_problem_to_set(selected_set_id, pid)
+            if result:
+                added += 1
+            else:
+                already += 1
+                
+        db.close()
+        
+        # Show success message
+        if added > 0:
+            QMessageBox.information(self, "Add to Set", f"Added {added} problem(s) to the set. Already present: {already}.")
+        else:
+            QMessageBox.information(self, "Add to Set", f"All {already} problem(s) were already in the set.")
 
     def resizeEvent(self, event):
         super().resizeEvent(event)

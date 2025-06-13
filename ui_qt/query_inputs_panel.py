@@ -124,7 +124,10 @@ class QueryInputsPanel(QWidget):
         earmark_and_types_row.setSpacing(8)
         earmark_and_types_row.setContentsMargins(0, 0, 0, 0)
         self.earmark_checkbox = QCheckBox("Earmark")
-        self.earmark_checkbox.setFont(QFont(FONT_FAMILY, LABEL_FONT_SIZE, QFont.Bold))
+        earmark_font = QFont(FONT_FAMILY)
+        earmark_font.setPointSizeF(LABEL_FONT_SIZE)
+        earmark_font.setWeight(QFont.Bold)
+        self.earmark_checkbox.setFont(earmark_font)
         self.earmark_checkbox.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; margin-left: 10px;")
         earmark_and_types_row.addWidget(self.earmark_checkbox)
         from db.math_db import MathProblemDB
@@ -150,7 +153,10 @@ class QueryInputsPanel(QWidget):
         domains_groupbox_layout.setContentsMargins(0, 0, 0, 0)
         domains_groupbox_layout.setSpacing(0)
         domains_label = QLabel("Math Domains")
-        domains_label.setFont(QFont(FONT_FAMILY, SECTION_LABEL_FONT_SIZE, QFont.Bold))
+        domains_font = QFont(FONT_FAMILY)
+        domains_font.setPointSizeF(SECTION_LABEL_FONT_SIZE)
+        domains_font.setWeight(QFont.Bold)
+        domains_label.setFont(domains_font)
         domains_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; padding-top: 4px; padding-bottom: 4px; margin-top: 0px; margin-bottom: 0px; background: {WINDOW_BG_COLOR};")
         domains_label.setMinimumHeight(30)
         domains_label.setAlignment(Qt.AlignCenter)
@@ -175,7 +181,10 @@ class QueryInputsPanel(QWidget):
         set_selector_layout.setContentsMargins(0, 0, 0, 0)
         set_selector_layout.setSpacing(0)
         set_selector_label = QLabel("Problem Sets")
-        set_selector_label.setFont(QFont(FONT_FAMILY, SECTION_LABEL_FONT_SIZE, QFont.Bold))
+        set_font = QFont(FONT_FAMILY)
+        set_font.setPointSizeF(SECTION_LABEL_FONT_SIZE)
+        set_font.setWeight(QFont.Bold)
+        set_selector_label.setFont(set_font)
         set_selector_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; padding-top: 4px; padding-bottom: 4px; margin-top: 0px; margin-bottom: 0px; background: {WINDOW_BG_COLOR};")
         set_selector_label.setMinimumHeight(30)
         set_selector_label.setAlignment(Qt.AlignCenter)
@@ -188,6 +197,9 @@ class QueryInputsPanel(QWidget):
 
         # Set Editor Panel
         self.set_editor_panel = SetEditorPanelQt()
+        
+        # Store reference to help with signal connection
+        self.set_editor_panel._query_inputs_panel = self
 
         # QStackedWidget to hold both
         self.set_stack = QStackedWidget()
@@ -227,10 +239,13 @@ class QueryInputsPanel(QWidget):
             
             # Create label
             lbl = QLabel(label)
-            lbl.setFont(QFont(FONT_FAMILY, LABEL_FONT_SIZE, QFont.Bold))
+            font = QFont(FONT_FAMILY)
+            font.setPointSizeF(LABEL_FONT_SIZE)
+            font.setWeight(QFont.Bold)
+            lbl.setFont(font)
             lbl.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; padding: 0px; margin: 0px; background: {WINDOW_BG_COLOR};")
             lbl.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
-            lbl.setMinimumHeight(LABEL_FONT_SIZE + 4)  # Ensure label is always visible
+            lbl.setMinimumHeight(int(LABEL_FONT_SIZE + 4))  # Ensure label is always visible
             
             col.addWidget(lbl, alignment=Qt.AlignHCenter)
             col.addSpacing(1)  #@@ # More space between label and entry

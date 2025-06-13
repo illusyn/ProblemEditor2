@@ -31,7 +31,9 @@ class KeyboardShortcutsDialog(QDialog):
         
         # Title
         title_label = QLabel("Keyboard Shortcuts")
-        title_font = QFont(FONT_FAMILY, BUTTON_FONT_SIZE + 4, QFont.Bold)
+        title_font = QFont(FONT_FAMILY)
+        title_font.setPointSizeF(BUTTON_FONT_SIZE + 4)
+        title_font.setWeight(QFont.Bold)
         title_label.setFont(title_font)
         title_label.setAlignment(Qt.AlignCenter)
         layout.addWidget(title_label)
@@ -110,16 +112,23 @@ class KeyboardShortcutsDialog(QDialog):
             for row, (shortcut, description) in enumerate(shortcuts):
                 if shortcut:  # Regular shortcut
                     shortcut_label = QLabel(shortcut)
-                    shortcut_label.setFont(QFont(FONT_FAMILY, LABEL_FONT_SIZE, QFont.Bold))
+                    shortcut_font = QFont(FONT_FAMILY)
+                    shortcut_font.setPointSizeF(LABEL_FONT_SIZE)
+                    shortcut_font.setWeight(QFont.Bold)
+                    shortcut_label.setFont(shortcut_font)
                     shortcut_label.setStyleSheet(f"color: {LABEL_FONT_COLOR}; font-weight: bold;")
                     group_layout.addWidget(shortcut_label, row, 0, Qt.AlignLeft)
                     
                     desc_label = QLabel(description)
-                    desc_label.setFont(QFont(FONT_FAMILY, LABEL_FONT_SIZE))
+                    desc_font = QFont(FONT_FAMILY)
+                    desc_font.setPointSizeF(LABEL_FONT_SIZE)
+                    desc_label.setFont(desc_font)
                     group_layout.addWidget(desc_label, row, 1, Qt.AlignLeft)
                 else:  # Sub-item (no shortcut key, just description)
                     desc_label = QLabel(description)
-                    desc_label.setFont(QFont(FONT_FAMILY, LABEL_FONT_SIZE))
+                    desc_font = QFont(FONT_FAMILY)
+                    desc_font.setPointSizeF(LABEL_FONT_SIZE)
+                    desc_label.setFont(desc_font)
                     desc_label.setStyleSheet("padding-left: 20px;")
                     group_layout.addWidget(desc_label, row, 0, 1, 2, Qt.AlignLeft)  # Span both columns
             

@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QScrollArea, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QMessageBox, QLabel, QTableWidget, QTableWidgetItem, QAbstractItemView, QStyledItemDelegate, QStyle, QGridLayout, QFrame
 from db.problem_set_db import ProblemSetDB
 from ui_qt.neumorphic_components import NeumorphicButton, NeumorphicEntry, NeumorphicTextEdit
-from ui_qt.style_config import BUTTON_MIN_HEIGHT, BUTTON_MIN_WIDTH, FONT_FAMILY, SECTION_LABEL_FONT_SIZE, NEUMORPH_TEXT_COLOR, NEUMORPH_BG_COLOR, NEUMORPH_SHADOW_DARK, NEUMORPH_SHADOW_LIGHT, CATEGORY_BTN_SELECTED_COLOR, NEUMORPH_RADIUS, SET_EDITOR_CONTROL_BUTTON_FONT_SIZE, SET_EDITOR_BUTTON_FONT_SIZE, SET_EDITOR_LABEL_FONT_SIZE, SET_EDITOR_HEAD_FONT_SIZE
+from ui_qt.style_config import BUTTON_MIN_HEIGHT, BUTTON_MIN_WIDTH, FONT_FAMILY, SECTION_LABEL_FONT_SIZE, NEUMORPH_TEXT_COLOR, NEUMORPH_BG_COLOR, NEUMORPH_SHADOW_DARK, NEUMORPH_SHADOW_LIGHT, CATEGORY_BTN_SELECTED_COLOR, NEUMORPH_RADIUS, SET_EDITOR_CONTROL_BUTTON_FONT_SIZE, SET_EDITOR_BUTTON_FONT_SIZE, SET_EDITOR_LABEL_FONT_SIZE, SET_EDITOR_HEAD_FONT_SIZE, CATEGORY_BTN_HEIGHT, SMALL_BUTTON_FONT_SIZE
 from PyQt5.QtCore import Qt, pyqtSignal, QRect
 from PyQt5.QtGui import QFont, QColor, QBrush, QPen, QPainter
 from ui_qt.category_panel import NeumorphicToolButton
@@ -43,7 +43,9 @@ class NeumorphicTileDelegate(QStyledItemDelegate):
 
         # Draw text
         painter.setPen(QColor(NEUMORPH_TEXT_COLOR))
-        font = QFont(FONT_FAMILY, SET_EDITOR_BUTTON_FONT_SIZE, QFont.Bold)
+        font = QFont(FONT_FAMILY)
+        font.setPointSizeF(SET_EDITOR_BUTTON_FONT_SIZE)
+        font.setWeight(QFont.Bold)
         painter.setFont(font)
         text = index.data(Qt.DisplayRole)
         painter.drawText(rect, Qt.AlignCenter, text)
@@ -51,7 +53,9 @@ class NeumorphicTileDelegate(QStyledItemDelegate):
         painter.restore()
 
 class SetEditorPanelQt(QWidget):
-    add_selected_problems_to_set = pyqtSignal(list, object)  # selected_problems, selected_set_id
+    # Try different signal signatures to see if one works better
+    add_selected_problems_to_set = pyqtSignal(list, int)  # selected_problems, selected_set_id
+    
     def __init__(self, parent=None):
         super().__init__(parent)
         # --- Directly use main layout for all contents (no QFrame border) ---
@@ -60,57 +64,84 @@ class SetEditorPanelQt(QWidget):
         main_layout.setSpacing(12)
         # Title label
         title_label = QLabel("Set Editor")
-        title_label.setFont(QFont(FONT_FAMILY, SET_EDITOR_HEAD_FONT_SIZE, QFont.Bold))
+        title_font = QFont(FONT_FAMILY)
+        title_font.setPointSizeF(SET_EDITOR_HEAD_FONT_SIZE)
+        title_font.setWeight(QFont.Bold)
+        title_label.setFont(title_font)
         title_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR};")
         title_label.setAlignment(Qt.AlignHCenter)
         main_layout.addWidget(title_label, alignment=Qt.AlignHCenter)
         # Main content layout
         main_layout.addLayout(main_layout)
 
-        # --- Top row: set name entry and buttons ---
-        top_row = QHBoxLayout()
+        # --- First row: Set name label and entry field ---
+        name_row = QHBoxLayout()
+        name_row.setSpacing(8)
+        
+        # Add stretch to center the label and entry field
+        name_row.addStretch(1)
+        
         name_label = QLabel("Set Name")
-        name_label.setFont(QFont(FONT_FAMILY, SET_EDITOR_LABEL_FONT_SIZE, QFont.Bold))
+        font = QFont(FONT_FAMILY)
+        font.setPointSizeF(SET_EDITOR_LABEL_FONT_SIZE)
+        font.setWeight(QFont.Bold)
+        name_label.setFont(font)
         name_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR};")
-        top_row.addWidget(name_label)
+        name_row.addWidget(name_label)
+        
         self.name_edit = NeumorphicEntry()
-        self.name_edit.setFixedWidth(256)
+        self.name_edit.setFixedWidth(768)  # 3x the original 256
         entry_font = self.name_edit.font()
-        entry_font.setPointSize(SET_EDITOR_LABEL_FONT_SIZE)
+        entry_font.setPointSizeF(SET_EDITOR_LABEL_FONT_SIZE)
         self.name_edit.setFont(entry_font)
-        top_row.addWidget(self.name_edit)
-        self.create_btn = NeumorphicButton("Create Set")
-        self.create_btn.setMinimumHeight(BUTTON_MIN_HEIGHT)
-        self.create_btn.setMaximumHeight(BUTTON_MIN_HEIGHT)
-        self.create_btn.setMinimumWidth(140)
-        self.create_btn.setMaximumWidth(180)
-        font = self.create_btn.font()
-        font.setPointSize(SET_EDITOR_CONTROL_BUTTON_FONT_SIZE)
-        self.create_btn.setFont(font)
+        name_row.addWidget(self.name_edit)
+        
+        # Add stretch to center the label and entry field
+        name_row.addStretch(1)
+        
+        main_layout.addLayout(name_row)
+        
+        # --- Second row: Buttons (Create Set, Add Problems to Set, Delete Selected Set) ---
+        button_row = QHBoxLayout()
+        button_row.setSpacing(12)
+        
+        # Add stretch to center the buttons
+        button_row.addStretch(1)
+        
+        # Create Set button
+        self.create_btn = NeumorphicButton("Create Set", font_size=SMALL_BUTTON_FONT_SIZE)
+        self.create_btn.setMinimumHeight(CATEGORY_BTN_HEIGHT)
+        self.create_btn.setMaximumHeight(CATEGORY_BTN_HEIGHT)
+        self.create_btn.setMinimumWidth(180)  # Wider for padding
         self.create_btn.clicked.connect(self.create_set)
-        top_row.addWidget(self.create_btn)
-        self.add_to_set_btn = NeumorphicButton("Add Problems to Set")
-        self.add_to_set_btn.setMinimumHeight(BUTTON_MIN_HEIGHT)
-        self.add_to_set_btn.setMaximumHeight(BUTTON_MIN_HEIGHT)
-        self.add_to_set_btn.setMinimumWidth(180)
-        self.add_to_set_btn.setMaximumWidth(220)
-        font = self.add_to_set_btn.font()
-        font.setPointSize(SET_EDITOR_CONTROL_BUTTON_FONT_SIZE)
-        self.add_to_set_btn.setFont(font)
+        button_row.addWidget(self.create_btn)
+        
+        # Add Problems to Set button
+        self.add_to_set_btn = NeumorphicButton("Add Problems to Set", font_size=SMALL_BUTTON_FONT_SIZE)
+        self.add_to_set_btn.setMinimumHeight(CATEGORY_BTN_HEIGHT)
+        self.add_to_set_btn.setMaximumHeight(CATEGORY_BTN_HEIGHT)
+        self.add_to_set_btn.setMinimumWidth(240)  # Wider for padding
+        print(f"[DEBUG] Connecting add_to_set_btn.clicked to on_add_selected_problem_to_set")
         self.add_to_set_btn.clicked.connect(self.on_add_selected_problem_to_set)
-        top_row.addWidget(self.add_to_set_btn)
-        self.delete_btn = NeumorphicButton("Delete Selected Set")
-        self.delete_btn.setMinimumHeight(BUTTON_MIN_HEIGHT)
-        self.delete_btn.setMaximumHeight(BUTTON_MIN_HEIGHT)
-        self.delete_btn.setMinimumWidth(180)
-        self.delete_btn.setMaximumWidth(220)
-        font = self.delete_btn.font()
-        font.setPointSize(SET_EDITOR_CONTROL_BUTTON_FONT_SIZE)
-        self.delete_btn.setFont(font)
+        # Check button click receivers
+        try:
+            btn_receivers = self.add_to_set_btn.receivers(self.add_to_set_btn.clicked)
+            print(f"[DEBUG] Button click connected to {btn_receivers} receivers")
+        except Exception as e:
+            print(f"[DEBUG] Could not check button receivers: {e}")
+        button_row.addWidget(self.add_to_set_btn)
+        
+        # Delete Selected Set button
+        self.delete_btn = NeumorphicButton("Delete Selected Set", font_size=SMALL_BUTTON_FONT_SIZE)
+        self.delete_btn.setMinimumHeight(CATEGORY_BTN_HEIGHT)
+        self.delete_btn.setMaximumHeight(CATEGORY_BTN_HEIGHT)
+        self.delete_btn.setMinimumWidth(240)  # Wider for padding
         self.delete_btn.clicked.connect(self.delete_selected_set)
-        top_row.addWidget(self.delete_btn)
-        top_row.addStretch(1)
-        main_layout.addLayout(top_row)
+        button_row.addWidget(self.delete_btn)
+        
+        # Add stretch to center the buttons
+        button_row.addStretch(1)
+        main_layout.addLayout(button_row)
 
         # --- Set grid: full width below top row ---
         self.set_selector_grid = SetSelectorGridQt()
@@ -308,14 +339,55 @@ class SetEditorPanelQt(QWidget):
                 db.close()
 
     def on_add_selected_problem_to_set(self):
-        parent = self.parent()
-        if parent and hasattr(parent, 'problem_display_panel'):
-            selected_problems = parent.problem_display_panel.get_selected_problems()
-        else:
-            selected_problems = []
+        # In the main editor context, we'll add the current problem being edited
+        print("[DEBUG] on_add_selected_problem_to_set called")
         selected_set_id = self.get_selected_set_id()
         print("[DEBUG] on_add_selected_problem_to_set: selected_set_id:", selected_set_id)
-        self.add_selected_problems_to_set.emit(selected_problems, selected_set_id)
+        
+        if not selected_set_id:
+            from PyQt5.QtWidgets import QMessageBox
+            QMessageBox.warning(self, "Add to Set", "Please select a set first.")
+            return
+            
+        # Emit signal with empty list - the main window will determine which problem to add
+        print(f"[DEBUG] About to emit add_selected_problems_to_set signal with set_id={selected_set_id} (type: {type(selected_set_id)})")
+        
+        # Ensure set_id is an integer
+        try:
+            selected_set_id = int(selected_set_id)
+        except (ValueError, TypeError):
+            print(f"[ERROR] Could not convert set_id to int: {selected_set_id}")
+            return
+            
+        # Try emitting the signal
+        self.add_selected_problems_to_set.emit([], selected_set_id)
+        print(f"[DEBUG] Signal emitted with empty list and set_id={selected_set_id}")
+        
+        # Also try direct parent traversal as a fallback
+        print("[DEBUG] Looking for MainWindow parent...")
+        
+        # Try through stored reference first
+        if hasattr(self, '_query_inputs_panel'):
+            print("[DEBUG] Found stored _query_inputs_panel reference")
+            # Navigate up from query_inputs_panel
+            test_parent = self._query_inputs_panel
+            while test_parent:
+                print(f"[DEBUG] Checking parent: {type(test_parent).__name__}")
+                if hasattr(test_parent, 'on_add_selected_problems_to_set_from_editor'):
+                    print("[DEBUG] Found MainWindow with handler through stored ref! Calling directly...")
+                    test_parent.on_add_selected_problems_to_set_from_editor([], selected_set_id)
+                    return
+                test_parent = test_parent.parent() if hasattr(test_parent, 'parent') else None
+        
+        # Original parent traversal
+        parent = self.parent()
+        while parent:
+            print(f"[DEBUG] Parent type: {type(parent).__name__}")
+            if hasattr(parent, 'on_add_selected_problems_to_set_from_editor'):
+                print("[DEBUG] Found MainWindow with handler! Calling directly as test...")
+                parent.on_add_selected_problems_to_set_from_editor([], selected_set_id)
+                break
+            parent = parent.parent()
 
     def get_selected_set_id(self):
         # Use the tracked selected_set_id, but also check the grid for consistency

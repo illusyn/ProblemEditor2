@@ -16,7 +16,10 @@ class NeumorphicToolButton(QToolButton):
         self.radius = radius
         self.font_family = font_family
         self.font_size = font_size
-        self.setFont(QFont(self.font_family, self.font_size, QFont.Bold))
+        font = QFont(self.font_family)
+        font.setPointSizeF(self.font_size)
+        font.setWeight(QFont.Bold)
+        self.setFont(font)
         self.setMinimumWidth(CATEGORY_BTN_WIDTH)
         self.setMinimumHeight(CATEGORY_BTN_HEIGHT)
         self.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR};")
@@ -59,9 +62,26 @@ class NeumorphicToolButton(QToolButton):
                 # Solid color for normal state
                 painter.setBrush(QBrush(QColor(NEUMORPH_BG_COLOR)))
                 painter.drawRoundedRect(rect, full_radius, full_radius)
-            # Text
+            # Text - apply shadow effect only for small font sizes
+            paint_font = QFont(self.font_family)
+            paint_font.setPointSizeF(self.font_size)
+            paint_font.setWeight(QFont.Bold)
+            painter.setFont(paint_font)
+            
+            # Apply shadow effect only for small fonts (14pt and below)
+            if self.font_size <= 14:
+                # Draw text shadow for bolder effect
+                shadow_color = QColor(NEUMORPH_TEXT_COLOR)
+                shadow_color.setAlpha(80)  # Semi-transparent shadow
+                
+                # Draw multiple shadow layers for thicker effect
+                shadow_offsets = [(1, 0), (0, 1), (-1, 0), (0, -1)]  # Create outline effect
+                for dx, dy in shadow_offsets:
+                    painter.setPen(shadow_color)
+                    painter.drawText(rect.translated(dx, dy), Qt.AlignCenter, self.text())
+            
+            # Draw main text on top
             painter.setPen(QColor(NEUMORPH_TEXT_COLOR))
-            painter.setFont(QFont(self.font_family, self.font_size, QFont.Bold))
             painter.drawText(rect, Qt.AlignCenter, self.text())
         finally:
             painter.end()
