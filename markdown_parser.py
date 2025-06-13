@@ -892,11 +892,12 @@ class MarkdownParser:
     \usepackage{amsmath}
     \usepackage{amssymb}
     \usepackage{graphicx}
-    \graphicspath{{./}{./images/}{./exports/images/}} 
+    \graphicspath{{./}{./images/}{./exports/images/}}
     \usepackage{geometry}
     \usepackage{xcolor}
     \usepackage{mdframed}
     \usepackage{enumitem}
+    \usepackage{float}
     """ + "\n".join(font_packages) + r"""
 
     % Set margins
