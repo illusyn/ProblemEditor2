@@ -122,9 +122,8 @@ class ImageConverter:
 
         # Use only filename instead of full path to avoid LaTeX issues
         image_filename = Path(image_path).name
-        # Escape underscores in the filename for LaTeX
-        # Underscores are common in our generated filenames and need to be escaped
-        image_filename = image_filename.replace('_', '\\_')
+        # Don't escape underscores in filenames inside \includegraphics
+        # LaTeX handles them properly in that context
 
         # Get the configured maximum height (default to 800 if not configured)
         max_height = 800
