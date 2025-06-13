@@ -630,6 +630,12 @@ class MathProblemDB:
             print(f"[DEBUG] Saving image {image_name} to {output_path}")
             # Save image to file
             format_to_use = format or image.format or 'PNG'
+            
+            # If it's DIB/BMP format but the output path expects PNG, convert it
+            if format_to_use in ['DIB', 'BMP'] and str(output_path).endswith('.png'):
+                format_to_use = 'PNG'
+                print(f"[DEBUG] Converting DIB/BMP to PNG for {output_path}")
+            
             image.save(output_path, format=format_to_use)
             return (True, str(output_path))
             
