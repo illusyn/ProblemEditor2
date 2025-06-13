@@ -19,9 +19,90 @@ import os
 import shutil
 from db.math_image_db import MathImageDB
 from config_loader import ConfigLoader
+import sqlite3
+from PIL import Image
+import io
 
 def latex_escape(text):
     return text.replace('_', r'\_')
+
+def export_missing_images_from_map(problem_id, images_dir):
+    """
+    Export images that are in problem_image_map but not in problem_images table.
+    This handles cases where images are referenced but not properly stored in problem_images.
+    """
+    exported_count = 0
+    
+    # Connect to databases
+    problems_conn = sqlite3.connect("db/math_problems.db")
+    problems_cursor = problems_conn.cursor()
+    
+    # Get all image mappings for this problem
+    problems_cursor.execute("""
+        SELECT DISTINCT pim.image_name 
+        FROM problem_image_map pim
+        LEFT JOIN problem_images pi ON pim.image_name = pi.image_name AND pi.problem_id = ?
+        WHERE pim.problem_id = ? AND pi.image_id IS NULL
+    """, (problem_id, problem_id))
+    
+    missing_images = [row[0] for row in problems_cursor.fetchall()]
+    problems_conn.close()
+    
+    if missing_images:
+        print(f"  Found {len(missing_images)} images in problem_image_map but not in problem_images for problem {problem_id}")
+    
+    for image_name in missing_images:
+        output_path = os.path.join(images_dir, image_name)
+        
+        # Skip if already exported
+        if os.path.exists(output_path):
+            continue
+            
+        # Try to get from math_images.db
+        try:
+            images_conn = sqlite3.connect("db/math_images.db")
+            images_cursor = images_conn.cursor()
+            
+            images_cursor.execute("SELECT data FROM images WHERE name = ?", (image_name,))
+            result = images_cursor.fetchone()
+            
+            if result:
+                image_data = result[0]
+                
+                # Check if we need to convert DIB to PNG
+                try:
+                    # Try to open the image data
+                    img = Image.open(io.BytesIO(image_data))
+                    
+                    # If it's DIB/BMP format and has .png extension, convert it
+                    if img.format in ['DIB', 'BMP'] and image_name.endswith('.png'):
+                        # Convert to PNG
+                        png_buffer = io.BytesIO()
+                        img.save(png_buffer, format='PNG')
+                        image_data = png_buffer.getvalue()
+                        print(f"    Converted {image_name} from DIB to PNG format")
+                except Exception as e:
+                    print(f"    Warning: Could not process image format for {image_name}: {e}")
+                
+                with open(output_path, 'wb') as f:
+                    f.write(image_data)
+                exported_count += 1
+                print(f"    Exported {image_name} from math_images.db")
+            else:
+                # Try temp/images as last resort
+                temp_path = f"temp/images/{image_name}"
+                if os.path.exists(temp_path):
+                    shutil.copy2(temp_path, output_path)
+                    exported_count += 1
+                    print(f"    Exported {image_name} from temp/images/")
+                else:
+                    print(f"    WARNING: Could not find {image_name} anywhere!")
+            
+            images_conn.close()
+        except Exception as e:
+            print(f"    ERROR exporting {image_name}: {e}")
+    
+    return exported_count
 
 def main():
 
@@ -84,6 +165,9 @@ def main():
             success, msg = db.export_image(image_id=image_id, output_path=output_path)
             if not success:
                 print(f"Warning: Could not export image {image_name} (id={image_id}) to {images_dir}: {msg}")
+        
+        # Also check for images in problem_image_map that aren't in problem_images
+        export_missing_images_from_map(problem_id, images_dir)
 
     # --- Build all problems as a single LaTeX string ---
     all_problems_latex = ""
@@ -120,6 +204,17 @@ def main():
             all_problems_latex += "\\clearpage\n"
     # --- Use create_latex_document to assemble the full document ---
     full_latex = md_parser.create_latex_document(all_problems_latex)
+    
+    # Fix the graphicspath for export context - since the .tex file is in exports/,
+    # it should look for images in ./images/ not ./exports/images/
+    full_latex = full_latex.replace(
+        r'\graphicspath{{./}{./images/}{./exports/images/}} ',
+        r'\graphicspath{{./}{./images/}}'
+    ).replace(
+        r'\graphicspath{{./}{./images/}{./exports/images/}}',
+        r'\graphicspath{{./}{./images/}}'
+    )
+    
     # Write to file
     with open(args.output, "w", encoding="utf-8") as f:
         f.write(full_latex)
