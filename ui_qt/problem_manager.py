@@ -18,20 +18,14 @@ class ProblemManager(QWidget):
         main_layout = QVBoxLayout(self)
         # Main content layout
         content_layout = QHBoxLayout()
-        # --- Left side: Return button above query panel ---
+        # --- Left side: query panel ---
         left_panel_widget = QWidget()
         left_vbox = QVBoxLayout(left_panel_widget)
         left_panel_widget.setStyleSheet('background: transparent;')
+        # Create return button but don't add it here - we'll pass it to QueryPanel
         self.return_btn = NeumorphicButton("Return to Editor", self)
-        self.return_btn.setMinimumWidth(CONTROL_BTN_WIDTH)
-        self.return_btn.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.return_btn.clicked.connect(self.return_to_editor)
-        btn_row = QHBoxLayout()
-        btn_row.addStretch(1)
-        btn_row.addWidget(self.return_btn)
-        btn_row.addStretch(1)
-        left_vbox.addLayout(btn_row)
-        self.query_panel = QueryPanel(laptop_mode=laptop_mode, show_preview_and_nav_buttons=False)
+        self.query_panel = QueryPanel(laptop_mode=laptop_mode, show_preview_and_nav_buttons=False, return_button=self.return_btn)
         left_vbox.addWidget(self.query_panel, stretch=1)
         # Remove SetEditorPanelQt and Add-to-Set button from here
         # Add-to-Set logic will be handled in SetEditorPanelQt
@@ -53,6 +47,9 @@ class ProblemManager(QWidget):
         self.query_panel.query_executed.connect(self.problem_display_panel.set_problems)
         # Connect reset to clear the grid
         self.query_panel.reset_clicked.connect(lambda: self.problem_display_panel.set_problems([]))
+        # Connect edit panel signals
+        self.query_panel.apply_attributes_to_selected.connect(self.on_apply_attributes)
+        self.query_panel.clear_attributes_from_selected.connect(self.on_clear_attributes)
         # --- Centralized selection state ---
         self.selected_problem_ids = set()
         self.selected_set_ids = set()
@@ -122,4 +119,95 @@ class ProblemManager(QWidget):
     def on_sets_selected(self, ids):
         print("[DEBUG] on_sets_selected:", ids)
         self.selected_set_ids = set(ids)
+    
+    def on_apply_attributes(self, attributes):
+        """Apply attributes to selected problems"""
+        selected_ids = self.get_selected_problem_ids()
+        if not selected_ids:
+            QMessageBox.warning(self, "No Selection", "Please select problems to apply attributes to.")
+            return
+        
+        from db.math_db import MathProblemDB
+        db = MathProblemDB()
+        
+        success_count = 0
+        for problem_id in selected_ids:
+            try:
+                # Apply earmark if specified
+                if 'earmark' in attributes:
+                    db.cur.execute("UPDATE problems SET earmark = ? WHERE problem_id = ?", 
+                                 (1 if attributes['earmark'] else 0, problem_id))
+                
+                # Apply problem types if specified
+                if 'type_ids' in attributes:
+                    # First, add any new types
+                    for type_id in attributes['type_ids']:
+                        db.cur.execute("""
+                            INSERT OR IGNORE INTO problem_problem_types (problem_id, type_id)
+                            VALUES (?, ?)
+                        """, (problem_id, type_id))
+                
+                # Apply categories if specified
+                if 'categories' in attributes:
+                    # First, add any new categories
+                    for category in attributes['categories']:
+                        db.cur.execute("""
+                            INSERT OR IGNORE INTO problem_math_categories (problem_id, category_id)
+                            VALUES (?, ?)
+                        """, (problem_id, category['category_id']))
+                
+                success_count += 1
+            except Exception as e:
+                print(f"[ERROR] Failed to apply attributes to problem {problem_id}: {e}")
+        
+        db.conn.commit()
+        db.close()
+        
+        QMessageBox.information(self, "Success", f"Attributes applied to {success_count} problems.")
+        # Refresh the display
+        self.on_query()
+    
+    def on_clear_attributes(self, attributes):
+        """Clear attributes from selected problems"""
+        selected_ids = self.get_selected_problem_ids()
+        if not selected_ids:
+            QMessageBox.warning(self, "No Selection", "Please select problems to clear attributes from.")
+            return
+        
+        from db.math_db import MathProblemDB
+        db = MathProblemDB()
+        
+        success_count = 0
+        for problem_id in selected_ids:
+            try:
+                # Clear earmark if specified
+                if 'earmark' in attributes:
+                    db.cur.execute("UPDATE problems SET earmark = 0 WHERE problem_id = ?", (problem_id,))
+                
+                # Clear problem types if specified
+                if 'type_ids' in attributes:
+                    for type_id in attributes['type_ids']:
+                        db.cur.execute("""
+                            DELETE FROM problem_problem_types 
+                            WHERE problem_id = ? AND type_id = ?
+                        """, (problem_id, type_id))
+                
+                # Clear categories if specified
+                if 'categories' in attributes:
+                    for category in attributes['categories']:
+                        db.cur.execute("""
+                            DELETE FROM problem_math_categories 
+                            WHERE problem_id = ? AND category_id = ?
+                        """, (problem_id, category['category_id']))
+                
+                success_count += 1
+            except Exception as e:
+                print(f"[ERROR] Failed to clear attributes from problem {problem_id}: {e}")
+        
+        db.conn.commit()
+        db.close()
+        
+        QMessageBox.information(self, "Success", f"Attributes cleared from {success_count} problems.")
+        # Refresh the display
+        self.on_query()
         
