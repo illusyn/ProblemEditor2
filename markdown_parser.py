@@ -888,7 +888,7 @@ class MarkdownParser:
         # Remove duplicates
         font_packages = list(dict.fromkeys(font_packages))
         # Build preamble
-        preamble = r"""\documentclass{article}
+        preamble = r"""\documentclass{exam}
     \usepackage{amsmath}
     \usepackage{amssymb}
     \usepackage{graphicx}
