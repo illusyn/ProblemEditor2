@@ -4,16 +4,20 @@ from PyQt5.QtCore import pyqtSignal
 from ui_qt.query_inputs_panel import QueryInputsPanel
 from ui_qt.neumorphic_components import NeumorphicButton
 from ui_qt.style_config import CONTROL_BTN_FONT_SIZE, CONTROL_BTN_WIDTH, SPACING, PADDING, WINDOW_BG_COLOR, BUTTON_TEXT_PADDING
+from ui_qt.edit_selected_problems_panel import EditSelectedProblemsPanel
 from db.math_db import MathProblemDB
 
 class QueryPanel(QWidget):
     query_executed = pyqtSignal(list)  # Emits a list of problems
     reset_clicked = pyqtSignal()       # Emits when reset is clicked
     query_clicked = pyqtSignal()       # Emits when Query button is clicked
-    def __init__(self, parent=None, laptop_mode=False, show_preview_and_nav_buttons=True):
+    apply_attributes_to_selected = pyqtSignal(dict)  # Emits attributes to apply
+    clear_attributes_from_selected = pyqtSignal(dict)  # Emits attributes to clear
+    def __init__(self, parent=None, laptop_mode=False, show_preview_and_nav_buttons=True, return_button=None):
         super().__init__(parent)
         self.laptop_mode = laptop_mode
         self.show_preview_and_nav_buttons = show_preview_and_nav_buttons
+        self.return_button = return_button
         self.setStyleSheet(f"background-color: {WINDOW_BG_COLOR};")
         self.setSizePolicy(self.sizePolicy().horizontalPolicy(), QSizePolicy.Minimum)
         self._init_ui()
@@ -30,6 +34,10 @@ class QueryPanel(QWidget):
         self.query_inputs_panel = QueryInputsPanel(laptop_mode=self.laptop_mode)
         layout.addWidget(self.query_inputs_panel)
 
+        # --- Edit Selected Problems Panel ---
+        self.edit_selected_panel = EditSelectedProblemsPanel(query_inputs_panel=self.query_inputs_panel)
+        layout.addWidget(self.edit_selected_panel)
+
         # Debug prints for child size hints
         print("[DEBUG] QueryInputsPanel minimumSizeHint:", self.query_inputs_panel.minimumSizeHint())
         print("[DEBUG] QueryInputsPanel sizeHint:", self.query_inputs_panel.sizeHint())
@@ -40,6 +48,10 @@ class QueryPanel(QWidget):
         # Connect query button to emit signal (placeholder logic)
         self.query_button.clicked.connect(self.query_clicked.emit)
         self.reset_button.clicked.connect(self._on_reset_clicked)
+        
+        # Connect edit panel signals
+        self.edit_selected_panel.apply_attributes.connect(self.apply_attributes_to_selected.emit)
+        self.edit_selected_panel.clear_attributes.connect(self.clear_attributes_from_selected.emit)
 
     def _create_query_controls(self, main_layout):
         query_grid = QGridLayout()
@@ -48,7 +60,12 @@ class QueryPanel(QWidget):
         self.reset_button = self.create_neumorphic_button("Reset")
         self.query_button = self.create_neumorphic_button("Query")
 
-        buttons = [self.reset_button, self.query_button]
+        buttons = []
+        # Add return button if provided
+        if self.return_button:
+            buttons.append(self.return_button)
+        
+        buttons += [self.reset_button, self.query_button]
         # Only add Preview button if not in main editor context
         if self.show_preview_and_nav_buttons:
             self.next_match_button = self.create_neumorphic_button("Next Match")
