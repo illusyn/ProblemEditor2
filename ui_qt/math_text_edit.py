@@ -95,6 +95,34 @@ class MathTextEdit(QTextEdit):
         menu.addAction("Overline Selection (with $)", self.overline_selection_dollars)
         menu.addAction("Wide Hat Selection", self.widehat_selection)
         menu.addAction("Wide Hat Selection (with $)", self.widehat_selection_dollars)
+        
+        # Apply custom styling to ensure readability
+        menu.setStyleSheet("""
+            QMenu {
+                background-color: #f5f5f5;
+                color: #333333;
+                border: 1px solid #cccccc;
+                padding: 4px;
+            }
+            QMenu::item {
+                background-color: transparent;
+                color: #333333;
+                padding: 6px 20px;
+            }
+            QMenu::item:selected {
+                background-color: #4a90e2;
+                color: #ffffff;
+            }
+            QMenu::item:disabled {
+                color: #999999;
+            }
+            QMenu::separator {
+                height: 1px;
+                background-color: #cccccc;
+                margin: 4px 10px;
+            }
+        """)
+        
         menu.exec_(self.mapToGlobal(pos))
 
     def paste_latex(self):
@@ -121,60 +149,94 @@ class MathTextEdit(QTextEdit):
     def _wrap_math_runs_exclude_words(self, text):
         """
         Wrap mathematical expressions in dollar signs while excluding English words.
-        This function processes selected text and wraps math content while preserving
-        punctuation and English words outside of the math delimiters.
+        This function uses a greedy approach to wrap entire mathematical expressions
+        instead of individual tokens.
         """
         # First, let's handle the simple case where the entire selection is wrapped
         if text.startswith('$') and text.endswith('$'):
             return text
             
-        # Helper function to check if token is an English word
-        def is_english_word(token):
-            if not token or not token.isalpha():
+        # Helper function to check if a word is likely English (not math)
+        def is_english_word(word):
+            if not word or not word.isalpha():
                 return False
-            if ENGLISH_WORDS:
-                return token.lower() in ENGLISH_WORDS
-            # Fallback for when english-words package is not installed
+            # Common English words that might appear in math context
+            common_words = {'is', 'the', 'of', 'and', 'or', 'if', 'then', 'where', 
+                           'find', 'calculate', 'solve', 'given', 'what', 'how',
+                           'with', 'has', 'have', 'be', 'are', 'was', 'were'}
+            if word.lower() in common_words:
+                return True
+            if ENGLISH_WORDS and len(word) > 2:  # Skip single letters
+                return word.lower() in ENGLISH_WORDS
             return False
         
-        # Use a more sophisticated regex to find mathematical expressions
-        # This regex looks for:
-        # 1. Expressions in parentheses with numbers: (0, 6)
-        # 2. Single variables: x, y, c
-        # 3. Mathematical expressions: x^2, πr^2
-        # 4. Numbers: 10, 3.14
-        math_pattern = r'\([^)]*\d[^)]*\)|[a-zA-Z]\^[\d.]+|[a-zA-Z]+\d+|\d+\.?\d*|[a-zA-Z](?![a-zA-Z])|[\+\-\*/=<>]|\\[a-zA-Z]+|π|θ|α|β|γ|δ|ε|λ|μ|σ|τ|φ|ω'
+        # Pattern to identify mathematical content
+        # This includes: variables, numbers, operators, functions, parentheses, etc.
+        math_chars = r'[a-zA-Z0-9\+\-\*/=<>^_\(\)\[\]\{\}\\.,]'
         
-        # Split text into tokens while preserving spaces
-        tokens = re.split(r'(\s+)', text)
+        # Split text into potential math expressions and non-math text
+        # Look for continuous runs of mathematical characters
+        parts = re.split(r'(\s+)', text)
+        
         result = []
-        
-        for token in tokens:
-            # Skip empty tokens or whitespace
-            if not token or token.isspace():
-                result.append(token)
+        i = 0
+        while i < len(parts):
+            part = parts[i]
+            
+            # Skip whitespace
+            if part.isspace():
+                result.append(part)
+                i += 1
                 continue
+            
+            # Check if this looks like the start of a math expression
+            # Common patterns: f(x), g(x), equations, expressions with operators
+            if (re.match(r'[a-zA-Z]\([a-zA-Z]\)', part) or  # Function notation f(x)
+                re.search(r'[=\+\-\*/\^]', part) or          # Contains operators
+                re.match(r'\d+', part) or                    # Starts with number
+                re.match(r'[a-zA-Z]\d', part) or             # Variable with subscript
+                re.match(r'[a-zA-Z]\^', part)):              # Variable with exponent
                 
-            # Check if it's already wrapped in dollars
-            if token.startswith('$') and token.endswith('$'):
-                result.append(token)
-                continue
-            
-            # Check for sentence-ending punctuation at the end
-            trailing_punct = ''
-            if token and token[-1] in ',.;:!?':
-                trailing_punct = token[-1]
-                token = token[:-1]
-            
-            # If it's an English word, don't wrap it
-            if is_english_word(token):
-                result.append(token + trailing_punct)
-            # If it contains mathematical patterns, wrap it
-            elif re.search(math_pattern, token):
-                result.append(f'${token}$' + trailing_punct)
+                # Start collecting the math expression
+                math_expr = [part]
+                j = i + 1
+                
+                # Continue collecting while we have math-like content
+                while j < len(parts):
+                    if parts[j].isspace():
+                        # Include space in math expression
+                        math_expr.append(parts[j])
+                        j += 1
+                    elif j < len(parts) and re.match(math_chars + '+', parts[j]):
+                        # Check if it's a standalone English word
+                        if parts[j].isalpha() and is_english_word(parts[j]):
+                            # Don't include English words unless they're single letters
+                            if len(parts[j]) > 1:
+                                break
+                        math_expr.append(parts[j])
+                        j += 1
+                    else:
+                        break
+                
+                # Join the math expression and wrap it
+                math_text = ''.join(math_expr).strip()
+                
+                # Handle trailing punctuation
+                trailing_punct = ''
+                if math_text and math_text[-1] in ',.;:!?':
+                    trailing_punct = math_text[-1]
+                    math_text = math_text[:-1].strip()
+                
+                # Wrap the entire expression
+                if math_text:
+                    result.append(f'${math_text}$' + trailing_punct)
+                
+                i = j
             else:
-                result.append(token + trailing_punct)
-                
+                # Not math, just append as is
+                result.append(part)
+                i += 1
+        
         return ''.join(result)
 
     def insert_fraction(self):
