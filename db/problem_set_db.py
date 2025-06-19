@@ -66,7 +66,7 @@ class ProblemSetDB:
         if self.cur.fetchone()[0] == 0:
             default_types = [
                 ('Intro',),
-                ('Elementary',),
+                ('Basic',),
                 ('Efficiency',),
                 ('SAT-Problem',)
             ]
