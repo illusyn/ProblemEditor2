@@ -20,11 +20,80 @@ import shutil
 from db.math_image_db import MathImageDB
 from config_loader import ConfigLoader
 import sqlite3
-from PIL import Image
 import io
+
+# Try to import PIL, but don't fail if it's not available
+try:
+    from PIL import Image
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
 
 def latex_escape(text):
     return text.replace('_', r'\_')
+
+def export_images_from_content(problem_id, content, images_dir):
+    """
+    Export images that are referenced in the problem content.
+    This handles cases where images are used in content but not in problem_images or problem_image_map.
+    """
+    exported_count = 0
+    
+    # Extract image references from content
+    image_refs = re.findall(r'\\includegraphics.*?\{(.*?)\}', content)
+    
+    if not image_refs:
+        return exported_count
+    
+    print(f"  Found {len(image_refs)} image references in content for problem {problem_id}")
+    
+    for image_name in image_refs:
+        output_path = os.path.join(images_dir, image_name)
+        
+        # Skip if already exported
+        if os.path.exists(output_path):
+            continue
+            
+        # Try to get from math_images.db
+        try:
+            images_conn = sqlite3.connect("db/math_images.db")
+            images_cursor = images_conn.cursor()
+            
+            images_cursor.execute("SELECT data FROM images WHERE name = ?", (image_name,))
+            result = images_cursor.fetchone()
+            
+            if result:
+                image_data = result[0]
+                
+                # Check if we need to convert DIB to PNG
+                if HAS_PIL:
+                    try:
+                        # Try to open the image data
+                        img = Image.open(io.BytesIO(image_data))
+                        
+                        # If it's DIB/BMP format and has .png extension, convert it
+                        if img.format in ['DIB', 'BMP'] and image_name.endswith('.png'):
+                            # Convert to PNG
+                            png_buffer = io.BytesIO()
+                            img.save(png_buffer, format='PNG')
+                            image_data = png_buffer.getvalue()
+                            print(f"    Converted {image_name} from DIB to PNG format")
+                    except:
+                        # If PIL fails, just use the raw data
+                        pass
+                
+                with open(output_path, 'wb') as f:
+                    f.write(image_data)
+                exported_count += 1
+                print(f"    Exported {image_name} from math_images.db (via content scan)")
+            else:
+                print(f"    WARNING: {image_name} referenced in content but not found in math_images.db!")
+            
+            images_conn.close()
+        except Exception as e:
+            print(f"    ERROR exporting {image_name}: {e}")
+    
+    return exported_count
 
 def export_missing_images_from_map(problem_id, images_dir):
     """
@@ -70,19 +139,20 @@ def export_missing_images_from_map(problem_id, images_dir):
                 image_data = result[0]
                 
                 # Check if we need to convert DIB to PNG
-                try:
-                    # Try to open the image data
-                    img = Image.open(io.BytesIO(image_data))
-                    
-                    # If it's DIB/BMP format and has .png extension, convert it
-                    if img.format in ['DIB', 'BMP'] and image_name.endswith('.png'):
-                        # Convert to PNG
-                        png_buffer = io.BytesIO()
-                        img.save(png_buffer, format='PNG')
-                        image_data = png_buffer.getvalue()
-                        print(f"    Converted {image_name} from DIB to PNG format")
-                except Exception as e:
-                    print(f"    Warning: Could not process image format for {image_name}: {e}")
+                if HAS_PIL:
+                    try:
+                        # Try to open the image data
+                        img = Image.open(io.BytesIO(image_data))
+                        
+                        # If it's DIB/BMP format and has .png extension, convert it
+                        if img.format in ['DIB', 'BMP'] and image_name.endswith('.png'):
+                            # Convert to PNG
+                            png_buffer = io.BytesIO()
+                            img.save(png_buffer, format='PNG')
+                            image_data = png_buffer.getvalue()
+                            print(f"    Converted {image_name} from DIB to PNG format")
+                    except Exception as e:
+                        print(f"    Warning: Could not process image format for {image_name}: {e}")
                 
                 with open(output_path, 'wb') as f:
                     f.write(image_data)
@@ -107,9 +177,9 @@ def export_missing_images_from_map(problem_id, images_dir):
 def main():
 
     parser = argparse.ArgumentParser(description="Export math problems to LaTeX.")
-    parser.add_argument('--category', type=str, help='Export only problems in this category')
-    parser.add_argument('--output', type=str, default='exports/problems_export.tex', help='Output LaTeX file')
-    parser.add_argument('--all', action='store_true', help='Include answer, earmark, and problem types after each problem')
+    parser.add_argument('-c', '--category', type=str, help='Export only problems in this category')
+    parser.add_argument('-o', '--output', type=str, default='exports/problems_export.tex', help='Output LaTeX file')
+    parser.add_argument('-a', '--all', action='store_true', help='Include answer, earmark, and problem types after each problem')
     args = parser.parse_args()
 
     db = MathProblemDB()
@@ -168,6 +238,9 @@ def main():
         
         # Also check for images in problem_image_map that aren't in problem_images
         export_missing_images_from_map(problem_id, images_dir)
+        
+        # Also check for images referenced in content that aren't in either table
+        export_images_from_content(problem_id, prob['content'], images_dir)
 
     # --- Build all problems as a single LaTeX string ---
     all_problems_latex = ""
@@ -193,6 +266,11 @@ def main():
             if success and types:
                 type_names = ', '.join([latex_escape(t['name']) for t in types])
                 answer_block += r'\textbf{Types:} ' + type_names + r'\\' + '\n'
+            # Add categories
+            categories = prob.get('categories', [])
+            if categories:
+                cat_names = ', '.join([latex_escape(cat['name']) for cat in categories])
+                answer_block += r'\textbf{Categories:} ' + cat_names + r'\\' + '\n'
             if answer_block:
                 all_problems_latex += f'''{{\color{{blue!70!black}}
 {answer_block}}}
