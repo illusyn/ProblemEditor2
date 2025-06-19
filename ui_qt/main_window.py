@@ -28,8 +28,19 @@ def update_problem_image_map(problem_id, content, db):
     # Remove old mappings
     db.cur.execute("DELETE FROM problem_image_map WHERE problem_id = ?", (problem_id,))
     # Extract image names from content
-    image_names = re.findall(r'\\includegraphics(?:\\[.*?\\])?\\{([^\\}]+)\\}', content)
-    for image_name in image_names:
+    image_names = re.findall(r'\\includegraphics(?:\[.*?\])?\{([^}]+)\}', content)
+    print(f"[DEBUG] update_problem_image_map: Found {len(image_names)} images in content for problem {problem_id}: {image_names}")
+    
+    # Also check for images in adjustbox environments
+    adjustbox_pattern = r'\\adjustbox\{[^}]*\}\{\\includegraphics(?:\[.*?\])?\{([^}]+)\}\}'
+    adjustbox_images = re.findall(adjustbox_pattern, content)
+    print(f"[DEBUG] update_problem_image_map: Found {len(adjustbox_images)} images in adjustbox: {adjustbox_images}")
+    
+    # Combine both lists and remove duplicates
+    all_images = list(set(image_names + adjustbox_images))
+    print(f"[DEBUG] update_problem_image_map: Total unique images to map: {all_images}")
+    
+    for image_name in all_images:
         db.cur.execute(
             "INSERT INTO problem_image_map (problem_id, image_name) VALUES (?, ?)",
             (problem_id, image_name)
