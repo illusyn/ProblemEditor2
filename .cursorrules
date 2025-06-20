@@ -1,6 +1,6 @@
 In addition to this file consult ./README.md and the ./docs folder for project structure and guidelines
 There is just one user for this app, me.
-Developing on Windows 11 computer in a Powershell with cywin installed.
+Developing on Windows 11 computer in a Powershell with cygwin installed.
 
 ## Roles & Responsibilities
 
