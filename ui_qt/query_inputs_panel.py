@@ -119,17 +119,31 @@ class QueryInputsPanel(QWidget):
         groupbox_layout.setSpacing(0)
         # --- Basic Inputs Row (Problem ID, Search Text, Answer) ---
         self._create_basic_inputs(groupbox_layout)
-        # --- Earmark checkbox and Problem type buttons on the same row ---
+        # --- Earmarks checkboxes and Problem type buttons on the same row ---
         earmark_and_types_row = QHBoxLayout()
         earmark_and_types_row.setSpacing(8)
         earmark_and_types_row.setContentsMargins(0, 0, 0, 0)
-        self.earmark_checkbox = QCheckBox("Earmark")
-        earmark_font = QFont(FONT_FAMILY)
-        earmark_font.setPointSizeF(LABEL_FONT_SIZE)
-        earmark_font.setWeight(QFont.Bold)
-        self.earmark_checkbox.setFont(earmark_font)
-        self.earmark_checkbox.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; margin-left: 10px;")
-        earmark_and_types_row.addWidget(self.earmark_checkbox)
+        
+        # Create Earmarks label
+        earmarks_label = QLabel("Earmarks:")
+        earmarks_font = QFont(FONT_FAMILY)
+        earmarks_font.setPointSizeF(LABEL_FONT_SIZE)
+        earmarks_font.setWeight(QFont.Bold)
+        earmarks_label.setFont(earmarks_font)
+        earmarks_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; margin-left: 10px;")
+        earmark_and_types_row.addWidget(earmarks_label)
+        
+        # Create checkboxes for A, B, C
+        self.earmark_checkboxes = {}
+        for earmark_id, label in [(1, 'A'), (2, 'B'), (3, 'C')]:
+            checkbox = QCheckBox(label)
+            checkbox.setFont(earmarks_font)
+            checkbox.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR};")
+            self.earmark_checkboxes[earmark_id] = checkbox
+            earmark_and_types_row.addWidget(checkbox)
+        
+        # Keep backward compatibility
+        self.earmark_checkbox = None  # Will be removed later
         from db.math_db import MathProblemDB
         db = MathProblemDB()
         types = db.cur.execute("SELECT type_id, name FROM problem_types ORDER BY type_id").fetchall()
@@ -287,10 +301,25 @@ class QueryInputsPanel(QWidget):
         self.search_text_entry.setText(str(value))
     
     def get_earmark(self):
-        return self.earmark_checkbox.isChecked()
+        # Backward compatibility - returns True if any earmark is selected
+        return any(cb.isChecked() for cb in self.earmark_checkboxes.values())
     
     def set_earmark(self, value):
-        self.earmark_checkbox.setChecked(value)
+        # Backward compatibility - if True, check earmark A
+        if value:
+            self.earmark_checkboxes[1].setChecked(True)
+        else:
+            for cb in self.earmark_checkboxes.values():
+                cb.setChecked(False)
+    
+    def get_selected_earmark_ids(self):
+        """Get list of selected earmark IDs"""
+        return [earmark_id for earmark_id, cb in self.earmark_checkboxes.items() if cb.isChecked()]
+    
+    def set_selected_earmark_ids(self, earmark_ids):
+        """Set which earmarks are selected"""
+        for earmark_id, cb in self.earmark_checkboxes.items():
+            cb.setChecked(earmark_id in earmark_ids)
     
     def get_selected_type_ids(self):
         return self.problem_type_panel.get_selected_type_ids()
@@ -309,7 +338,8 @@ class QueryInputsPanel(QWidget):
         self.problem_id_entry.setText("")
         self.search_text_entry.setText("")
         self.answer_entry.setText("")
-        self.earmark_checkbox.setChecked(False)
+        for cb in self.earmark_checkboxes.values():
+            cb.setChecked(False)
         self.problem_type_panel.set_selected_type_ids([])
         self.clear_category_selection()
         self.set_selector_grid.clear_selection()
@@ -325,8 +355,9 @@ class QueryInputsPanel(QWidget):
             criteria['search_text'] = self.get_search_text()
         if self.get_answer():
             criteria['answer'] = self.get_answer()
-        if self.get_earmark():
-            criteria['earmark'] = True
+        earmark_ids = self.get_selected_earmark_ids()
+        if earmark_ids:
+            criteria['earmark_ids'] = earmark_ids
         type_ids = self.get_selected_type_ids()
         if type_ids:
             criteria['type_ids'] = type_ids
@@ -348,7 +379,10 @@ class QueryInputsPanel(QWidget):
         if 'answer' in criteria:
             self.set_answer(criteria['answer'])
         if 'earmark' in criteria:
+            # Backward compatibility
             self.set_earmark(criteria['earmark'])
+        if 'earmark_ids' in criteria:
+            self.set_selected_earmark_ids(criteria['earmark_ids'])
         if 'type_ids' in criteria:
             self.set_selected_type_ids(criteria['type_ids'])
         if 'categories' in criteria:
@@ -374,7 +408,7 @@ class QueryInputsPanel(QWidget):
             bool(self.get_problem_id()) or
             bool(self.get_search_text()) or
             bool(self.get_answer()) or
-            self.get_earmark() or
+            bool(self.get_selected_earmark_ids()) or
             bool(self.get_selected_type_ids()) or
             bool(self.get_selected_categories()) or
             bool(self.get_selected_sets())
@@ -388,7 +422,7 @@ class QueryInputsPanel(QWidget):
             return 'text'
         elif self.get_answer():
             return 'answer'
-        elif self.get_earmark():
+        elif self.get_selected_earmark_ids():
             return 'earmark'
         elif self.get_selected_type_ids():
             return 'type'
