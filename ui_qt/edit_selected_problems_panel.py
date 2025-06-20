@@ -16,7 +16,7 @@ from PyQt5.QtCore import Qt, pyqtSignal
 from ui_qt.neumorphic_components import NeumorphicButton
 from ui_qt.style_config import (
     FONT_FAMILY, LABEL_FONT_SIZE, SECTION_LABEL_FONT_SIZE,
-    NEUMORPH_TEXT_COLOR, WINDOW_BG_COLOR, CONTROL_BTN_FONT_SIZE,
+    NEUMORPH_TEXT_COLOR, WINDOW_BG_COLOR, BUTTON_FONT_SIZE,
     BUTTON_TEXT_PADDING, PADDING, SPACING
 )
 
@@ -71,8 +71,8 @@ class EditSelectedProblemsPanel(QWidget):
         button_layout = QHBoxLayout()
         button_layout.setSpacing(SPACING)
         
-        self.clear_button = NeumorphicButton("Clear Attribute(s)", font_size=CONTROL_BTN_FONT_SIZE)
-        self.apply_button = NeumorphicButton("Apply Attribute(s)", font_size=CONTROL_BTN_FONT_SIZE)
+        self.clear_button = NeumorphicButton("Clear Attribute(s)", font_size=BUTTON_FONT_SIZE)
+        self.apply_button = NeumorphicButton("Apply Attribute(s)", font_size=BUTTON_FONT_SIZE)
         
         # Set button widths based on text
         for btn in [self.clear_button, self.apply_button]:
