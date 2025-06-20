@@ -85,6 +85,7 @@ class QueryPanel(QWidget):
         main_layout.addLayout(query_grid)
 
     def create_neumorphic_button(self, text, parent=None):
+        print(f"Creating button '{text}' with CONTROL_BTN_FONT_SIZE: {CONTROL_BTN_FONT_SIZE}")
         return NeumorphicButton(
             text,
             parent=parent,
