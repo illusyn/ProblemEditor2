@@ -40,9 +40,11 @@ class ProblemCellWidget(QWidget):
         summary_top += '</span>'
 
         summary_lines = []
-        earmark = problem.get('earmark', None)
-        if earmark not in [None, 0, '', False, '0', 'False']:
-            summary_lines.append('<b>Earmark:</b> Yes')
+        # Show new earmarks
+        earmarks = problem.get('earmarks', [])
+        if earmarks:
+            earmark_names = ', '.join([e['name'] for e in earmarks])
+            summary_lines.append(f'<b>Earmarks:</b> {earmark_names}')
         types = problem.get('types', [])
         if types:
             type_names = ', '.join([t['name'] for t in types])
