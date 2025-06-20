@@ -257,9 +257,11 @@ def main():
             answer_block += r'\textbf{ID:} ' + str(problem_number) + r'\\' + '\n'
             if answer:
                 answer_block += r'\textbf{Answer:} $' + latex_escape(answer) + r'$\\' + '\n'
-            earmark = prob.get('earmark', None)
-            if earmark not in [None, 0, '', False, '0', 'False']:
-                answer_block += r'\textbf{Earmark:} Yes\\' + '\n'
+            # Get earmarks from new structure
+            earmarks = prob.get('earmarks', [])
+            if earmarks:
+                earmark_names = ', '.join([e['name'] for e in earmarks])
+                answer_block += r'\textbf{Earmarks:} ' + latex_escape(earmark_names) + r'\\' + '\n'
             db_types = MathProblemDB()
             success, types = db_types.get_types_for_problem(problem_number)
             db_types.close()
