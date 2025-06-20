@@ -59,7 +59,7 @@ class EditSelectedProblemsPanel(QWidget):
         content_layout.setSpacing(SPACING)
         
         # Info label
-        info_label = QLabel("Use the attribute selections above (Earmark, Problem Types, Categories) to edit selected problems")
+        info_label = QLabel("Use the attribute selections above (Earmarks, Problem Types, Categories) to edit selected problems")
         info_font = QFont(FONT_FAMILY)
         info_font.setPointSizeF(LABEL_FONT_SIZE - 1)
         info_label.setFont(info_font)
@@ -99,9 +99,10 @@ class EditSelectedProblemsPanel(QWidget):
             
         attributes = {}
         
-        # Get earmark state
-        if self.query_inputs_panel.earmark_checkbox.isChecked():
-            attributes['earmark'] = True
+        # Get selected earmarks
+        earmark_ids = self.query_inputs_panel.get_selected_earmark_ids()
+        if earmark_ids:
+            attributes['earmark_ids'] = earmark_ids
         
         # Get selected problem types
         type_ids = self.query_inputs_panel.get_selected_type_ids()
