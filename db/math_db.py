@@ -471,6 +471,18 @@ class MathProblemDB:
                     for t in self.cur.fetchall()
                 ]
                 
+                # Get earmarks for this problem
+                self.cur.execute("""
+                    SELECT e.earmark_id, e.name
+                    FROM earmark_types e
+                    JOIN problem_earmarks pe ON e.earmark_id = pe.earmark_id
+                    WHERE pe.problem_id = ?
+                """, (problem_id,))
+                problem["earmarks"] = [
+                    {"earmark_id": e[0], "name": e[1]}
+                    for e in self.cur.fetchall()
+                ]
+                
                 problems.append(problem)
             
             return (True, problems)
@@ -1136,5 +1148,95 @@ class MathProblemDB:
             """, (problem_id,))
             types = [{"type_id": row[0], "name": row[1]} for row in self.cur.fetchall()]
             return (True, types)
+        except Exception as e:
+            return (False, str(e))
+    
+    def get_earmarks_for_problem(self, problem_id):
+        """
+        Get all earmarks for a problem
+        
+        Args:
+            problem_id (int): ID of the problem
+            
+        Returns:
+            tuple: (success, list of earmark dicts or error_message)
+        """
+        try:
+            self.cur.execute("""
+                SELECT e.earmark_id, e.name
+                FROM earmark_types e
+                JOIN problem_earmarks pe ON e.earmark_id = pe.earmark_id
+                WHERE pe.problem_id = ?
+                ORDER BY e.earmark_id
+            """, (problem_id,))
+            
+            earmarks = [{"earmark_id": row[0], "name": row[1]} for row in self.cur.fetchall()]
+            return (True, earmarks)
+        except Exception as e:
+            return (False, str(e))
+    
+    def add_earmark_to_problem(self, problem_id, earmark_id):
+        """
+        Add an earmark to a problem
+        
+        Args:
+            problem_id (int): ID of the problem
+            earmark_id (int): ID of the earmark
+            
+        Returns:
+            tuple: (success, message)
+        """
+        try:
+            self.cur.execute("""
+                INSERT OR IGNORE INTO problem_earmarks (problem_id, earmark_id)
+                VALUES (?, ?)
+            """, (problem_id, earmark_id))
+            self.conn.commit()
+            return (True, "Earmark added successfully")
+        except Exception as e:
+            self.conn.rollback()
+            return (False, str(e))
+    
+    def remove_earmark_from_problem(self, problem_id, earmark_id):
+        """
+        Remove an earmark from a problem
+        
+        Args:
+            problem_id (int): ID of the problem
+            earmark_id (int): ID of the earmark
+            
+        Returns:
+            tuple: (success, message)
+        """
+        try:
+            self.cur.execute("""
+                DELETE FROM problem_earmarks
+                WHERE problem_id = ? AND earmark_id = ?
+            """, (problem_id, earmark_id))
+            self.conn.commit()
+            return (True, "Earmark removed successfully")
+        except Exception as e:
+            self.conn.rollback()
+            return (False, str(e))
+    
+    def get_all_earmarks(self):
+        """
+        Get all available earmarks
+        
+        Returns:
+            tuple: (success, list of earmark dicts or error_message)
+        """
+        try:
+            self.cur.execute("""
+                SELECT earmark_id, name, description
+                FROM earmark_types
+                ORDER BY earmark_id
+            """)
+            
+            earmarks = [
+                {"earmark_id": row[0], "name": row[1], "description": row[2]}
+                for row in self.cur.fetchall()
+            ]
+            return (True, earmarks)
         except Exception as e:
             return (False, str(e))
