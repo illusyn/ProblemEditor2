@@ -5,7 +5,7 @@ MathTextEdit: QTextEdit subclass for math/markdown editing with context menu and
 import re
 import unicodedata
 from PyQt5.QtWidgets import QTextEdit, QMenu, QAction, QApplication, QMessageBox, QShortcut
-from PyQt5.QtGui import QKeySequence, QTextCursor, QFont
+from PyQt5.QtGui import QKeySequence, QTextCursor, QFont, QContextMenuEvent, QMouseEvent, QPalette
 from PyQt5.QtCore import Qt
 from ui_qt.style_config import EDITOR_FONT_FAMILY, EDITOR_FONT_SIZE, EDITOR_BG_COLOR
 
@@ -57,8 +57,11 @@ class MathTextEdit(QTextEdit):
         self.setFont(font)
         self.setStyleSheet(f"background: {EDITOR_BG_COLOR};")
         self.setMinimumSize(400, 300)
-        self.setContextMenuPolicy(Qt.CustomContextMenu)
-        self.customContextMenuRequested.connect(self.show_context_menu)
+        # Keep selection visible even when focus is lost
+        palette = self.palette()
+        palette.setColor(palette.Inactive, palette.HighlightedText, palette.color(palette.Active, palette.HighlightedText))
+        palette.setColor(palette.Inactive, palette.Highlight, palette.color(palette.Active, palette.Highlight))
+        self.setPalette(palette)
         # Shortcuts
         QShortcut(QKeySequence("Ctrl+F"), self, self.insert_fraction)
         QShortcut(QKeySequence("Ctrl+D"), self, self.insert_degree)
@@ -86,44 +89,64 @@ class MathTextEdit(QTextEdit):
         QShortcut(QKeySequence("Ctrl+A"), self, self.insert_angle)
         QShortcut(QKeySequence("Ctrl+Shift+A"), self, self.insert_angle_dollars)
 
-    def show_context_menu(self, pos):
-        menu = self.createStandardContextMenu()
-        menu.addSeparator()
-        menu.addAction("Paste LaTeX as Equation", self.paste_latex)
-        menu.addAction("Wrap Math", self.wrap_math_selection)
-        menu.addAction("Overline Selection", self.overline_selection)
-        menu.addAction("Overline Selection (with $)", self.overline_selection_dollars)
-        menu.addAction("Wide Hat Selection", self.widehat_selection)
-        menu.addAction("Wide Hat Selection (with $)", self.widehat_selection_dollars)
-        
-        # Apply custom styling to ensure readability
-        menu.setStyleSheet("""
-            QMenu {
-                background-color: #f5f5f5;
-                color: #333333;
-                border: 1px solid #cccccc;
-                padding: 4px;
-            }
-            QMenu::item {
-                background-color: transparent;
-                color: #333333;
-                padding: 6px 20px;
-            }
-            QMenu::item:selected {
-                background-color: #4a90e2;
-                color: #ffffff;
-            }
-            QMenu::item:disabled {
-                color: #999999;
-            }
-            QMenu::separator {
-                height: 1px;
-                background-color: #cccccc;
-                margin: 4px 10px;
-            }
-        """)
-        
-        menu.exec_(self.mapToGlobal(pos))
+    def mousePressEvent(self, event):
+        """Override mouse press to preserve selection on right-click."""
+        if event.button() == Qt.RightButton:
+            # Do nothing - let mouseReleaseEvent handle it
+            event.accept()
+        else:
+            # For other buttons, use default behavior
+            super().mousePressEvent(event)
+    
+    def mouseReleaseEvent(self, event):
+        """Show context menu on right-click release."""
+        if event.button() == Qt.RightButton:
+            # Show context menu on release
+            menu = self.createStandardContextMenu()
+            menu.addSeparator()
+            menu.addAction("Paste LaTeX as Equation", self.paste_latex)
+            menu.addAction("Wrap Math", self.wrap_math_selection)
+            menu.addAction("Overline Selection", self.overline_selection)
+            menu.addAction("Overline Selection (with $)", self.overline_selection_dollars)
+            menu.addAction("Wide Hat Selection", self.widehat_selection)
+            menu.addAction("Wide Hat Selection (with $)", self.widehat_selection_dollars)
+            
+            # Apply custom styling
+            menu.setStyleSheet("""
+                QMenu {
+                    background-color: #f5f5f5;
+                    color: #333333;
+                    border: 1px solid #cccccc;
+                    padding: 4px;
+                }
+                QMenu::item {
+                    background-color: transparent;
+                    color: #333333;
+                    padding: 6px 20px;
+                }
+                QMenu::item:selected {
+                    background-color: #4a90e2;
+                    color: #ffffff;
+                }
+                QMenu::item:disabled {
+                    color: #999999;
+                }
+                QMenu::separator {
+                    height: 1px;
+                    background-color: #cccccc;
+                    margin: 4px 10px;
+                }
+            """)
+            
+            menu.exec_(event.globalPos())
+            event.accept()
+        else:
+            super().mouseReleaseEvent(event)
+
+    def contextMenuEvent(self, event):
+        """Override context menu event to prevent default behavior."""
+        # Do nothing - we handle context menu in mouseReleaseEvent
+        event.accept()
 
     def paste_latex(self):
         clipboard = QApplication.clipboard()
@@ -145,6 +168,7 @@ class MathTextEdit(QTextEdit):
         selected_text = cursor.selectedText()
         wrapped = self._wrap_math_runs_exclude_words(selected_text)
         cursor.insertText(wrapped)
+    
 
     def _wrap_math_runs_exclude_words(self, text):
         """
@@ -298,6 +322,7 @@ class MathTextEdit(QTextEdit):
         else:
             self.insertPlainText("\\overline{}")
     
+    
     def overline_selection_dollars(self):
         cursor = self.textCursor()
         if cursor.hasSelection():
@@ -305,6 +330,7 @@ class MathTextEdit(QTextEdit):
             cursor.insertText(f"$\\overline{{{selected_text}}}$")
         else:
             self.insertPlainText("$\\overline{}$")
+    
     
     def widehat_selection(self):
         cursor = self.textCursor()
@@ -314,6 +340,7 @@ class MathTextEdit(QTextEdit):
         else:
             self.insertPlainText("\\widehat{}")
     
+    
     def widehat_selection_dollars(self):
         cursor = self.textCursor()
         if cursor.hasSelection():
@@ -321,6 +348,7 @@ class MathTextEdit(QTextEdit):
             cursor.insertText(f"$\\widehat{{{selected_text}}}$")
         else:
             self.insertPlainText("$\\widehat{}$")
+    
     
     def insert_angle(self):
         self.insertPlainText(r"\angle")

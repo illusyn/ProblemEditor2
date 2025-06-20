@@ -43,17 +43,15 @@ class MarkdownParser:
         self.document_content = ""
         
         # LaTeX special characters that need to be escaped
+        # Note: We don't escape \ { } as they're essential for LaTeX commands
         self.latex_special_chars = {
             '#': '\\#',
             '$': '\\$',
             '%': '\\%',
             '&': '\\&',
             '_': '\\_',
-            '{': '\\{',
-            '}': '\\}',
             '~': '\\textasciitilde{}',
-            '^': '\\textasciicircum{}',
-            '\\': '\\textbackslash{}'
+            '^': '\\textasciicircum{}'
         }
         
         # Initialize counter for enumeration tracking
@@ -90,20 +88,37 @@ class MarkdownParser:
         
         i = 0
         while i < len(text):
-            if text[i:i+2] == '\\[' or text[i:i+2] == '\\]':
+            # Check for display math \[ ... \]
+            if text[i:i+2] == '\\[' and (i == 0 or text[i-1] != '\\'):
+                # This is \[ for display math (not preceded by \)
                 if current_part:
                     parts.append((current_part, in_math))
                     current_part = ""
                 current_part += text[i:i+2]
                 i += 2
-                in_math = not in_math
+                in_math = True
+            elif text[i:i+2] == '\\]' and in_math:
+                # This is \] ending display math
+                current_part += text[i:i+2]
+                parts.append((current_part, in_math))
+                current_part = ""
+                i += 2
+                in_math = False
             elif text[i] == '$':
-                if current_part:
-                    parts.append((current_part, in_math))
-                    current_part = ""
+                # Add the $ to the current part before toggling mode
                 current_part += text[i]
                 i += 1
-                in_math = not in_math
+                # If we're ending math mode, save the part
+                if in_math:
+                    parts.append((current_part, in_math))
+                    current_part = ""
+                    in_math = False
+                else:
+                    # Starting math mode - save any previous non-math part
+                    if current_part[:-1]:  # Everything except the $ we just added
+                        parts.append((current_part[:-1], False))
+                    current_part = "$"  # Start new part with $
+                    in_math = True
             else:
                 current_part += text[i]
                 i += 1
@@ -119,10 +134,39 @@ class MarkdownParser:
             else:
                 # Create a copy of special chars without % for text content
                 special_chars = {k: v for k, v in self.latex_special_chars.items() if k != '%'}
-                # Escape special characters in non-math parts
-                escaped_part = part
+                
+                # Special handling for sequences of underscores (blanks)
+                # Replace 3 or more underscores with \rule command
+                escaped_part = re.sub(r'_{3,}', lambda m: r'\rule{' + str(len(m.group()) * 0.5) + 'cm}{0.4pt}', part)
+                
+                # Convert \tab to \hspace*
+                # \tab -> \hspace*{2em} (default)
+                # \tab[3cm] -> \hspace*{3cm} (custom spacing)
+                escaped_part = re.sub(
+                    r'\\tab(?:\[([^\]]+)\])?',
+                    lambda m: r'\hspace*{' + (m.group(1) if m.group(1) else '2em') + '}',
+                    escaped_part
+                )
+                
+                # Convert \nl to \\[spacing]
+                # \nl -> \\[2mm] (default)
+                # \nl[4mm] -> \\[4mm] (custom spacing)
+                escaped_part = re.sub(
+                    r'\\nl(?:\[([^\]]+)\])?',
+                    lambda m: r'\\[' + (m.group(1) if m.group(1) else '2mm') + ']',
+                    escaped_part
+                )
+                
+                # Escape other special characters in non-math parts
                 for char, replacement in special_chars.items():
-                    escaped_part = escaped_part.replace(char, replacement)
+                    if char == '_':
+                        # For underscores, only escape those that weren't already converted to \rule
+                        # This catches single/double underscores that might be used for subscripts
+                        if '\\rule' not in escaped_part:
+                            escaped_part = escaped_part.replace(char, replacement)
+                    else:
+                        escaped_part = escaped_part.replace(char, replacement)
+                
                 result += escaped_part
         
         return result
@@ -551,7 +595,11 @@ class MarkdownParser:
             for param_name, param_config in code_cmd.parameters.items():
                 if param_name not in params and 'default' in param_config:
                     params[param_name] = param_config['default']
-            content = "\n".join(content_lines)
+            # Escape the content before passing to render_latex
+            escaped_content_lines = []
+            for line in content_lines:
+                escaped_content_lines.append(self.escape_latex(line))
+            content = "\n".join(escaped_content_lines)
             # Allow variable substitution from config variables
             template = code_cmd.render_latex(content, params, context=context)
             # Substitute $variables.varname$ in the output
@@ -938,8 +986,9 @@ class MarkdownParser:
             def replacer(match):
                 expr = match.group(1)
                 # Replace {expr}unit or )unit or digitunit with {expr}\,\mathrm{unit}
+                # Only match units (2+ letters) or known single-letter units, not variables
                 expr = re.sub(
-                    r'([0-9\}\)])\s*([a-zA-Z]{1,4}(?:\^\d+)?)',
+                    r'([0-9\}\)])\s*([a-zA-Z]{2,4}(?:\^\d+)?)',
                     r'\1\\,\\mathrm{\2}',
                     expr
                 )
