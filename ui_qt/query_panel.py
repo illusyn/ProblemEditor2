@@ -103,13 +103,14 @@ class QueryPanel(QWidget):
         all_problems = db.get_problems_list(category_id=category_id, limit=1000)[1]
         db.close()
         problem_id = criteria.get('problem_id', '').strip()
-        earmark = criteria.get('earmark', False)
+        earmark_ids = criteria.get('earmark_ids', [])
         filtered = all_problems
 
         if problem_id:
             filtered = [p for p in filtered if str(p.get('problem_id', '')) == problem_id]
-        if earmark:
-            filtered = [p for p in filtered if p.get('earmark', 0)]
+        if earmark_ids:
+            # Filter by new earmarks structure
+            filtered = [p for p in filtered if any(e['earmark_id'] in earmark_ids for e in p.get('earmarks', []))]
         selected_type_ids = self.query_inputs_panel.get_selected_type_ids()
         if selected_type_ids:
             filtered = [p for p in filtered if any(t['type_id'] in selected_type_ids for t in p.get('types', []))]
@@ -140,6 +141,10 @@ class QueryPanel(QWidget):
         return self.query_inputs_panel.get_earmark()
     def set_earmark(self, value):
         self.query_inputs_panel.set_earmark(value)
+    def get_selected_earmark_ids(self):
+        return self.query_inputs_panel.get_selected_earmark_ids()
+    def set_selected_earmark_ids(self, earmark_ids):
+        self.query_inputs_panel.set_selected_earmark_ids(earmark_ids)
     def get_selected_type_ids(self):
         return self.query_inputs_panel.get_selected_type_ids()
     def set_selected_type_ids(self, type_ids):
