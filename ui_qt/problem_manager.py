@@ -95,10 +95,10 @@ class ProblemManager(QWidget):
         problem_id = criteria.get('problem_id', '').strip()
         if problem_id:
             problems = [p for p in problems if str(p.get('problem_id', '')) == problem_id]
-        # Filter by Earmark
-        earmark = criteria.get('earmark', False)
-        if earmark:
-            problems = [p for p in problems if p.get('earmark', 0)]
+        # Filter by Earmarks
+        earmark_ids = criteria.get('earmark_ids', [])
+        if earmark_ids:
+            problems = [p for p in problems if any(e['earmark_id'] in earmark_ids for e in p.get('earmarks', []))]
         # Filter by Problem Types
         selected_type_ids = criteria.get('type_ids', [])
         if selected_type_ids:
@@ -133,10 +133,13 @@ class ProblemManager(QWidget):
         success_count = 0
         for problem_id in selected_ids:
             try:
-                # Apply earmark if specified
-                if 'earmark' in attributes:
-                    db.cur.execute("UPDATE problems SET earmark = ? WHERE problem_id = ?", 
-                                 (1 if attributes['earmark'] else 0, problem_id))
+                # Apply earmarks if specified
+                if 'earmark_ids' in attributes:
+                    for earmark_id in attributes['earmark_ids']:
+                        db.cur.execute("""
+                            INSERT OR IGNORE INTO problem_earmarks (problem_id, earmark_id)
+                            VALUES (?, ?)
+                        """, (problem_id, earmark_id))
                 
                 # Apply problem types if specified
                 if 'type_ids' in attributes:
@@ -180,9 +183,13 @@ class ProblemManager(QWidget):
         success_count = 0
         for problem_id in selected_ids:
             try:
-                # Clear earmark if specified
-                if 'earmark' in attributes:
-                    db.cur.execute("UPDATE problems SET earmark = 0 WHERE problem_id = ?", (problem_id,))
+                # Clear earmarks if specified
+                if 'earmark_ids' in attributes:
+                    for earmark_id in attributes['earmark_ids']:
+                        db.cur.execute("""
+                            DELETE FROM problem_earmarks 
+                            WHERE problem_id = ? AND earmark_id = ?
+                        """, (problem_id, earmark_id))
                 
                 # Clear problem types if specified
                 if 'type_ids' in attributes:
