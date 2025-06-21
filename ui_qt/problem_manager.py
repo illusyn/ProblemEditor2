@@ -9,6 +9,47 @@ from ui_qt.set_editor_panel import SetEditorPanelQt
 from ui_qt.neumorphic_components import NeumorphicButton
 from ui_qt.style_config import CONTROL_BTN_WIDTH, FONT_FAMILY, SECTION_LABEL_FONT_SIZE
 
+def show_styled_message(parent, title, message, msg_type="info"):
+    """Show a styled message box"""
+    msg_box = QMessageBox(parent)
+    msg_box.setWindowTitle(title)
+    msg_box.setText(message)
+    
+    if msg_type == "info":
+        msg_box.setIcon(QMessageBox.Information)
+    elif msg_type == "warning":
+        msg_box.setIcon(QMessageBox.Warning)
+    elif msg_type == "error":
+        msg_box.setIcon(QMessageBox.Critical)
+    
+    # Apply styling to ensure readability
+    msg_box.setStyleSheet("""
+        QMessageBox {
+            background-color: #f0f0f3;
+            color: #2b2d42;
+        }
+        QMessageBox QLabel {
+            color: #2b2d42;
+            font-family: 'Segoe UI';
+            font-size: 12pt;
+        }
+        QMessageBox QPushButton {
+            background-color: #e0e0e3;
+            color: #2b2d42;
+            border: 1px solid #b0b0b3;
+            border-radius: 4px;
+            padding: 5px 15px;
+            font-family: 'Segoe UI';
+            font-size: 11pt;
+            min-width: 60px;
+        }
+        QMessageBox QPushButton:hover {
+            background-color: #d0d0d3;
+        }
+    """)
+    
+    msg_box.exec_()
+
 class ProblemManager(QWidget):
     return_to_editor = pyqtSignal()
 
@@ -50,6 +91,8 @@ class ProblemManager(QWidget):
         # Connect edit panel signals
         self.query_panel.apply_attributes_to_selected.connect(self.on_apply_attributes)
         self.query_panel.clear_attributes_from_selected.connect(self.on_clear_attributes)
+        # Connect export completed signal
+        self.query_panel.export_completed.connect(self.on_export_completed)
         # --- Centralized selection state ---
         self.selected_problem_ids = set()
         self.selected_set_ids = set()
@@ -111,6 +154,8 @@ class ProblemManager(QWidget):
             selected_cat_names = {cat['name'] for cat in selected_categories}
             problems = [p for p in problems if selected_cat_names.issubset({c['name'] for c in p.get('categories', [])})]
         self.problem_display_panel.set_problems(problems)
+        # Also update query panel's export panel with the results
+        self.query_panel.set_query_results(problems)
 
     def on_problems_selected(self, ids):
         print("[DEBUG] on_problems_selected:", ids)
@@ -124,7 +169,7 @@ class ProblemManager(QWidget):
         """Apply attributes to selected problems"""
         selected_ids = self.get_selected_problem_ids()
         if not selected_ids:
-            QMessageBox.warning(self, "No Selection", "Please select problems to apply attributes to.")
+            show_styled_message(self, "No Selection", "Please select problems to apply attributes to.", "warning")
             return
         
         from db.math_db import MathProblemDB
@@ -166,7 +211,7 @@ class ProblemManager(QWidget):
         db.conn.commit()
         db.close()
         
-        QMessageBox.information(self, "Success", f"Attributes applied to {success_count} problems.")
+        show_styled_message(self, "Success", f"Attributes applied to {success_count} problems.", "info")
         # Refresh the display
         self.on_query()
     
@@ -174,7 +219,7 @@ class ProblemManager(QWidget):
         """Clear attributes from selected problems"""
         selected_ids = self.get_selected_problem_ids()
         if not selected_ids:
-            QMessageBox.warning(self, "No Selection", "Please select problems to clear attributes from.")
+            show_styled_message(self, "No Selection", "Please select problems to clear attributes from.", "warning")
             return
         
         from db.math_db import MathProblemDB
@@ -214,7 +259,12 @@ class ProblemManager(QWidget):
         db.conn.commit()
         db.close()
         
-        QMessageBox.information(self, "Success", f"Attributes cleared from {success_count} problems.")
+        show_styled_message(self, "Success", f"Attributes cleared from {success_count} problems.", "info")
         # Refresh the display
         self.on_query()
+    
+    def on_export_completed(self, output_path):
+        """Handle export completion"""
+        # The export panel already shows a success message, so we don't need another one here
+        pass
         
