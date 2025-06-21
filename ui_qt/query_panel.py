@@ -1,10 +1,11 @@
 # query_panel.py
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QSizePolicy
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QGridLayout, QSizePolicy, QStackedWidget, QPushButton
 from PyQt5.QtCore import pyqtSignal
 from ui_qt.query_inputs_panel import QueryInputsPanel
 from ui_qt.neumorphic_components import NeumorphicButton
 from ui_qt.style_config import CONTROL_BTN_FONT_SIZE, CONTROL_BTN_WIDTH, SPACING, PADDING, WINDOW_BG_COLOR, BUTTON_TEXT_PADDING
 from ui_qt.edit_selected_problems_panel import EditSelectedProblemsPanel
+from ui_qt.export_to_latex_panel import ExportToLatexPanel
 from db.math_db import MathProblemDB
 
 class QueryPanel(QWidget):
@@ -13,11 +14,13 @@ class QueryPanel(QWidget):
     query_clicked = pyqtSignal()       # Emits when Query button is clicked
     apply_attributes_to_selected = pyqtSignal(dict)  # Emits attributes to apply
     clear_attributes_from_selected = pyqtSignal(dict)  # Emits attributes to clear
+    export_completed = pyqtSignal(str)  # Emits when export is complete
     def __init__(self, parent=None, laptop_mode=False, show_preview_and_nav_buttons=True, return_button=None):
         super().__init__(parent)
         self.laptop_mode = laptop_mode
         self.show_preview_and_nav_buttons = show_preview_and_nav_buttons
         self.return_button = return_button
+        self.selected_problems = []  # Track currently selected problems
         self.setStyleSheet(f"background-color: {WINDOW_BG_COLOR};")
         self.setSizePolicy(self.sizePolicy().horizontalPolicy(), QSizePolicy.Minimum)
         self._init_ui()
@@ -34,9 +37,30 @@ class QueryPanel(QWidget):
         self.query_inputs_panel = QueryInputsPanel(laptop_mode=self.laptop_mode)
         layout.addWidget(self.query_inputs_panel)
 
-        # --- Edit Selected Problems Panel ---
+        # --- Stacked widget for Edit/Export panels ---
+        self.panel_stack = QStackedWidget()
+        
+        # Edit Selected Problems Panel
         self.edit_selected_panel = EditSelectedProblemsPanel(query_inputs_panel=self.query_inputs_panel)
-        layout.addWidget(self.edit_selected_panel)
+        self.panel_stack.addWidget(self.edit_selected_panel)  # index 0
+        
+        # Export to LaTeX Panel
+        self.export_panel = ExportToLatexPanel()
+        self.panel_stack.addWidget(self.export_panel)  # index 1
+        
+        # Toggle button
+        self.toggle_panel_btn = NeumorphicButton("Switch to Export", font_size=CONTROL_BTN_FONT_SIZE)
+        self.toggle_panel_btn.clicked.connect(self.toggle_panel_view)
+        # Set button width based on text
+        fm = self.toggle_panel_btn.fontMetrics()
+        text_width = fm.horizontalAdvance("Switch to Export") if hasattr(fm, 'horizontalAdvance') else fm.width("Switch to Export")
+        # Account for both possible texts
+        text_width2 = fm.horizontalAdvance("Switch to Edit") if hasattr(fm, 'horizontalAdvance') else fm.width("Switch to Edit")
+        max_width = max(text_width, text_width2)
+        self.toggle_panel_btn.setFixedWidth(max_width + (BUTTON_TEXT_PADDING * 2))
+        layout.addWidget(self.toggle_panel_btn)
+        
+        layout.addWidget(self.panel_stack)
 
         # Debug prints for child size hints
         print("[DEBUG] QueryInputsPanel minimumSizeHint:", self.query_inputs_panel.minimumSizeHint())
@@ -52,6 +76,9 @@ class QueryPanel(QWidget):
         # Connect edit panel signals
         self.edit_selected_panel.apply_attributes.connect(self.apply_attributes_to_selected.emit)
         self.edit_selected_panel.clear_attributes.connect(self.clear_attributes_from_selected.emit)
+        
+        # Connect export panel signals
+        self.export_panel.export_completed.connect(self.export_completed.emit)
 
     def _create_query_controls(self, main_layout):
         query_grid = QGridLayout()
@@ -115,10 +142,14 @@ class QueryPanel(QWidget):
         selected_type_ids = self.query_inputs_panel.get_selected_type_ids()
         if selected_type_ids:
             filtered = [p for p in filtered if any(t['type_id'] in selected_type_ids for t in p.get('types', []))]
+        self.selected_problems = filtered
+        self.export_panel.set_selected_problems(filtered)
         self.query_executed.emit(filtered)
 
     def _on_reset_clicked(self):
         self.query_inputs_panel.reset_all_inputs()
+        self.selected_problems = []
+        self.export_panel.set_selected_problems([])
         self.reset_clicked.emit()
 
     # Proxy methods to QueryInputsPanel for external access
@@ -188,4 +219,19 @@ class QueryPanel(QWidget):
         return self.query_inputs_panel.search_text_entry
     @property
     def answer_entry(self):
-        return self.query_inputs_panel.answer_entry 
+        return self.query_inputs_panel.answer_entry
+    
+    def toggle_panel_view(self):
+        """Toggle between Edit and Export panels"""
+        current_index = self.panel_stack.currentIndex()
+        if current_index == 0:  # Currently showing Edit panel
+            self.panel_stack.setCurrentIndex(1)
+            self.toggle_panel_btn.setText("Switch to Edit")
+        else:  # Currently showing Export panel
+            self.panel_stack.setCurrentIndex(0)
+            self.toggle_panel_btn.setText("Switch to Export")
+    
+    def set_query_results(self, problems):
+        """Update the selected problems for export"""
+        self.selected_problems = problems
+        self.export_panel.set_selected_problems(problems) 
