@@ -81,6 +81,11 @@ class MarkdownParser:
         if text.startswith('\\[') and text.endswith('\\]'):
             return text
             
+        # Don't escape LaTeX commands that should preserve underscores
+        # Check for \includegraphics, \label, and figure environments
+        if any(cmd in text for cmd in ['\\includegraphics', '\\label{', '\\begin{figure}', '\\end{figure}']):
+            return text
+            
         # Split text into math and non-math parts
         parts = []
         current_part = ""

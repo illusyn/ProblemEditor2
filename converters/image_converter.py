@@ -165,7 +165,9 @@ class ImageConverter:
             latex += "    \\caption{" + caption + "}\n"
         # Add label if provided
         if label:
-            latex += "    \\label{" + label + "}\n"
+            # Replace underscores with hyphens in labels to avoid LaTeX issues
+            safe_label = label.replace('_', '-')
+            latex += "    \\label{" + safe_label + "}\n"
         # Close the figure environment
         latex += "\\end{figure}\n"
         return latex

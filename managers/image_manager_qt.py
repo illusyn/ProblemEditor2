@@ -48,7 +48,7 @@ class ImageDetailsDialog(QDialog):
         label_layout = QHBoxLayout()
         label_label = QLabel("Label:")
         self.label_edit = QLineEdit()
-        self.label_edit.setText(f"fig:{Path(self.image_info['filename']).stem}")
+        self.label_edit.setText(f"fig:{Path(self.image_info['filename']).stem.replace('_', '-')}")
         label_layout.addWidget(label_label)
         label_layout.addWidget(self.label_edit)
         layout.addLayout(label_layout)
