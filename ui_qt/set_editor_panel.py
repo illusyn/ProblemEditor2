@@ -345,9 +345,30 @@ class SetEditorPanelQt(QWidget):
         print("[DEBUG] on_add_selected_problem_to_set: selected_set_id:", selected_set_id)
         
         if not selected_set_id:
-            from PyQt5.QtWidgets import QMessageBox
-            QMessageBox.warning(self, "Add to Set", "Please select a set first.")
-            return
+            # Check if there's a name in the entry field to create a new set
+            set_name = self.name_edit.text().strip()
+            if set_name:
+                # Create the new set first
+                db = ProblemSetDB()
+                try:
+                    db.cur.execute("INSERT INTO problem_sets (name) VALUES (?)", (set_name,))
+                    db.conn.commit()
+                    selected_set_id = db.cur.lastrowid
+                    self.name_edit.clear()
+                    self.refresh_sets()
+                    # Select the newly created set in the grid
+                    self.set_selector_grid.select_set(selected_set_id)
+                    self.selected_set_id = selected_set_id
+                    db.close()
+                except Exception as e:
+                    db.close()
+                    from PyQt5.QtWidgets import QMessageBox
+                    QMessageBox.warning(self, "Add to Set", f"Could not create set: {e}")
+                    return
+            else:
+                from PyQt5.QtWidgets import QMessageBox
+                QMessageBox.warning(self, "Add to Set", "Please select an existing set or enter a name for a new set.")
+                return
             
         # Emit signal with empty list - the main window will determine which problem to add
         print(f"[DEBUG] About to emit add_selected_problems_to_set signal with set_id={selected_set_id} (type: {type(selected_set_id)})")

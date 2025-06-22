@@ -33,7 +33,8 @@ class ProblemCellWidget(QWidget):
 
         # Build summary info (ID, Answer, Types, Cat, etc.)
         problem_id = problem.get('problem_id', '')
-        answer = problem.get('answer', '').strip()
+        answer = problem.get('answer') or ''
+        answer = answer.strip()
         summary_top = f'<span style="color:#1976d2;"><b>ID:</b> {problem_id}'
         if answer:
             summary_top += f' &nbsp; <b>Answer:</b> {answer}'

@@ -170,4 +170,18 @@ class SetSelectorGridQt(QWidget):
                 row += 1
         
         self.grid_layout.setRowStretch(row + 1, 1)
-        print(f"[DEBUG] refresh_sets() completed, grid now has {len(self.button_to_set_id)} buttons") 
+        print(f"[DEBUG] refresh_sets() completed, grid now has {len(self.button_to_set_id)} buttons")
+    
+    def select_set(self, set_id):
+        """Programmatically select a set by its ID"""
+        print(f"[DEBUG] select_set({set_id}) called")
+        
+        # Find the button for this set_id
+        for btn, btn_set_id in self.button_to_set_id.items():
+            if btn_set_id == set_id:
+                if not btn.isChecked():
+                    btn.setChecked(True)
+                    self.toggle_set(set_id, True)
+                return
+        
+        print(f"[DEBUG] Warning: Could not find button for set_id={set_id}") 
