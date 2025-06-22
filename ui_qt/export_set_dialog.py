@@ -370,10 +370,10 @@ class ExportSetDialog(QDialog):
             if include_answers and prob.get('answer', '').strip():
                 answer = prob['answer'].strip()
                 all_problems_latex += "\\vspace{0.2cm}\n"
-                all_problems_latex += "{\\color{blue!70!black}\n"
+                all_problems_latex += "{\\color{red}\\footnotesize\\linespread{0.8}\\selectfont\n"
                 all_problems_latex += "\\textbf{Answer:} "
-                # Escape LaTeX special characters in the answer
-                all_problems_latex += self._latex_escape(answer) + "\n"
+                # Process answer - handle potential math content
+                all_problems_latex += self._process_answer(answer) + "\\par\n"
                 all_problems_latex += "}\n"
             
             # Add spacing between problems (except after the last one)
@@ -396,9 +396,26 @@ class ExportSetDialog(QDialog):
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(full_latex)
     
-    def _latex_escape(self, text):
-        """Escape special LaTeX characters"""
-        return text.replace('_', r'\_')
+    def _process_answer(self, answer):
+        """Process answer text as plain text only"""
+        # Split answer into lines and join with semicolon for multi-line answers
+        lines = answer.split('\n')
+        cleaned_lines = [line.strip() for line in lines if line.strip()]
+        
+        # Join multiple lines with semicolon and space
+        if len(cleaned_lines) > 1:
+            single_line = '; '.join(cleaned_lines)
+        else:
+            single_line = cleaned_lines[0] if cleaned_lines else ''
+        
+        # Replace infinity symbols with words
+        single_line = single_line.replace(r'\infty', 'Infinity')
+        single_line = single_line.replace('-\\infty', '-Infinity')
+        
+        # Escape the caret character which triggers math mode
+        single_line = single_line.replace('^', r'\textasciicircum{}')
+        
+        return single_line
     
     def _export_problem_images(self, problem_id, prob_data, images_dir):
         """Export all images for a problem"""
