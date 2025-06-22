@@ -877,12 +877,13 @@ class MarkdownParser:
         
         return '\n'.join(result_lines)
     
-    def create_latex_document(self, content):
+    def create_latex_document(self, content, context=None):
         """
         Create a full LaTeX document with the processed content
         
         Args:
             content (str): Processed LaTeX content
+            context (str, optional): Context for document creation ('export' for larger margins)
             
         Returns:
             str: Complete LaTeX document
@@ -935,6 +936,29 @@ class MarkdownParser:
             font_packages.append("\\usepackage{adjustbox}")
         # Remove duplicates
         font_packages = list(dict.fromkeys(font_packages))
+        
+        # Set margins based on context
+        if context == 'export':
+            # Get export margins from config
+            left_margin = 1.5
+            right_margin = 1.0
+            top_margin = 1.0
+            bottom_margin = 1.0
+            
+            if self.config_manager:
+                left_margin = self.config_manager.get_value("export", "left_margin", 1.5)
+                right_margin = self.config_manager.get_value("export", "right_margin", 1.0)
+                top_margin = self.config_manager.get_value("export", "top_margin", 1.0)
+                bottom_margin = self.config_manager.get_value("export", "bottom_margin", 1.0)
+            
+            margin_settings = rf"\geometry{{left={left_margin}in, right={right_margin}in, top={top_margin}in, bottom={bottom_margin}in}}"
+        else:
+            # Standard margins for preview
+            preview_margin = 1.0
+            if self.config_manager:
+                preview_margin = self.config_manager.get_value("preview", "margin", 1.0)
+            margin_settings = rf"\geometry{{margin={preview_margin}in}}"
+        
         # Build preamble
         preamble = r"""\documentclass{exam}
     \usepackage{amsmath}
@@ -949,7 +973,7 @@ class MarkdownParser:
     """ + "\n".join(font_packages) + r"""
 
     % Set margins
-    \geometry{margin=1in}
+    """ + margin_settings + r"""
 
     % Set paragraph indentation to zero
     \setlength{\parindent}{0pt}

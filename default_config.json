@@ -12,7 +12,14 @@
         "font_family": "Calibri",
         "math_font_family": "Cambria Math",
         "math_font_size": 16,
-        "zoom_level": 80
+        "zoom_level": 80,
+        "margin": 1.0
+    },
+    "export": {
+        "left_margin": 1.0,
+        "right_margin": 1.0,
+        "top_margin": 1.0,
+        "bottom_margin": 1.0
     },
     "appearance": {
         "theme": "light"

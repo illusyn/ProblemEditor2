@@ -1,16 +1,13 @@
-# export_to_latex_panel.py
+# export_selected_dialog.py
 """
-Export to LaTeX panel for the Simplified Math Editor (PyQt5).
+Export Selected Problems dialog for the Simplified Math Editor (PyQt5).
 
-This panel allows exporting selected problems to a LaTeX file with options:
-- Include metadata (ID, answer, earmarks, types, categories)
-- Choose output filename
-- Export selected problems from query results
+This dialog provides export options for selected problems as a popup.
 """
 
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame,
-    QCheckBox, QLineEdit, QPushButton, QFileDialog, QMessageBox
+    QDialog, QVBoxLayout, QHBoxLayout, QLabel, QCheckBox,
+    QLineEdit, QPushButton, QFileDialog, QDialogButtonBox
 )
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt, pyqtSignal
@@ -30,6 +27,7 @@ import re
 
 def show_styled_message(parent, title, message, msg_type="info"):
     """Show a styled message box"""
+    from PyQt5.QtWidgets import QMessageBox
     msg_box = QMessageBox(parent)
     msg_box.setWindowTitle(title)
     msg_box.setText(message)
@@ -70,49 +68,34 @@ def show_styled_message(parent, title, message, msg_type="info"):
     msg_box.exec_()
 
 
-class ExportToLatexPanel(QWidget):
-    """Panel for exporting selected problems to LaTeX"""
+class ExportSelectedDialog(QDialog):
+    """Dialog for exporting selected problems to LaTeX"""
     
     # Signals
     export_completed = pyqtSignal(str)  # Emits the output file path
     
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, selected_problems=None):
         super().__init__(parent)
-        self.setStyleSheet('background: transparent;')
-        self.selected_problems = []  # Will be set by query panel
+        self.selected_problems = selected_problems or []
+        self.setWindowTitle("Export Selected Problems to LaTeX")
+        self.setModal(True)
+        self.setStyleSheet(f"background-color: {WINDOW_BG_COLOR};")
         self._init_ui()
-    
+        
     def _init_ui(self):
         """Initialize the UI components"""
-        main_layout = QVBoxLayout(self)
-        main_layout.setContentsMargins(0, 0, 0, 0)
-        main_layout.setSpacing(SPACING)
-        
-        # Section title
-        title_label = QLabel("Export Selected Problems to LaTeX")
-        title_font = QFont(FONT_FAMILY)
-        title_font.setPointSizeF(SECTION_LABEL_FONT_SIZE)
-        title_font.setWeight(QFont.Bold)
-        title_label.setFont(title_font)
-        title_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; padding-top: 4px; padding-bottom: 4px;")
-        title_label.setAlignment(Qt.AlignCenter)
-        main_layout.addWidget(title_label)
-        
-        # Frame for content
-        content_frame = QFrame()
-        content_frame.setFrameShape(QFrame.StyledPanel)
-        content_frame.setStyleSheet('QFrame { border: 1px solid #888; border-radius: 8px; background: transparent; }')
-        content_layout = QVBoxLayout(content_frame)
-        content_layout.setContentsMargins(PADDING, PADDING, PADDING, PADDING)
-        content_layout.setSpacing(SPACING)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(PADDING, PADDING, PADDING, PADDING)
+        layout.setSpacing(SPACING)
         
         # Info label
-        self.info_label = QLabel("No problems selected")
+        self.info_label = QLabel()
         info_font = QFont(FONT_FAMILY)
         info_font.setPointSizeF(LABEL_FONT_SIZE)
         self.info_label.setFont(info_font)
         self.info_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR};")
-        content_layout.addWidget(self.info_label)
+        # Don't update label yet - export_button doesn't exist
+        layout.addWidget(self.info_label)
         
         # Options section
         options_label = QLabel("Export Options:")
@@ -121,7 +104,7 @@ class ExportToLatexPanel(QWidget):
         options_font.setWeight(QFont.Bold)
         options_label.setFont(options_font)
         options_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR};")
-        content_layout.addWidget(options_label)
+        layout.addWidget(options_label)
         
         # Checkbox for including metadata
         self.include_metadata_checkbox = QCheckBox("Include metadata (ID, Answer, Earmarks, Types, Categories)")
@@ -130,7 +113,7 @@ class ExportToLatexPanel(QWidget):
         self.include_metadata_checkbox.setFont(checkbox_font)
         self.include_metadata_checkbox.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR};")
         self.include_metadata_checkbox.setChecked(False)
-        content_layout.addWidget(self.include_metadata_checkbox)
+        layout.addWidget(self.include_metadata_checkbox)
         
         # Output file section
         output_label = QLabel("Output File:")
@@ -139,7 +122,7 @@ class ExportToLatexPanel(QWidget):
         output_font.setWeight(QFont.Bold)
         output_label.setFont(output_font)
         output_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR};")
-        content_layout.addWidget(output_label)
+        layout.addWidget(output_label)
         
         # File selection row
         file_row = QHBoxLayout()
@@ -157,36 +140,64 @@ class ExportToLatexPanel(QWidget):
         file_row.addWidget(self.output_file_entry)
         file_row.addWidget(self.browse_button)
         
-        content_layout.addLayout(file_row)
+        layout.addLayout(file_row)
         
-        # Export button
-        self.export_button = NeumorphicButton("Export to LaTeX", font_size=BUTTON_FONT_SIZE)
-        fm = self.export_button.fontMetrics()
-        text_width = fm.horizontalAdvance(self.export_button.text()) if hasattr(fm, 'horizontalAdvance') else fm.width(self.export_button.text())
-        self.export_button.setFixedWidth(text_width + (BUTTON_TEXT_PADDING * 2))
+        # Dialog buttons
+        button_box = QDialogButtonBox()
+        self.export_button = QPushButton("Export")
+        self.cancel_button = QPushButton("Cancel")
         
-        button_layout = QHBoxLayout()
-        button_layout.addWidget(self.export_button)
-        button_layout.addStretch()
+        # Style the dialog buttons
+        for btn in [self.export_button, self.cancel_button]:
+            btn_font = QFont(FONT_FAMILY)
+            btn_font.setPointSizeF(BUTTON_FONT_SIZE)
+            btn.setFont(btn_font)
+            btn.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: #e0e0e3;
+                    color: {NEUMORPH_TEXT_COLOR};
+                    border: 1px solid #b0b0b3;
+                    border-radius: 4px;
+                    padding: 5px 15px;
+                    min-width: 80px;
+                }}
+                QPushButton:hover {{
+                    background-color: #d0d0d3;
+                }}
+            """)
         
-        content_layout.addLayout(button_layout)
+        button_box.addButton(self.export_button, QDialogButtonBox.AcceptRole)
+        button_box.addButton(self.cancel_button, QDialogButtonBox.RejectRole)
         
-        main_layout.addWidget(content_frame)
+        layout.addWidget(button_box)
         
         # Connect signals
         self.browse_button.clicked.connect(self._on_browse_clicked)
-        self.export_button.clicked.connect(self._on_export_clicked)
+        button_box.accepted.connect(self._on_export_clicked)
+        button_box.rejected.connect(self.reject)
+        
+        # Set initial size
+        self.resize(600, 300)
+        
+        # Now update the info label after all widgets are created
+        self._update_info_label()
     
     def set_selected_problems(self, problems):
         """Set the list of selected problems to export"""
         self.selected_problems = problems
-        count = len(problems) if problems else 0
+        self._update_info_label()
+    
+    def _update_info_label(self):
+        """Update the info label with current selection count"""
+        count = len(self.selected_problems) if self.selected_problems else 0
         if count == 0:
             self.info_label.setText("No problems selected")
-            self.export_button.setEnabled(False)
+            if hasattr(self, 'export_button'):
+                self.export_button.setEnabled(False)
         else:
             self.info_label.setText(f"{count} problem{'s' if count != 1 else ''} selected for export")
-            self.export_button.setEnabled(True)
+            if hasattr(self, 'export_button'):
+                self.export_button.setEnabled(True)
     
     def _on_browse_clicked(self):
         """Handle browse button click"""
@@ -246,8 +257,9 @@ class ExportToLatexPanel(QWidget):
             # Show success message
             show_styled_message(self, "Export Complete", f"Successfully exported {len(self.selected_problems)} problems to:\n{output_path}", "info")
             
-            # Emit signal
+            # Emit signal and close
             self.export_completed.emit(output_path)
+            self.accept()
             
         except Exception as e:
             show_styled_message(self, "Export Error", f"Failed to export problems:\n{str(e)}", "error")

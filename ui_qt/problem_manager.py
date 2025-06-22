@@ -7,7 +7,9 @@ from ui_qt.query_panel import QueryPanel
 from ui_qt.problem_display_panel import ProblemDisplayPanel
 from ui_qt.set_editor_panel import SetEditorPanelQt
 from ui_qt.neumorphic_components import NeumorphicButton
-from ui_qt.style_config import CONTROL_BTN_WIDTH, FONT_FAMILY, SECTION_LABEL_FONT_SIZE
+from ui_qt.style_config import CONTROL_BTN_WIDTH, FONT_FAMILY, SECTION_LABEL_FONT_SIZE, CONTROL_BTN_FONT_SIZE, BUTTON_TEXT_PADDING, SPACING
+from ui_qt.export_selected_dialog import ExportSelectedDialog
+from ui_qt.export_set_dialog import ExportSetDialog
 
 def show_styled_message(parent, title, message, msg_type="info"):
     """Show a styled message box"""
@@ -75,9 +77,32 @@ class ProblemManager(QWidget):
         # Example (if left_panel_widget exists):
         # left_panel_widget.setStyleSheet('background: transparent;')
         content_layout.addWidget(left_panel_widget, stretch=2)  # 40%
-        # --- Right side: Problem display only ---
+        # --- Right side: Problem display with export buttons ---
         right_panel = QWidget()
         right_layout = QVBoxLayout(right_panel)
+        right_layout.setContentsMargins(0, 0, 0, 0)
+        right_layout.setSpacing(SPACING)
+        
+        # Export buttons row
+        export_buttons_layout = QHBoxLayout()
+        export_buttons_layout.setSpacing(SPACING)
+        
+        self.export_selected_btn = NeumorphicButton("Export Selected to LaTeX", font_size=CONTROL_BTN_FONT_SIZE)
+        self.export_set_btn = NeumorphicButton("Export Set to LaTeX", font_size=CONTROL_BTN_FONT_SIZE)
+        
+        # Set button widths based on text
+        for btn in [self.export_selected_btn, self.export_set_btn]:
+            fm = btn.fontMetrics()
+            text_width = fm.horizontalAdvance(btn.text()) if hasattr(fm, 'horizontalAdvance') else fm.width(btn.text())
+            btn.setFixedWidth(text_width + (BUTTON_TEXT_PADDING * 2))
+        
+        export_buttons_layout.addWidget(self.export_selected_btn)
+        export_buttons_layout.addWidget(self.export_set_btn)
+        export_buttons_layout.addStretch()
+        
+        right_layout.addLayout(export_buttons_layout)
+        
+        # Problem display panel
         self.problem_display_panel = ProblemDisplayPanel()
         right_layout.addWidget(self.problem_display_panel)
         content_layout.addWidget(right_panel, stretch=3)
@@ -91,13 +116,15 @@ class ProblemManager(QWidget):
         # Connect edit panel signals
         self.query_panel.apply_attributes_to_selected.connect(self.on_apply_attributes)
         self.query_panel.clear_attributes_from_selected.connect(self.on_clear_attributes)
-        # Connect export completed signal
-        self.query_panel.export_completed.connect(self.on_export_completed)
         # --- Centralized selection state ---
         self.selected_problem_ids = set()
         self.selected_set_ids = set()
         print(f"-------------------->set():{set()}")
         self.problem_display_panel.selection_changed.connect(self.on_problems_selected)
+        
+        # Connect export buttons
+        self.export_selected_btn.clicked.connect(self.show_export_selected_dialog)
+        self.export_set_btn.clicked.connect(self.show_export_set_dialog)
 
     def get_selected_problem_ids(self):
         return [p.get('problem_id') for p in self.problem_display_panel.get_selected_problems()]
@@ -212,8 +239,8 @@ class ProblemManager(QWidget):
         db.close()
         
         show_styled_message(self, "Success", f"Attributes applied to {success_count} problems.", "info")
-        # Refresh the display
-        self.on_query()
+        # Refresh only the selected problems in the current display
+        self._refresh_selected_problems(selected_ids)
     
     def on_clear_attributes(self, attributes):
         """Clear attributes from selected problems"""
@@ -260,11 +287,106 @@ class ProblemManager(QWidget):
         db.close()
         
         show_styled_message(self, "Success", f"Attributes cleared from {success_count} problems.", "info")
-        # Refresh the display
-        self.on_query()
+        # Refresh only the selected problems in the current display
+        self._refresh_selected_problems(selected_ids)
     
     def on_export_completed(self, output_path):
         """Handle export completion"""
         # The export panel already shows a success message, so we don't need another one here
         pass
+    
+    def show_export_selected_dialog(self):
+        """Show the export selected problems dialog"""
+        # Get the problems from the last query (stored in query panel)
+        current_problems = self.query_panel.selected_problems
+        
+        if not current_problems:
+            show_styled_message(self, "No Problems", "No problems available to export. Please run a query first.", "warning")
+            return
+        
+        # Create and show the dialog
+        dialog = ExportSelectedDialog(self, current_problems)
+        dialog.export_completed.connect(self.on_export_completed)
+        dialog.exec_()
+    
+    def show_export_set_dialog(self):
+        """Show the export set dialog"""
+        # Get selected sets from the query inputs panel
+        selected_sets = self.query_panel.query_inputs_panel.get_selected_set_ids()
+        
+        if not selected_sets:
+            show_styled_message(self, "No Set Selected", "Please select exactly one set to export.", "warning")
+            return
+        
+        if len(selected_sets) > 1:
+            show_styled_message(self, "Multiple Sets Selected", "Please select exactly one set to export.", "warning")
+            return
+        
+        # Get the selected set's details
+        set_id = selected_sets[0]
+        
+        # Get set name from the database
+        from db.problem_set_db import ProblemSetDB
+        set_db = ProblemSetDB()
+        sets = set_db.get_all_sets()
+        set_db.close()
+        
+        set_name = None
+        for s in sets:
+            # s is a tuple: (set_id, name, description, is_ordered)
+            if s[0] == set_id:
+                set_name = s[1]
+                break
+        
+        if not set_name:
+            show_styled_message(self, "Set Not Found", "Could not find the selected set.", "error")
+            return
+        
+        # Create and show the dialog
+        dialog = ExportSetDialog(self, set_id=set_id, set_name=set_name)
+        dialog.export_completed.connect(self.on_export_completed)
+        dialog.exec_()
+    
+    def _refresh_selected_problems(self, problem_ids):
+        """Refresh only the selected problems in the current display"""
+        if not problem_ids:
+            return
+            
+        # Get fresh data for the selected problems
+        from db.math_db import MathProblemDB
+        db = MathProblemDB()
+        
+        # Get current problems list from query panel
+        current_problems = self.query_panel.selected_problems
+        if not current_problems:
+            db.close()
+            return
+        
+        # Create a map of problem_id to index for quick lookup
+        problem_map = {p['problem_id']: i for i, p in enumerate(current_problems)}
+        
+        # Update each selected problem with fresh data
+        for problem_id in problem_ids:
+            if problem_id in problem_map:
+                # Get fresh problem data with all attributes
+                success, fresh_data = db.get_problem(problem_id, with_images=True, with_categories=True)
+                if success and fresh_data:
+                    # Also get earmarks and types
+                    earmarks_success, earmarks = db.get_earmarks_for_problem(problem_id)
+                    if earmarks_success:
+                        fresh_data['earmarks'] = earmarks
+                    
+                    types_success, types = db.get_types_for_problem(problem_id)
+                    if types_success:
+                        fresh_data['types'] = types
+                    # Update the problem in the list
+                    idx = problem_map[problem_id]
+                    current_problems[idx] = fresh_data
+        
+        db.close()
+        
+        # Update the display with the refreshed problems
+        self.problem_display_panel.set_problems(current_problems)
+        # Also update query panel's reference
+        self.query_panel.set_query_results(current_problems)
         

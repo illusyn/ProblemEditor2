@@ -41,7 +41,14 @@ class ConfigManager:
             },
             "preview": {
                 "font_size": 16,
-                "font_family": "Carlito"
+                "font_family": "Carlito",
+                "margin": 1.0
+            },
+            "export": {
+                "left_margin": 1.5,
+                "right_margin": 1.0,
+                "top_margin": 1.0,
+                "bottom_margin": 1.0
             },
             "appearance": {
                 "theme": "light"

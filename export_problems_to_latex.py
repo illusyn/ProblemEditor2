@@ -249,7 +249,17 @@ def main():
         problem_number = prob['problem_id']
         latex = md_parser.parse(content, context='export')
         latex = latex.replace(r"\\begin{figure}[htbp]", r"\\begin{figure}[H]")
-        all_problems_latex += "\\begin{samepage}\n" + latex + "\n"
+        
+        # Add filbreak to suggest good page break point before problem
+        if idx > 0:
+            all_problems_latex += "\\filbreak\n"
+        
+        # Start minipage to prevent page breaks within problem
+        all_problems_latex += "\\noindent\\begin{minipage}{\\textwidth}\n"
+        
+        # Add problem content
+        all_problems_latex += latex + "\n"
+        
         if args.all:
             answer = prob.get('answer', '').strip()
             answer_block = ''
@@ -274,16 +284,19 @@ def main():
                 cat_names = ', '.join([latex_escape(cat['name']) for cat in categories])
                 answer_block += r'\textbf{Categories:} ' + cat_names + r'\\' + '\n'
             if answer_block:
-                all_problems_latex += f'''{{\color{{blue!70!black}}
-{answer_block}}}
-'''
-        all_problems_latex += "\\end{samepage}\n"
+                all_problems_latex += '{\\color{blue!70!black}\n'
+                all_problems_latex += answer_block
+                all_problems_latex += '}\n'
+        
+        # End minipage block
+        all_problems_latex += "\\end{minipage}\n"
         if not ((idx + 1) % 2 == 0 and (idx + 1) != len(problems)):
-            all_problems_latex += "\\vspace{1cm}\n"
+            all_problems_latex += "\\vspace{1cm}\n\\noindent\n"
         if (idx + 1) % 2 == 0 and (idx + 1) != len(problems):
             all_problems_latex += "\\clearpage\n"
     # --- Use create_latex_document to assemble the full document ---
-    full_latex = md_parser.create_latex_document(all_problems_latex)
+    # Pass context='export' for larger left margin
+    full_latex = md_parser.create_latex_document(all_problems_latex, context='export')
     
     # Fix the graphicspath for export context - since the .tex file is in exports/,
     # it should look for images in ./images/ not ./exports/images/
