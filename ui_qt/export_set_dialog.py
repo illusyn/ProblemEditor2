@@ -116,10 +116,11 @@ class ExportSetDialog(QDialog):
         checkbox_font.setPointSizeF(LABEL_FONT_SIZE)
         self.title_checkbox.setFont(checkbox_font)
         self.title_checkbox.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR};")
+        self.title_checkbox.setChecked(True)  # Default to checked
         
         self.title_entry = NeumorphicEntry()
         self.title_entry.setText(self.set_name)
-        self.title_entry.setEnabled(False)
+        self.title_entry.setEnabled(True)  # Enable since checkbox is checked by default
         self.title_entry.setMinimumHeight(ENTRY_MIN_HEIGHT)
         
         title_row.addWidget(self.title_checkbox)
@@ -130,7 +131,15 @@ class ExportSetDialog(QDialog):
         self.number_problems_checkbox = QCheckBox("Number Problems")
         self.number_problems_checkbox.setFont(checkbox_font)
         self.number_problems_checkbox.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR};")
+        self.number_problems_checkbox.setChecked(True)  # Default to checked
         layout.addWidget(self.number_problems_checkbox)
+        
+        # Include answers checkbox
+        self.include_answers_checkbox = QCheckBox("Include Answers")
+        self.include_answers_checkbox.setFont(checkbox_font)
+        self.include_answers_checkbox.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR};")
+        self.include_answers_checkbox.setChecked(False)  # Default to unchecked
+        layout.addWidget(self.include_answers_checkbox)
         
         # Output file section
         output_label = QLabel("Output File:")
@@ -249,10 +258,11 @@ class ExportSetDialog(QDialog):
         include_title = self.title_checkbox.isChecked()
         title_text = self.title_entry.text() if include_title else None
         number_problems = self.number_problems_checkbox.isChecked()
+        include_answers = self.include_answers_checkbox.isChecked()
         
         try:
             # Export the set
-            self._export_set(output_path, images_dir, title_text, number_problems)
+            self._export_set(output_path, images_dir, title_text, number_problems, include_answers)
             
             # Show success message
             show_styled_message(self, "Export Complete", f"Successfully exported set '{self.set_name}' to:\n{output_path}", "info")
@@ -264,7 +274,7 @@ class ExportSetDialog(QDialog):
         except Exception as e:
             show_styled_message(self, "Export Error", f"Failed to export set:\n{str(e)}", "error")
     
-    def _export_set(self, output_path, images_dir, title_text, number_problems):
+    def _export_set(self, output_path, images_dir, title_text, number_problems, include_answers):
         """Export the problem set to LaTeX file"""
         # Get problems in the set
         db = MathProblemDB()
@@ -356,6 +366,16 @@ class ExportSetDialog(QDialog):
                 all_problems_latex += latex + "\n"
                 all_problems_latex += "\\end{minipage}\n"
             
+            # Add answer if requested
+            if include_answers and prob.get('answer', '').strip():
+                answer = prob['answer'].strip()
+                all_problems_latex += "\\vspace{0.2cm}\n"
+                all_problems_latex += "{\\color{blue!70!black}\n"
+                all_problems_latex += "\\textbf{Answer:} "
+                # Escape LaTeX special characters in the answer
+                all_problems_latex += self._latex_escape(answer) + "\n"
+                all_problems_latex += "}\n"
+            
             # Add spacing between problems (except after the last one)
             if idx < len(full_problems) - 1:
                 all_problems_latex += "\\vspace{0.5cm}\n\\noindent\n"
@@ -375,6 +395,10 @@ class ExportSetDialog(QDialog):
         # Write to file
         with open(output_path, "w", encoding="utf-8") as f:
             f.write(full_latex)
+    
+    def _latex_escape(self, text):
+        """Escape special LaTeX characters"""
+        return text.replace('_', r'\_')
     
     def _export_problem_images(self, problem_id, prob_data, images_dir):
         """Export all images for a problem"""

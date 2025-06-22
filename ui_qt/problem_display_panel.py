@@ -209,24 +209,8 @@ class ProblemDisplayPanel(QWidget):
         self.outer_layout = QVBoxLayout(self)
         self.setLayout(self.outer_layout)
 
-        # --- Display configuration panel ---
-        config_group = QGroupBox("Display Configuration")
-        config_layout = QHBoxLayout()
-        config_group.setLayout(config_layout)
-        config_layout.addWidget(QLabel("Font size:"))
-        self.font_size_combo = QComboBox()
-        self.font_size_combo.addItems([str(i) for i in range(10, 33)])
-        # Load saved font size if available
-        self.font_size_combo.setCurrentText(str(self.load_saved_font_size()))
-        self.current_font_size = int(self.font_size_combo.currentText())
-        config_layout.addWidget(self.font_size_combo)
-        # Add 'Save Fontsize' button instead of checkbox
-        self.save_font_btn = QPushButton("Save Fontsize")
-        config_layout.addWidget(self.save_font_btn)
-        self.save_font_btn.clicked.connect(self.on_save_font_btn_clicked)
-        config_layout.addStretch(1)
-        self.outer_layout.addWidget(config_group)
-        self.font_size_combo.currentTextChanged.connect(self.on_font_size_changed)
+        # Load saved font size
+        self.current_font_size = self.load_saved_font_size()
 
         # Scrollable area for problems
         self.scroll_area = QScrollArea(self)
@@ -276,11 +260,7 @@ class ProblemDisplayPanel(QWidget):
         self.update_all_content_fonts()
 
     def update_all_content_fonts(self):
-        try:
-            font_size = int(self.font_size_combo.currentText())
-        except Exception:
-            font_size = 14
-        self.current_font_size = font_size
+        font_size = self.current_font_size
         for cell in self.problem_cells:
             cell_font = QFont('Arial')
             cell_font.setPointSizeF(font_size)
@@ -302,12 +282,15 @@ class ProblemDisplayPanel(QWidget):
         with open(self.CONFIG_PATH, "w") as f:
             json.dump(data, f)
 
-    def on_font_size_changed(self, size):
+    def set_font_size(self, size):
+        """Set the font size for the display"""
+        self.current_font_size = size
         self.update_all_content_fonts()
-        # No auto-save on change; only save when button is clicked
-
-    def on_save_font_btn_clicked(self):
-        self.save_font_size(self.font_size_combo.currentText())
+    
+    def set_config(self, config):
+        """Update display configuration"""
+        if 'font_size' in config:
+            self.set_font_size(config['font_size'])
 
     def load_remember_font_setting(self):
         # Deprecated, no longer used

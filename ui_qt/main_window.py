@@ -353,7 +353,7 @@ class MainWindow(QMainWindow):
                 'original_width': int(width * 800),
                 'original_height': int(width * 600),
                 'caption': '',
-                'label': f'fig:{Path(image_filename).stem}',
+                'label': f'fig:{Path(image_filename).stem.replace("_", "-")}',
                 'latex_width': width,
             }
             # Extract current LaTeX height (in cm) from LaTeX code if possible

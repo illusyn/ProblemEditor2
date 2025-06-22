@@ -1,15 +1,16 @@
 # problem_manager.py
 
-from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QSpacerItem, QSizePolicy, QMessageBox, QLabel, QTextEdit
+from PyQt5.QtWidgets import QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QSpacerItem, QSizePolicy, QMessageBox, QLabel, QTextEdit, QDialog
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtGui import QFont
 from ui_qt.query_panel import QueryPanel
 from ui_qt.problem_display_panel import ProblemDisplayPanel
 from ui_qt.set_editor_panel import SetEditorPanelQt
 from ui_qt.neumorphic_components import NeumorphicButton
-from ui_qt.style_config import CONTROL_BTN_WIDTH, FONT_FAMILY, SECTION_LABEL_FONT_SIZE, CONTROL_BTN_FONT_SIZE, BUTTON_TEXT_PADDING, SPACING
+from ui_qt.style_config import CONTROL_BTN_WIDTH, FONT_FAMILY, SECTION_LABEL_FONT_SIZE, CONTROL_BTN_FONT_SIZE, BUTTON_FONT_SIZE, BUTTON_TEXT_PADDING, SPACING
 from ui_qt.export_selected_dialog import ExportSelectedDialog
 from ui_qt.export_set_dialog import ExportSetDialog
+from ui_qt.display_config_dialog import DisplayConfigDialog
 
 def show_styled_message(parent, title, message, msg_type="info"):
     """Show a styled message box"""
@@ -87,11 +88,12 @@ class ProblemManager(QWidget):
         export_buttons_layout = QHBoxLayout()
         export_buttons_layout.setSpacing(SPACING)
         
-        self.export_selected_btn = NeumorphicButton("Export Selected to LaTeX", font_size=CONTROL_BTN_FONT_SIZE)
-        self.export_set_btn = NeumorphicButton("Export Set to LaTeX", font_size=CONTROL_BTN_FONT_SIZE)
+        self.export_selected_btn = NeumorphicButton("Export Selected to LaTeX", font_size=BUTTON_FONT_SIZE)
+        self.export_set_btn = NeumorphicButton("Export Set to LaTeX", font_size=BUTTON_FONT_SIZE)
+        self.display_config_btn = NeumorphicButton("Display Configuration", font_size=BUTTON_FONT_SIZE)
         
         # Set button widths based on text
-        for btn in [self.export_selected_btn, self.export_set_btn]:
+        for btn in [self.export_selected_btn, self.export_set_btn, self.display_config_btn]:
             fm = btn.fontMetrics()
             text_width = fm.horizontalAdvance(btn.text()) if hasattr(fm, 'horizontalAdvance') else fm.width(btn.text())
             btn.setFixedWidth(text_width + (BUTTON_TEXT_PADDING * 2))
@@ -99,6 +101,7 @@ class ProblemManager(QWidget):
         export_buttons_layout.addWidget(self.export_selected_btn)
         export_buttons_layout.addWidget(self.export_set_btn)
         export_buttons_layout.addStretch()
+        export_buttons_layout.addWidget(self.display_config_btn)
         
         right_layout.addLayout(export_buttons_layout)
         
@@ -125,6 +128,7 @@ class ProblemManager(QWidget):
         # Connect export buttons
         self.export_selected_btn.clicked.connect(self.show_export_selected_dialog)
         self.export_set_btn.clicked.connect(self.show_export_set_dialog)
+        self.display_config_btn.clicked.connect(self.show_display_config_dialog)
 
     def get_selected_problem_ids(self):
         return [p.get('problem_id') for p in self.problem_display_panel.get_selected_problems()]
@@ -389,4 +393,26 @@ class ProblemManager(QWidget):
         self.problem_display_panel.set_problems(current_problems)
         # Also update query panel's reference
         self.query_panel.set_query_results(current_problems)
+    
+    def show_display_config_dialog(self):
+        """Show the display configuration dialog"""
+        # Get current font size from display panel
+        current_font_size = self.problem_display_panel.current_font_size
+        
+        # Create and show the dialog
+        dialog = DisplayConfigDialog(current_font_size=current_font_size, parent=self)
+        
+        # Connect the config_changed signal to save the configuration
+        dialog.config_changed.connect(self._on_display_config_save)
+        
+        # If OK is clicked, apply the configuration
+        if dialog.exec_() == QDialog.Accepted:
+            config = dialog.get_config()
+            self.problem_display_panel.set_config(config)
+    
+    def _on_display_config_save(self, config):
+        """Handle saving the display configuration"""
+        # Save to the problem display panel's config file
+        if 'font_size' in config:
+            self.problem_display_panel.save_font_size(config['font_size'])
         
