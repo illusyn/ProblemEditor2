@@ -119,6 +119,7 @@ class ProblemManager(QWidget):
         # Connect edit panel signals
         self.query_panel.apply_attributes_to_selected.connect(self.on_apply_attributes)
         self.query_panel.clear_attributes_from_selected.connect(self.on_clear_attributes)
+        self.query_panel.delete_selected_problems.connect(self.on_delete_selected)
         # --- Centralized selection state ---
         self.selected_problem_ids = set()
         self.selected_set_ids = set()
@@ -293,6 +294,48 @@ class ProblemManager(QWidget):
         show_styled_message(self, "Success", f"Attributes cleared from {success_count} problems.", "info")
         # Refresh only the selected problems in the current display
         self._refresh_selected_problems(selected_ids)
+    
+    def on_delete_selected(self):
+        """Delete selected problems from the database"""
+        selected_ids = self.get_selected_problem_ids()
+        if not selected_ids:
+            show_styled_message(self, "No Selection", "Please select problems to delete.", "warning")
+            return
+        
+        from db.math_db import MathProblemDB
+        db = MathProblemDB()
+        
+        success_count = 0
+        failed_count = 0
+        
+        for problem_id in selected_ids:
+            try:
+                # Delete the problem (cascade will handle related records)
+                success, msg = db.delete_problem(problem_id)
+                if success:
+                    success_count += 1
+                else:
+                    failed_count += 1
+                    print(f"[ERROR] Failed to delete problem {problem_id}: {msg}")
+            except Exception as e:
+                failed_count += 1
+                print(f"[ERROR] Exception deleting problem {problem_id}: {e}")
+        
+        db.close()
+        
+        # Show result message
+        if failed_count == 0:
+            show_styled_message(self, "Success", f"Successfully deleted {success_count} problems.", "info")
+        else:
+            show_styled_message(self, "Partial Success", 
+                              f"Deleted {success_count} problems.\n{failed_count} problems could not be deleted.", 
+                              "warning")
+        
+        # Clear the selection
+        self.selected_problem_ids.clear()
+        
+        # Refresh the display to remove deleted problems
+        self.problem_display_panel.remove_problems(selected_ids)
     
     def on_export_completed(self, output_path):
         """Handle export completion"""

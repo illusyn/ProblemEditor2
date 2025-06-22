@@ -259,6 +259,16 @@ class ProblemDisplayPanel(QWidget):
             self.problem_cells.append(cell)
         self.update_all_content_fonts()
 
+    def remove_problems(self, problem_ids):
+        """Remove specific problems from the display"""
+        problem_ids_set = set(problem_ids)
+        
+        # Filter out the deleted problems
+        self.problems = [p for p in self.problems if p.get('problem_id') not in problem_ids_set]
+        
+        # Re-display the remaining problems
+        self.set_problems(self.problems)
+
     def update_all_content_fonts(self):
         font_size = self.current_font_size
         for cell in self.problem_cells:

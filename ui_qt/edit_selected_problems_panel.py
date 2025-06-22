@@ -9,7 +9,7 @@ This panel allows bulk editing of attributes for selected problems:
 """
 
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame
+    QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, QMessageBox
 )
 from PyQt5.QtGui import QFont
 from PyQt5.QtCore import Qt, pyqtSignal
@@ -27,6 +27,7 @@ class EditSelectedProblemsPanel(QWidget):
     # Signals
     apply_attributes = pyqtSignal(dict)  # Emits dict of attributes to apply
     clear_attributes = pyqtSignal(dict)  # Emits dict of attributes to clear
+    delete_selected = pyqtSignal()  # Emits when delete is confirmed
     
     def __init__(self, parent=None, query_inputs_panel=None):
         super().__init__(parent)
@@ -73,15 +74,22 @@ class EditSelectedProblemsPanel(QWidget):
         
         self.clear_button = NeumorphicButton("Clear Attribute(s)", font_size=BUTTON_FONT_SIZE)
         self.apply_button = NeumorphicButton("Apply Attribute(s)", font_size=BUTTON_FONT_SIZE)
+        self.delete_button = NeumorphicButton("Delete Selected", font_size=BUTTON_FONT_SIZE)
+        self.delete_button.setStyleSheet(self.delete_button.styleSheet() + """
+            QPushButton:hover {
+                color: #d32f2f;
+            }
+        """)
         
         # Set button widths based on text
-        for btn in [self.clear_button, self.apply_button]:
+        for btn in [self.clear_button, self.apply_button, self.delete_button]:
             fm = btn.fontMetrics()
             text_width = fm.horizontalAdvance(btn.text()) if hasattr(fm, 'horizontalAdvance') else fm.width(btn.text())
             btn.setFixedWidth(text_width + (BUTTON_TEXT_PADDING * 2))
         
         button_layout.addWidget(self.clear_button)
         button_layout.addWidget(self.apply_button)
+        button_layout.addWidget(self.delete_button)
         button_layout.addStretch()
         
         content_layout.addLayout(button_layout)
@@ -91,6 +99,7 @@ class EditSelectedProblemsPanel(QWidget):
         # Connect signals
         self.clear_button.clicked.connect(self._on_clear_clicked)
         self.apply_button.clicked.connect(self._on_apply_clicked)
+        self.delete_button.clicked.connect(self._on_delete_clicked)
     
     def _get_selected_attributes(self):
         """Get currently selected attributes from the query inputs panel"""
@@ -127,3 +136,34 @@ class EditSelectedProblemsPanel(QWidget):
         attributes = self._get_selected_attributes()
         if attributes:
             self.apply_attributes.emit(attributes)
+    
+    def _on_delete_clicked(self):
+        """Handle delete button click with confirmation"""
+        # Show confirmation dialog
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle("Confirm Delete")
+        msg_box.setText("Are you sure you want to delete the selected problems?")
+        msg_box.setInformativeText("This action cannot be undone.")
+        msg_box.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+        msg_box.setDefaultButton(QMessageBox.No)
+        msg_box.setIcon(QMessageBox.Warning)
+        
+        # Style the message box
+        msg_box.setStyleSheet(f"""
+            QMessageBox {{
+                background-color: {WINDOW_BG_COLOR};
+                color: {NEUMORPH_TEXT_COLOR};
+            }}
+            QMessageBox QLabel {{
+                color: {NEUMORPH_TEXT_COLOR};
+            }}
+            QPushButton {{
+                font-family: {FONT_FAMILY};
+                font-size: {BUTTON_FONT_SIZE}px;
+                color: {NEUMORPH_TEXT_COLOR};
+                padding: 6px 12px;
+            }}
+        """)
+        
+        if msg_box.exec_() == QMessageBox.Yes:
+            self.delete_selected.emit()

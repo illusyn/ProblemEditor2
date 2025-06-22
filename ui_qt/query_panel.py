@@ -13,6 +13,7 @@ class QueryPanel(QWidget):
     query_clicked = pyqtSignal()       # Emits when Query button is clicked
     apply_attributes_to_selected = pyqtSignal(dict)  # Emits attributes to apply
     clear_attributes_from_selected = pyqtSignal(dict)  # Emits attributes to clear
+    delete_selected_problems = pyqtSignal()  # Emits when delete selected is confirmed
     def __init__(self, parent=None, laptop_mode=False, show_preview_and_nav_buttons=True, return_button=None):
         super().__init__(parent)
         self.laptop_mode = laptop_mode
@@ -53,6 +54,7 @@ class QueryPanel(QWidget):
         # Connect edit panel signals
         self.edit_selected_panel.apply_attributes.connect(self.apply_attributes_to_selected.emit)
         self.edit_selected_panel.clear_attributes.connect(self.clear_attributes_from_selected.emit)
+        self.edit_selected_panel.delete_selected.connect(self.delete_selected_problems.emit)
 
     def _create_query_controls(self, main_layout):
         query_grid = QGridLayout()
