@@ -304,6 +304,9 @@ class ExportSetDialog(QDialog):
                     prob_data['types'] = types
                 
                 full_problems.append(prob_data)
+            else:
+                # Log the error but continue with other problems
+                print(f"[ERROR] Failed to load problem {problem_id}: {prob_data}")
         
         db.close()
         

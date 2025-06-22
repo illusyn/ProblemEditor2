@@ -312,7 +312,7 @@ class MathProblemDB:
             # Get problem data
             self.cur.execute("""
                 SELECT problem_id, content, solution, has_latex_solution, 
-                       answer, notes, earmark, creation_date, last_modified 
+                       answer, notes, creation_date, last_modified 
                 FROM problems WHERE problem_id = ?
             """, (problem_id,))
             
@@ -328,9 +328,8 @@ class MathProblemDB:
                 "has_latex_solution": problem[3],
                 "answer": problem[4],
                 "notes": problem[5],
-                "earmark": problem[6],
-                "creation_date": problem[7],
-                "last_modified": problem[8]
+                "creation_date": problem[6],
+                "last_modified": problem[7]
             }
             
             # Get associated images
