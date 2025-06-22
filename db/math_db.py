@@ -157,7 +157,7 @@ class MathProblemDB:
         self.conn.commit()
     
     def add_problem(self, content, solution=None, has_latex_solution=0, 
-                   answer=None, notes=None, earmark=0, categories=None):
+                   answer=None, notes=None, categories=None):
         """
         Add a new math problem to the database
         
@@ -167,7 +167,6 @@ class MathProblemDB:
             has_latex_solution (int, optional): 1 if solution contains LaTeX, 0 otherwise
             answer (str, optional): Plain text answer (no LaTeX)
             notes (str, optional): Additional notes about the problem
-            earmark (int, optional): Earmark value for the problem
             categories (list, optional): List of category names to associate with the problem
             
         Returns:
@@ -180,9 +179,9 @@ class MathProblemDB:
             # Insert problem
             self.cur.execute('''
                 INSERT INTO problems 
-                (content, solution, has_latex_solution, answer, notes, earmark, creation_date, last_modified)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-            ''', (content, solution, has_latex_solution, answer, notes, earmark, now, now))
+                (content, solution, has_latex_solution, answer, notes, creation_date, last_modified)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
+            ''', (content, solution, has_latex_solution, answer, notes, now, now))
             
             # Get the problem_id of the inserted problem
             problem_id = self.cur.lastrowid
@@ -200,7 +199,7 @@ class MathProblemDB:
             return (False, str(e))
     
     def update_problem(self, problem_id, content=None, solution=None, 
-                      has_latex_solution=None, answer=None, notes=None, earmark=None):
+                      has_latex_solution=None, answer=None, notes=None):
         """
         Update an existing math problem
         
@@ -248,10 +247,6 @@ class MathProblemDB:
             if notes is not None:
                 columns.append("notes = ?")
                 values.append(notes)
-            
-            if earmark is not None:
-                columns.append("earmark = ?")
-                values.append(earmark)
             
             # Add last modified timestamp
             columns.append("last_modified = ?")
@@ -398,7 +393,7 @@ class MathProblemDB:
         try:
             # First get the problems
             query = """
-                SELECT DISTINCT p.problem_id, p.content, p.answer, p.earmark, p.creation_date, p.last_modified
+                SELECT DISTINCT p.problem_id, p.content, p.answer, p.creation_date, p.last_modified
                 FROM problems p
             """
             
@@ -440,9 +435,8 @@ class MathProblemDB:
                     "problem_id": problem_id,
                     "content": row[1],
                     "answer": row[2],
-                    "earmark": row[3],
-                    "creation_date": row[4],
-                    "last_modified": row[5],
+                    "creation_date": row[3],
+                    "last_modified": row[4],
                     "categories": []
                 }
                 
@@ -1011,7 +1005,7 @@ class MathProblemDB:
         if ordered:
             print(f"-------------------ordered={ordered}")
             self.cur.execute('''
-                SELECT p.problem_id, p.content, p.answer, p.earmark, p.creation_date, p.last_modified
+                SELECT p.problem_id, p.content, p.answer, p.creation_date, p.last_modified
                 FROM problems p
                 JOIN problem_set_member m ON p.problem_id = m.problem_id
                 WHERE m.set_id = ?
@@ -1019,7 +1013,7 @@ class MathProblemDB:
             ''', (set_id,))
         else:
             self.cur.execute('''
-                SELECT p.problem_id, p.content, p.answer, p.earmark, p.creation_date, p.last_modified
+                SELECT p.problem_id, p.content, p.answer, p.creation_date, p.last_modified
                 FROM problems p
                 JOIN problem_set_member m ON p.problem_id = m.problem_id
                 WHERE m.set_id = ?
@@ -1033,9 +1027,8 @@ class MathProblemDB:
                 "problem_id": problem_id,
                 "content": row[1],
                 "answer": row[2],
-                "earmark": row[3],
-                "creation_date": row[4],
-                "last_modified": row[5],
+                "creation_date": row[3],
+                "last_modified": row[4],
                 "categories": []
             }
             # Get categories for this problem

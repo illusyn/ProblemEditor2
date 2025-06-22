@@ -222,8 +222,9 @@ class MainWindow(QMainWindow):
             problem_cat_names = {c["name"] for c in p.get('categories', [])}
             if selected_cats and not selected_cats.issubset(problem_cat_names):
                 continue
-            if earmark_filter and not p.get('earmark', 0):
-                continue
+            # TODO: Implement earmark filtering with many-to-many relationship
+            # if earmark_filter and not p.get('earmark', 0):
+            #     continue
             results.append(p)
         # Always order results by problem_id ascending
         if not (problem_id or search_text or selected_cats or earmark_filter):
@@ -269,7 +270,8 @@ class MainWindow(QMainWindow):
             db.close()
         else:
             self.left_panel.set_selected_type_ids([])
-        self.left_panel.set_earmark(problem.get("earmark", 0))
+        # TODO: Load earmark from many-to-many relationship
+        # self.left_panel.set_earmark(problem.get("earmark", 0))
         self.update_preview()
 
     def show_next_problem(self):
@@ -510,7 +512,8 @@ class MainWindow(QMainWindow):
         answer = self.left_panel.get_answer().strip()
         notes = self.left_panel.get_notes().strip()
         categories = [cat["name"] for cat in self.left_panel.category_panel.get_selected_categories()]
-        earmark = 1 if self.left_panel.get_earmark() else 0
+        # TODO: Handle earmark with many-to-many relationship
+        # earmark = 1 if self.left_panel.get_earmark() else 0
         selected_type_ids = self.left_panel.get_selected_type_ids()
         # Map type IDs to type names for saving
         type_id_to_name = {t['type_id']: t['name'] for t in self.left_panel.problem_type_panel.types}
@@ -525,7 +528,6 @@ class MainWindow(QMainWindow):
                     content=content,
                     answer=answer,
                     notes=notes,
-                    earmark=earmark
                 )
                 if not success:
                     QMessageBox.critical(self, "Save Problem", f"Failed to update problem: {msg}")
@@ -548,7 +550,6 @@ class MainWindow(QMainWindow):
                     content,
                     answer=answer,
                     notes=notes,
-                    earmark=earmark,
                     categories=categories
                 )
                 if not success:
