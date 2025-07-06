@@ -110,20 +110,26 @@ class MarkdownParser:
                 i += 2
                 in_math = False
             elif text[i] == '$':
-                # Add the $ to the current part before toggling mode
-                current_part += text[i]
-                i += 1
-                # If we're ending math mode, save the part
-                if in_math:
-                    parts.append((current_part, in_math))
-                    current_part = ""
-                    in_math = False
+                # Check if this is a currency dollar sign (followed by a digit)
+                if i + 1 < len(text) and text[i + 1].isdigit() and not in_math:
+                    # This is likely a currency symbol, not math delimiter
+                    current_part += text[i]
+                    i += 1
                 else:
-                    # Starting math mode - save any previous non-math part
-                    if current_part[:-1]:  # Everything except the $ we just added
-                        parts.append((current_part[:-1], False))
-                    current_part = "$"  # Start new part with $
-                    in_math = True
+                    # Add the $ to the current part before toggling mode
+                    current_part += text[i]
+                    i += 1
+                    # If we're ending math mode, save the part
+                    if in_math:
+                        parts.append((current_part, in_math))
+                        current_part = ""
+                        in_math = False
+                    else:
+                        # Starting math mode - save any previous non-math part
+                        if current_part[:-1]:  # Everything except the $ we just added
+                            parts.append((current_part[:-1], False))
+                        current_part = "$"  # Start new part with $
+                        in_math = True
             else:
                 current_part += text[i]
                 i += 1
@@ -1022,6 +1028,7 @@ class MarkdownParser:
                     expr
                 )
                 return f'${expr}$'
-            return re.sub(r'\$(.+?)\$', replacer, latex)
+            # Only match unescaped dollar signs (not \$)
+            return re.sub(r'(?<!\\)\$(.+?)(?<!\\)\$', replacer, latex)
         template = fix_unit_spacing(template)
         return template
