@@ -141,6 +141,29 @@ class ExportSetDialog(QDialog):
         self.include_answers_checkbox.setChecked(False)  # Default to unchecked
         layout.addWidget(self.include_answers_checkbox)
         
+        # Problem spacing row
+        spacing_row = QHBoxLayout()
+        spacing_row.setSpacing(SPACING)
+        
+        spacing_label = QLabel("Space between problems:")
+        spacing_label.setFont(checkbox_font)
+        spacing_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR};")
+        
+        self.spacing_entry = NeumorphicEntry()
+        self.spacing_entry.setText("0.5")  # Default to 0.5cm
+        self.spacing_entry.setMinimumHeight(ENTRY_MIN_HEIGHT)
+        self.spacing_entry.setMaximumWidth(80)
+        
+        spacing_unit_label = QLabel("cm")
+        spacing_unit_label.setFont(checkbox_font)
+        spacing_unit_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR};")
+        
+        spacing_row.addWidget(spacing_label)
+        spacing_row.addWidget(self.spacing_entry)
+        spacing_row.addWidget(spacing_unit_label)
+        spacing_row.addStretch()
+        layout.addLayout(spacing_row)
+        
         # Output file section
         output_label = QLabel("Output File:")
         output_label.setFont(options_font)  # Reuse the options_font
@@ -260,9 +283,17 @@ class ExportSetDialog(QDialog):
         number_problems = self.number_problems_checkbox.isChecked()
         include_answers = self.include_answers_checkbox.isChecked()
         
+        # Get spacing value
+        try:
+            spacing_cm = float(self.spacing_entry.text())
+            if spacing_cm < 0:
+                spacing_cm = 0.5  # Default if negative
+        except ValueError:
+            spacing_cm = 0.5  # Default if invalid
+        
         try:
             # Export the set
-            self._export_set(output_path, images_dir, title_text, number_problems, include_answers)
+            self._export_set(output_path, images_dir, title_text, number_problems, include_answers, spacing_cm)
             
             # Show success message
             show_styled_message(self, "Export Complete", f"Successfully exported set '{self.set_name}' to:\n{output_path}", "info")
@@ -274,7 +305,7 @@ class ExportSetDialog(QDialog):
         except Exception as e:
             show_styled_message(self, "Export Error", f"Failed to export set:\n{str(e)}", "error")
     
-    def _export_set(self, output_path, images_dir, title_text, number_problems, include_answers):
+    def _export_set(self, output_path, images_dir, title_text, number_problems, include_answers, spacing_cm=0.5):
         """Export the problem set to LaTeX file"""
         # Get problems in the set
         db = MathProblemDB()
@@ -381,7 +412,8 @@ class ExportSetDialog(QDialog):
             
             # Add spacing between problems (except after the last one)
             if idx < len(full_problems) - 1:
-                all_problems_latex += "\\vspace{0.5cm}\n\\noindent\n"
+                # Use \addvspace which only adds space if needed (e.g., not at page bottom)
+                all_problems_latex += f"\\addvspace{{{spacing_cm}cm}}\n\\noindent\n"
         
         # Create full LaTeX document with export context for larger margins
         full_latex = md_parser.create_latex_document(all_problems_latex, context='export')
