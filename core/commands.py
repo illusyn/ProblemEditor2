@@ -89,6 +89,10 @@ class ContentCommand(Command):
 class TextCommand(ContentCommand):
     """Basic text command (#text)"""
     
+    def __init__(self, config_manager=None):
+        super().__init__()
+        self.config_manager = config_manager
+    
     def render_markdown(self, content: str, params: Optional[Dict[str, Any]] = None) -> str:
         return f"#text\n{content}"
     
@@ -99,8 +103,19 @@ class TextCommand(ContentCommand):
     
     def render_latex(self, content: str, params: Optional[Dict[str, Any]] = None, context: str = "export") -> str:
         params = params or {}
+        
+        # Use problem spacing for text command too
+        if self.config_manager:
+            config_spacing = self.config_manager.get_value(context, "problem_spacing", 1.0)
+            config_unit = self.config_manager.get_value(context, "problem_spacing_unit", "em")
+            vspace = params.get('vspace', config_spacing)
+            vspace_unit = config_unit
+        else:
+            vspace = params.get('vspace', self._parameters['vspace']['default'])
+            vspace_unit = "em"
+            
         indent = params.get("indent", self._parameters["indent"]["default"])
-        spacing = params.get('spacing', self._parameters['spacing']['default'])
+        
         # Context-aware font size
         if context == "export":
             font_size_pt = FONT_SIZES.get(context, {}).get("text", 12)
@@ -113,14 +128,14 @@ class TextCommand(ContentCommand):
         if font_size_pt and font_size_pt > 0:
             font_cmd += f"\\fontsize{{{font_size_pt}pt}}{{{line_spacing}pt}}\\selectfont "
         if indent > 0:
-            return f"\\vspace{{{spacing}em}}\n\\hspace{{{indent}em}}{font_cmd}{content}\\par\n\\vspace{{{spacing}em}}\n"
-        return f"\\vspace{{{spacing}em}}\n{font_cmd}{content}\\par\n\\vspace{{{spacing}em}}\n"
+            return f"\\vspace{{{vspace}{vspace_unit}}}\n\\hspace{{{indent}em}}{font_cmd}{content}\\par\n\\vspace{{{vspace}{vspace_unit}}}\n"
+        return f"\\vspace{{{vspace}{vspace_unit}}}\n{font_cmd}{content}\\par\n\\vspace{{{vspace}{vspace_unit}}}\n"
 
 class EnumCommand(TextCommand):
     """Enumerated item command (#enum)"""
     
-    def __init__(self):
-        super().__init__()
+    def __init__(self, config_manager=None):
+        super().__init__(config_manager)
         self._parameters.update({
             "format": {
                 "type": "str",
@@ -158,8 +173,9 @@ class EnumCommand(TextCommand):
 class ProblemCommand(ContentCommand):
     """Problem statement command (#problem)"""
     
-    def __init__(self):
+    def __init__(self, config_manager=None):
         super().__init__()
+        self.config_manager = config_manager
         self._parameters.update({
             "bold": {
                 "type": "boolean",
@@ -179,8 +195,19 @@ class ProblemCommand(ContentCommand):
     
     def render_latex(self, content: str, params: Optional[Dict[str, Any]] = None, context: str = "export") -> str:
         params = params or {}
+        
+        # Get spacing from config if available, otherwise use defaults
+        if self.config_manager:
+            config_spacing = self.config_manager.get_value(context, "problem_spacing", 1.0)
+            config_unit = self.config_manager.get_value(context, "problem_spacing_unit", "em")
+            vspace = params.get('vspace', config_spacing)
+            vspace_unit = config_unit
+        else:
+            vspace = params.get('vspace', self._parameters['vspace']['default'])
+            vspace_unit = "em"
+            
         spacing = params.get('spacing', self._parameters['spacing']['default'])
-        vspace = params.get('vspace', self._parameters['vspace']['default'])
+        
         # Context-aware font size
         if context == "export":
             font_size_pt = FONT_SIZES.get(context, {}).get("problem", 12)
@@ -195,7 +222,7 @@ class ProblemCommand(ContentCommand):
         # Prepend problem number if provided
         number = params.get('number', None)
         prefix = f"\\textbf{{Problem {number}. }}" if number is not None else ""
-        return f"\\vspace{{{vspace}em}}\n{prefix}{font_cmd}{content}\\par\n\\vspace{{{vspace}em}}\n"
+        return f"\\vspace{{{vspace}{vspace_unit}}}\n{prefix}{font_cmd}{content}\\par\n\\vspace{{{vspace}{vspace_unit}}}\n"
 
 def parse_latex_settings(self):
     """
