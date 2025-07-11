@@ -19,7 +19,7 @@ from db.math_image_db import MathImageDB
 class ImageConverter:
     """Converts images to LaTeX figure environments with database storage"""
     
-    def __init__(self, working_dir=None, config_manager=None):
+    def __init__(self, working_dir=None, config_manager=None, images_db_path=None):
         """
         Initialize the image converter
         
@@ -27,6 +27,7 @@ class ImageConverter:
             working_dir (str, optional): Working directory for temporary image storage.
                                        If None, './temp' will be used.
             config_manager: Configuration manager instance for accessing app settings
+            images_db_path: Path to the images database (optional)
         """
         if working_dir:
             self.working_dir = Path(working_dir)
@@ -40,7 +41,7 @@ class ImageConverter:
         self.config_manager = config_manager
         
         # Initialize the image database
-        self.image_db = MathImageDB()
+        self.image_db = MathImageDB(images_db_path)
         
         # Keep track of images used in the current document
         self.document_images = {}

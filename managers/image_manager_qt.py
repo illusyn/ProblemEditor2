@@ -86,15 +86,16 @@ class ImageDetailsDialog(QDialog):
 class ImageManagerQt:
     """Manages image operations for the Simplified Math Editor (PyQt5 version)"""
     
-    def __init__(self, app):
+    def __init__(self, app, images_db_path=None):
         """
         Initialize the image manager
         
         Args:
             app: Reference to the MainWindow instance
+            images_db_path: Path to the images database (optional)
         """
         self.app = app
-        self.image_db = MathImageDB()
+        self.image_db = MathImageDB(images_db_path)
     
     def paste_image(self):
         """
