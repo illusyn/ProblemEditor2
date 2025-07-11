@@ -106,6 +106,7 @@ class MathTextEdit(QTextEdit):
             menu.addSeparator()
             menu.addAction("Paste LaTeX as Equation", self.paste_latex)
             menu.addAction("Wrap Math", self.wrap_math_selection)
+            menu.addAction("Escape $ Signs", self.escape_dollar_signs)
             menu.addAction("Overline Selection", self.overline_selection)
             menu.addAction("Overline Selection (with $)", self.overline_selection_dollars)
             menu.addAction("Wide Hat Selection", self.widehat_selection)
@@ -180,12 +181,17 @@ class MathTextEdit(QTextEdit):
         if text.startswith('$') and text.endswith('$'):
             return text
             
+        # Special case: if the entire selection is just a single letter, always wrap it
+        if len(text) == 1 and text.isalpha():
+            return f'${text}$'
+            
         # Helper function to check if a word is likely English (not math)
         def is_english_word(word):
             if not word or not word.isalpha():
                 return False
             # Common English words that might appear in math context
-            common_words = {'is', 'the', 'of', 'and', 'or', 'if', 'then', 'where', 
+            # Include single letter words like 'a' and 'I'
+            common_words = {'a', 'i', 'is', 'the', 'of', 'and', 'or', 'if', 'then', 'where', 
                            'find', 'calculate', 'solve', 'given', 'what', 'how',
                            'with', 'has', 'have', 'be', 'are', 'was', 'were'}
             if word.lower() in common_words:
@@ -196,7 +202,7 @@ class MathTextEdit(QTextEdit):
         
         # Pattern to identify mathematical content
         # This includes: variables, numbers, operators, functions, parentheses, etc.
-        math_chars = r'[a-zA-Z0-9\+\-\*/=<>^_\(\)\[\]\{\}\\.,]'
+        math_chars = r'[a-zA-Z0-9\+\-\*/=<>^_%\(\)\[\]\{\}\\.,]'
         
         # Split text into potential math expressions and non-math text
         # Look for continuous runs of mathematical characters
@@ -216,14 +222,29 @@ class MathTextEdit(QTextEdit):
             # Check if this looks like the start of a math expression
             # Common patterns: f(x), g(x), equations, expressions with operators
             if (re.match(r'[a-zA-Z]\([a-zA-Z]\)', part) or  # Function notation f(x)
-                re.search(r'[=\+\-\*/\^]', part) or          # Contains operators
+                re.search(r'[=\+\-\*/\^%]', part) or          # Contains operators (including %)
                 re.match(r'\d+', part) or                    # Starts with number
                 re.match(r'[a-zA-Z]\d', part) or             # Variable with subscript
-                re.match(r'[a-zA-Z]\^', part)):              # Variable with exponent
+                re.match(r'[a-zA-Z]\^', part) or             # Variable with exponent
+                (len(part) == 1 and part.isalpha())):        # Single letter variable
                 
                 # Start collecting the math expression
                 math_expr = [part]
                 j = i + 1
+                
+                # For single letters, check if the next word is an English word
+                if len(part) == 1 and part.isalpha() and j < len(parts):
+                    # Skip any whitespace
+                    next_non_space_idx = j
+                    while next_non_space_idx < len(parts) and parts[next_non_space_idx].isspace():
+                        next_non_space_idx += 1
+                    
+                    # If the next non-space token is an English word, don't continue collecting
+                    if next_non_space_idx < len(parts) and is_english_word(parts[next_non_space_idx]):
+                        # Just wrap the single letter
+                        result.append(f'${part}$')
+                        i += 1
+                        continue
                 
                 # Continue collecting while we have math-like content
                 while j < len(parts):
@@ -234,9 +255,8 @@ class MathTextEdit(QTextEdit):
                     elif j < len(parts) and re.match(math_chars + '+', parts[j]):
                         # Check if it's a standalone English word
                         if parts[j].isalpha() and is_english_word(parts[j]):
-                            # Don't include English words unless they're single letters
-                            if len(parts[j]) > 1:
-                                break
+                            # Don't include English words
+                            break
                         math_expr.append(parts[j])
                         j += 1
                     else:
@@ -262,6 +282,21 @@ class MathTextEdit(QTextEdit):
                 i += 1
         
         return ''.join(result)
+
+    def escape_dollar_signs(self):
+        """Escape dollar signs in selected text by adding backslash before them."""
+        cursor = self.textCursor()
+        if not cursor.hasSelection():
+            QMessageBox.information(self, "No Selection", "Please select text containing $ signs to escape.")
+            return
+        
+        selected_text = cursor.selectedText()
+        
+        # Replace all $ with \$
+        escaped_text = selected_text.replace('$', r'\$')
+        
+        # Replace the selection with the escaped text
+        cursor.insertText(escaped_text)
 
     def insert_fraction(self):
         self.insertPlainText(r"\frac{}{}")
