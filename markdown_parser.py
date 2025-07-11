@@ -110,26 +110,20 @@ class MarkdownParser:
                 i += 2
                 in_math = False
             elif text[i] == '$':
-                # Check if this is a currency dollar sign (followed by a digit)
-                if i + 1 < len(text) and text[i + 1].isdigit() and not in_math:
-                    # This is likely a currency symbol, not math delimiter
-                    current_part += text[i]
-                    i += 1
+                # Add the $ to the current part before toggling mode
+                current_part += text[i]
+                i += 1
+                # If we're ending math mode, save the part
+                if in_math:
+                    parts.append((current_part, in_math))
+                    current_part = ""
+                    in_math = False
                 else:
-                    # Add the $ to the current part before toggling mode
-                    current_part += text[i]
-                    i += 1
-                    # If we're ending math mode, save the part
-                    if in_math:
-                        parts.append((current_part, in_math))
-                        current_part = ""
-                        in_math = False
-                    else:
-                        # Starting math mode - save any previous non-math part
-                        if current_part[:-1]:  # Everything except the $ we just added
-                            parts.append((current_part[:-1], False))
-                        current_part = "$"  # Start new part with $
-                        in_math = True
+                    # Starting math mode - save any previous non-math part
+                    if current_part[:-1]:  # Everything except the $ we just added
+                        parts.append((current_part[:-1], False))
+                    current_part = "$"  # Start new part with $
+                    in_math = True
             else:
                 current_part += text[i]
                 i += 1
@@ -597,9 +591,9 @@ class MarkdownParser:
         print(f"parse_standard_command: command_name={command_name}, params={params}")
         # PATCH: Ignore all command/parameter definitions in config. Use only code-defined commands/parameters.
         code_commands = {
-            'text': TextCommand(),
-            'problem': ProblemCommand(),
-            'enum': EnumCommand(),
+            'text': TextCommand(self.config_manager),
+            'problem': ProblemCommand(self.config_manager),
+            'enum': EnumCommand(self.config_manager),
         }
         if command_name in code_commands:
             code_cmd = code_commands[command_name]
@@ -674,6 +668,8 @@ class MarkdownParser:
         # Join lines back together
         return "\n".join(lines)
     
+    
+    
     def parse(self, markdown_text, context="export"):
         """
         Convert markdown to LaTeX
@@ -738,16 +734,27 @@ class MarkdownParser:
                 processed_command = self.parse_command(command_text, context=context)
                 processed_lines.append(processed_command)
             else:
-                # Regular text - escape LaTeX special characters
-                escaped_line = self.escape_latex(line)
+                # Regular text without command - treat as problem content
+                # Collect all consecutive non-command lines
+                content_lines = []
+                while i < len(lines) and not lines[i].strip().startswith('#'):
+                    content_lines.append(lines[i])
+                    i += 1
                 
-                # If we are in an enum block, we need to close it before adding regular text
-                if self.in_enum_block and escaped_line.strip():
-                    processed_lines.append("\\end{enumerate}")
-                    self.in_enum_block = False
-                
-                processed_lines.append(escaped_line)
-                i += 1
+                if content_lines and any(line.strip() for line in content_lines):
+                    # If we are in an enum block, we need to close it
+                    if self.in_enum_block:
+                        processed_lines.append("\\end{enumerate}")
+                        self.in_enum_block = False
+                    
+                    # Process as problem content
+                    problem_cmd = ProblemCommand(self.config_manager)
+                    escaped_content_lines = []
+                    for line in content_lines:
+                        escaped_content_lines.append(self.escape_latex(line))
+                    content = "\n".join(escaped_content_lines)
+                    latex_output = problem_cmd.render_latex(content, {}, context=context)
+                    processed_lines.append(latex_output)
         
         # Join the processed lines
         content = '\n'.join(processed_lines)
