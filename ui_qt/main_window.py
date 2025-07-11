@@ -66,11 +66,11 @@ class MainWindow(QMainWindow):
         # Initialize file manager
         self.file_manager = FileManager(self)
 
-        # Initialize image manager (for Tkinter dialog compatibility)
-        self.image_manager = ImageManagerQt(self)
+        # Initialize image manager with correct database path
+        self.image_manager = ImageManagerQt(self, self.images_db_path)
 
-        # Initialize image converter
-        self.image_converter = ImageConverter()
+        # Initialize image converter with correct database path
+        self.image_converter = ImageConverter(images_db_path=self.images_db_path)
 
         # Menu bar
         menubar = QMenuBar(self)
@@ -118,7 +118,9 @@ class MainWindow(QMainWindow):
         self.left_panel.save_problem_button.clicked.connect(self.save_current_problem)
         
         # Add Problem Browser 2 screen
-        self.problem_manager_screen = ProblemManager(laptop_mode=laptop_mode, db_path=self.problems_db_path)
+        self.problem_manager_screen = ProblemManager(laptop_mode=laptop_mode, 
+                                                    db_path=self.problems_db_path,
+                                                    images_db_path=self.images_db_path)
         self.stacked_widget.addWidget(self.problem_manager_screen)
         self.left_panel.problem_browser2_button.clicked.connect(self.show_problem_manager_screen)
         # Connect return_to_editor signal
