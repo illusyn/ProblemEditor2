@@ -8,10 +8,11 @@ import json
 from ui_qt.style_config import CATEGORY_BTN_SELECTED_COLOR
 
 class ProblemCellWidget(QWidget):
-    def __init__(self, problem, font_size, parent=None):
+    def __init__(self, problem, font_size, parent=None, images_db_path=None):
         super().__init__(parent)
         self.problem = problem
         self.selected = False
+        self.images_db_path = images_db_path
         main_layout = QHBoxLayout(self)
         main_layout.setSpacing(12)
         self.setLayout(main_layout)
@@ -116,7 +117,9 @@ class ProblemCellWidget(QWidget):
                 
                 if image_names:
                     print(f"[DEBUG] Found {len(image_names)} images for problem {problem_id}: {image_names}")
-                    image_manager = ImageManagerQt(self)
+                    print(f"[DEBUG] ProblemCellWidget images_db_path: {self.images_db_path}")
+                    image_manager = ImageManagerQt(self, self.images_db_path)
+                    print(f"[DEBUG] ImageManager using db path: {image_manager.image_db.db_path}")
                     
                     # Check what images are available in the image database
                     available_images = image_manager.image_db.get_all_image_names()
@@ -203,10 +206,11 @@ class ProblemDisplayPanel(QWidget):
     CONFIG_PATH = "user_settings.json"
     selection_changed = pyqtSignal(list)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, images_db_path=None):
         print("ProblemDisplayPanel init:0")
         super().__init__(parent)
         print("ProblemDisplayPanel init")
+        self.images_db_path = images_db_path
         self.outer_layout = QVBoxLayout(self)
         self.setLayout(self.outer_layout)
 
@@ -255,7 +259,9 @@ class ProblemDisplayPanel(QWidget):
         for idx, problem in enumerate(problems):
             row = idx // cols
             col = idx % cols
-            cell = ProblemCellWidget(problem, self.current_font_size, parent=self.scroll_content)
+            cell = ProblemCellWidget(problem, self.current_font_size, 
+                                   parent=self.scroll_content, 
+                                   images_db_path=self.images_db_path)
             self.grid.addWidget(cell, row, col)
             self.problem_cells.append(cell)
         self.update_all_content_fonts()
