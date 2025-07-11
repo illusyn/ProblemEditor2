@@ -23,6 +23,7 @@ from ui_qt.problem_display_panel import ProblemDisplayPanel
 from PyQt5.QtCore import Qt
 from managers.config_manager import ConfigManager
 from ui_qt.set_panel import SetPanelQt
+from db.db_config import DatabaseConfig
 
 def update_problem_image_map(problem_id, content, db):
     # Remove old mappings
@@ -47,11 +48,20 @@ def update_problem_image_map(problem_id, content, db):
         )
 
 class MainWindow(QMainWindow):
-    def __init__(self, laptop_mode=False):
+    def __init__(self, laptop_mode=False, db_version="main"):
         super().__init__()
         self.setWindowTitle("Simplified Math Editor (PyQt5)")
         self.setGeometry(100, 100, 1200, 800)
         self.config_manager = ConfigManager(config_file="default_config.json")
+        
+        # Initialize database configuration
+        self.db_config = DatabaseConfig(db_version)
+        self.db_config.ensure_directories()
+        self.problems_db_path, self.images_db_path = self.db_config.get_database_paths()
+        
+        # Update window title to show database version if not main
+        if db_version != "main":
+            self.setWindowTitle(f"Simplified Math Editor (PyQt5) - Database: {db_version}")
 
         # Initialize file manager
         self.file_manager = FileManager(self)
@@ -108,12 +118,12 @@ class MainWindow(QMainWindow):
         self.left_panel.save_problem_button.clicked.connect(self.save_current_problem)
         
         # Add Problem Browser 2 screen
-        self.problem_manager_screen = ProblemManager(laptop_mode=laptop_mode)
+        self.problem_manager_screen = ProblemManager(laptop_mode=laptop_mode, db_path=self.problems_db_path)
         self.stacked_widget.addWidget(self.problem_manager_screen)
         self.left_panel.problem_browser2_button.clicked.connect(self.show_problem_manager_screen)
         # Connect return_to_editor signal
         self.problem_manager_screen.return_to_editor.connect(self.show_editor_screen)
-        self.problem_db = MathProblemDB()
+        self.problem_db = MathProblemDB(self.problems_db_path)
         self.editor_panel = EditorPanel(main_window=self)
         # Pass the delete_current_problem method to the editor panel
         self.editor_panel.delete_problem_callback = self.delete_current_problem
@@ -133,6 +143,15 @@ class MainWindow(QMainWindow):
         
         # Try connecting the signal after the UI is fully constructed
         self._connect_set_editor_signal()
+    
+    def get_problems_db(self):
+        """Get a new instance of the problems database with the correct path."""
+        return MathProblemDB(self.problems_db_path)
+    
+    def get_images_db(self):
+        """Get a new instance of the images database with the correct path."""
+        from db.math_image_db import MathImageDB
+        return MathImageDB(self.images_db_path)
     
     def _connect_set_editor_signal(self):
         """Connect the set editor panel signal - called after UI is constructed"""

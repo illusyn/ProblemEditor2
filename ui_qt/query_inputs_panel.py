@@ -85,10 +85,11 @@ class QueryInputsPanel(QWidget):
     - Advanced inputs: Problem types, earmark, categories, notes
     """
     
-    def __init__(self, parent=None, laptop_mode=False):
+    def __init__(self, parent=None, laptop_mode=False, db_path=None):
         super().__init__(parent)
         self.setStyleSheet('background: transparent;')
         self.laptop_mode = laptop_mode
+        self.db_path = db_path
         self._selected_set_id = None
         # --- Wrap all contents in a QFrame with border ---
         self.outer_frame = QFrame()
@@ -145,7 +146,7 @@ class QueryInputsPanel(QWidget):
         # Keep backward compatibility
         self.earmark_checkbox = None  # Will be removed later
         from db.math_db import MathProblemDB
-        db = MathProblemDB()
+        db = MathProblemDB(self.db_path)
         types = db.cur.execute("SELECT type_id, name FROM problem_types ORDER BY type_id").fetchall()
         db.close()
         type_dicts = [{"type_id": row[0], "name": row[1]} for row in types]
@@ -175,7 +176,7 @@ class QueryInputsPanel(QWidget):
         domains_label.setMinimumHeight(30)
         domains_label.setAlignment(Qt.AlignCenter)
         domains_groupbox_layout.addWidget(domains_label)
-        self.category_panel = CategoryPanelQt()
+        self.category_panel = CategoryPanelQt(db_path=self.db_path)
         self.category_frame = QFrame()
         self.category_frame.setFrameShape(QFrame.StyledPanel)
         # self.category_frame.setStyleSheet('QFrame { border: 2px solid #888; border-radius: 12px; background: transparent; }')

@@ -56,9 +56,10 @@ def show_styled_message(parent, title, message, msg_type="info"):
 class ProblemManager(QWidget):
     return_to_editor = pyqtSignal()
 
-    def __init__(self, parent=None, laptop_mode=False):
+    def __init__(self, parent=None, laptop_mode=False, db_path=None):
         super().__init__(parent)
         print("[DEBUG] ProblemManager __init__ called:", self)
+        self.db_path = db_path
         main_layout = QVBoxLayout(self)
         # Main content layout
         content_layout = QHBoxLayout()
@@ -69,7 +70,7 @@ class ProblemManager(QWidget):
         # Create return button but don't add it here - we'll pass it to QueryPanel
         self.return_btn = NeumorphicButton("Return to Editor", self)
         self.return_btn.clicked.connect(self.return_to_editor)
-        self.query_panel = QueryPanel(laptop_mode=laptop_mode, show_preview_and_nav_buttons=False, return_button=self.return_btn)
+        self.query_panel = QueryPanel(laptop_mode=laptop_mode, show_preview_and_nav_buttons=False, return_button=self.return_btn, db_path=self.db_path)
         left_vbox.addWidget(self.query_panel, stretch=1)
         # Remove SetEditorPanelQt and Add-to-Set button from here
         # Add-to-Set logic will be handled in SetEditorPanelQt
@@ -151,7 +152,7 @@ class ProblemManager(QWidget):
         selected_set_ids = self.query_panel.query_inputs_panel.get_selected_set_ids()
         selected_set_id = selected_set_ids[0] if selected_set_ids else None
         from db.math_db import MathProblemDB
-        db = MathProblemDB()
+        db = MathProblemDB(self.db_path)
         # If a set is selected, get only problems in that set; else get all
         if selected_set_id:
             problems = db.list_problems_in_set(selected_set_id)
@@ -205,7 +206,7 @@ class ProblemManager(QWidget):
             return
         
         from db.math_db import MathProblemDB
-        db = MathProblemDB()
+        db = MathProblemDB(self.db_path)
         
         success_count = 0
         for problem_id in selected_ids:
@@ -255,7 +256,7 @@ class ProblemManager(QWidget):
             return
         
         from db.math_db import MathProblemDB
-        db = MathProblemDB()
+        db = MathProblemDB(self.db_path)
         
         success_count = 0
         for problem_id in selected_ids:
@@ -303,7 +304,7 @@ class ProblemManager(QWidget):
             return
         
         from db.math_db import MathProblemDB
-        db = MathProblemDB()
+        db = MathProblemDB(self.db_path)
         
         success_count = 0
         failed_count = 0
@@ -401,7 +402,7 @@ class ProblemManager(QWidget):
             
         # Get fresh data for the selected problems
         from db.math_db import MathProblemDB
-        db = MathProblemDB()
+        db = MathProblemDB(self.db_path)
         
         # Get current problems list from query panel
         current_problems = self.query_panel.selected_problems

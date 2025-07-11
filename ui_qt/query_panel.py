@@ -14,11 +14,12 @@ class QueryPanel(QWidget):
     apply_attributes_to_selected = pyqtSignal(dict)  # Emits attributes to apply
     clear_attributes_from_selected = pyqtSignal(dict)  # Emits attributes to clear
     delete_selected_problems = pyqtSignal()  # Emits when delete selected is confirmed
-    def __init__(self, parent=None, laptop_mode=False, show_preview_and_nav_buttons=True, return_button=None):
+    def __init__(self, parent=None, laptop_mode=False, show_preview_and_nav_buttons=True, return_button=None, db_path=None):
         super().__init__(parent)
         self.laptop_mode = laptop_mode
         self.show_preview_and_nav_buttons = show_preview_and_nav_buttons
         self.return_button = return_button
+        self.db_path = db_path
         self.selected_problems = []  # Track currently selected problems
         self.setStyleSheet(f"background-color: {WINDOW_BG_COLOR};")
         self.setSizePolicy(self.sizePolicy().horizontalPolicy(), QSizePolicy.Minimum)
@@ -33,7 +34,7 @@ class QueryPanel(QWidget):
         self._create_query_controls(layout)
 
         # --- Query Inputs Panel (contains ALL input fields) ---
-        self.query_inputs_panel = QueryInputsPanel(laptop_mode=self.laptop_mode)
+        self.query_inputs_panel = QueryInputsPanel(laptop_mode=self.laptop_mode, db_path=self.db_path)
         layout.addWidget(self.query_inputs_panel)
 
         # --- Edit Selected Problems Panel ---
@@ -96,7 +97,7 @@ class QueryPanel(QWidget):
         )
 
     def _on_query_clicked(self):
-        db = MathProblemDB()
+        db = MathProblemDB(self.db_path)
         criteria = self.query_inputs_panel.build_query_criteria()
         # Get selected category ID if any
         selected_categories = self.query_inputs_panel.get_selected_categories()
