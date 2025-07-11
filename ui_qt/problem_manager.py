@@ -56,10 +56,11 @@ def show_styled_message(parent, title, message, msg_type="info"):
 class ProblemManager(QWidget):
     return_to_editor = pyqtSignal()
 
-    def __init__(self, parent=None, laptop_mode=False, db_path=None):
+    def __init__(self, parent=None, laptop_mode=False, db_path=None, images_db_path=None):
         super().__init__(parent)
         print("[DEBUG] ProblemManager __init__ called:", self)
         self.db_path = db_path
+        self.images_db_path = images_db_path
         main_layout = QVBoxLayout(self)
         # Main content layout
         content_layout = QHBoxLayout()
@@ -107,7 +108,7 @@ class ProblemManager(QWidget):
         right_layout.addLayout(export_buttons_layout)
         
         # Problem display panel
-        self.problem_display_panel = ProblemDisplayPanel()
+        self.problem_display_panel = ProblemDisplayPanel(images_db_path=self.images_db_path)
         right_layout.addWidget(self.problem_display_panel)
         content_layout.addWidget(right_panel, stretch=3)
         main_layout.addLayout(content_layout)
