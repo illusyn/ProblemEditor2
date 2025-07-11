@@ -141,28 +141,29 @@ class ExportSetDialog(QDialog):
         self.include_answers_checkbox.setChecked(False)  # Default to unchecked
         layout.addWidget(self.include_answers_checkbox)
         
-        # Problem spacing row
-        spacing_row = QHBoxLayout()
-        spacing_row.setSpacing(SPACING)
-        
-        spacing_label = QLabel("Space between problems:")
-        spacing_label.setFont(checkbox_font)
-        spacing_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR};")
-        
-        self.spacing_entry = NeumorphicEntry()
-        self.spacing_entry.setText("0.5")  # Default to 0.5cm
-        self.spacing_entry.setMinimumHeight(ENTRY_MIN_HEIGHT)
-        self.spacing_entry.setMaximumWidth(80)
-        
-        spacing_unit_label = QLabel("cm")
-        spacing_unit_label.setFont(checkbox_font)
-        spacing_unit_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR};")
-        
-        spacing_row.addWidget(spacing_label)
-        spacing_row.addWidget(self.spacing_entry)
-        spacing_row.addWidget(spacing_unit_label)
-        spacing_row.addStretch()
-        layout.addLayout(spacing_row)
+        # Problem spacing row - DISABLED: Spacing is now configured globally
+        # in the config file under export.problem_spacing
+        # spacing_row = QHBoxLayout()
+        # spacing_row.setSpacing(SPACING)
+        # 
+        # spacing_label = QLabel("Space between problems:")
+        # spacing_label.setFont(checkbox_font)
+        # spacing_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR};")
+        # 
+        # self.spacing_entry = NeumorphicEntry()
+        # self.spacing_entry.setText("0.5")  # Default to 0.5cm
+        # self.spacing_entry.setMinimumHeight(ENTRY_MIN_HEIGHT)
+        # self.spacing_entry.setMaximumWidth(80)
+        # 
+        # spacing_unit_label = QLabel("cm")
+        # spacing_unit_label.setFont(checkbox_font)
+        # spacing_unit_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR};")
+        # 
+        # spacing_row.addWidget(spacing_label)
+        # spacing_row.addWidget(self.spacing_entry)
+        # spacing_row.addWidget(spacing_unit_label)
+        # spacing_row.addStretch()
+        # layout.addLayout(spacing_row)
         
         # Output file section
         output_label = QLabel("Output File:")
@@ -283,13 +284,8 @@ class ExportSetDialog(QDialog):
         number_problems = self.number_problems_checkbox.isChecked()
         include_answers = self.include_answers_checkbox.isChecked()
         
-        # Get spacing value
-        try:
-            spacing_cm = float(self.spacing_entry.text())
-            if spacing_cm < 0:
-                spacing_cm = 0.5  # Default if negative
-        except ValueError:
-            spacing_cm = 0.5  # Default if invalid
+        # Spacing is now handled by the ProblemCommand configuration
+        spacing_cm = 0.5  # This parameter is kept for backward compatibility but not used
         
         try:
             # Export the set
@@ -380,18 +376,12 @@ class ExportSetDialog(QDialog):
                 all_problems_latex += "\\filbreak\n"
             
             if number_problems:
-                # Strip any leading newlines or spaces from latex content
-                latex_stripped = latex.lstrip('\n \t')
-                
-                # Remove leading \vspace commands that might cause line breaks
-                latex_stripped = re.sub(r'^\\vspace\{[^}]*\}\s*', '', latex_stripped)
-                
                 # Use parbox approach for proper alignment
                 problem_num = idx + 1
                 all_problems_latex += "\\noindent\\begin{minipage}{\\textwidth}\n"
                 all_problems_latex += "\\noindent\\parbox[t]{2.5em}{\\textbf{" + str(problem_num) + ".}}"
                 all_problems_latex += "\\parbox[t]{\\dimexpr\\textwidth-2.5em\\relax}{"
-                all_problems_latex += latex_stripped
+                all_problems_latex += latex
                 all_problems_latex += "}\n"
                 all_problems_latex += "\\end{minipage}\n"
             else:
@@ -410,10 +400,8 @@ class ExportSetDialog(QDialog):
                 all_problems_latex += self._process_answer(answer) + "\\par\n"
                 all_problems_latex += "}\n"
             
-            # Add spacing between problems (except after the last one)
-            if idx < len(full_problems) - 1:
-                # Use \addvspace which only adds space if needed (e.g., not at page bottom)
-                all_problems_latex += f"\\addvspace{{{spacing_cm}cm}}\n\\noindent\n"
+            # Note: Spacing between problems is now handled by the ProblemCommand itself
+            # The spacing_cm from the dialog is ignored in favor of the configured spacing
         
         # Create full LaTeX document with export context for larger margins
         full_latex = md_parser.create_latex_document(all_problems_latex, context='export')
