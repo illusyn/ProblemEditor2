@@ -42,12 +42,16 @@ class ConfigManager:
             "preview": {
                 "font_size": 16,
                 "font_family": "Carlito",
-                "margin": 1.0
+                "margin": 1.0,
+                "problem_spacing": 1.3,
+                "problem_spacing_unit": "em"
             },
             "export": {
                 "left_margin": 1.5,
                 "right_margin": 1.0,
                 "top_margin": 1.0,
+                "problem_spacing": 1.3,
+                "problem_spacing_unit": "em",
                 "bottom_margin": 1.0
             },
             "appearance": {
