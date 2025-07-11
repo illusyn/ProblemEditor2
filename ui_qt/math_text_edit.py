@@ -306,7 +306,7 @@ class MathTextEdit(QTextEdit):
         self.insertPlainText("#text\n")
     
     def insert_vspace(self):
-        self.insertPlainText(r"\\[2mm]")
+        self.insertPlainText(r"\vspace{2mm}")
     
     def insert_triangle(self):
         self.insertPlainText(r"\bigtriangleup")
