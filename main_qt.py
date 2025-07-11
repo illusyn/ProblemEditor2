@@ -6,11 +6,15 @@ import sys
 import re
 # Parse --scale flag before any UI imports
 scale = 1.0
+db_version = "main"  # Default to main database
 for arg in sys.argv:
     m = re.match(r"--scale=([0-9.]+)", arg)
     if m:
         scale = float(m.group(1))
-        break
+    # Parse --db-version flag
+    m2 = re.match(r"--db-version=(\w+)", arg)
+    if m2:
+        db_version = m2.group(1)
 # Now import the rest of the modules
 from PyQt5.QtWidgets import QApplication, QWidget, QPushButton, QVBoxLayout, QLineEdit, QGraphicsDropShadowEffect
 from PyQt5.QtGui import QColor, QGuiApplication
@@ -67,7 +71,7 @@ if __name__ == "__main__":
     screen = QGuiApplication.primaryScreen()
     dpi = screen.logicalDotsPerInch() if screen else 96
     set_scale('main')  # Or 'laptop' if running on laptop; add DPI logic if needed
-    window = MainWindow(laptop_mode=(scale < 1.0))
+    window = MainWindow(laptop_mode=(scale < 1.0), db_version=db_version)
     # Print the minimum window size for debugging
     print(f"Minimum window size: {window.minimumSize().width()} x {window.minimumSize().height()}")
     print(f"Minimum size hint: {window.minimumSizeHint().width()} x {window.minimumSizeHint().height()}")
