@@ -87,11 +87,11 @@ class NeumorphicToolButton(QToolButton):
             painter.end()
 
 class CategoryPanelQt(QWidget):
-    def __init__(self, categories=None, parent=None):
+    def __init__(self, categories=None, parent=None, db_path=None):
         super().__init__(parent)
         self.setStyleSheet('background: transparent;')
         if categories is None:
-            db = ProblemDatabase()
+            db = ProblemDatabase(db_path)
             self.categories = db.get_all_categories()
         else:
             self.categories = categories
