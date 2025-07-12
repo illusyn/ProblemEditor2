@@ -204,14 +204,14 @@ class QueryInputsPanel(QWidget):
         set_selector_label.setMinimumHeight(30)
         set_selector_label.setAlignment(Qt.AlignCenter)
         set_selector_layout.addWidget(set_selector_label)
-        self.set_selector_grid = SetSelectorGridQt()
+        self.set_selector_grid = SetSelectorGridQt(self.db_path)
         # Set height for 5 rows: 5 rows * 40px height + 4 gaps * 10px spacing + some padding
         self.set_selector_grid.setMinimumHeight(250)
         set_selector_layout.addWidget(self.set_selector_grid)
         # self.set_selector_groupbox.setLayout(set_selector_layout)
 
         # Set Editor Panel
-        self.set_editor_panel = SetEditorPanelQt()
+        self.set_editor_panel = SetEditorPanelQt(db_path=self.db_path)
         
         # Store reference to help with signal connection
         self.set_editor_panel._query_inputs_panel = self
