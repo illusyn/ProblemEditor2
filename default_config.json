@@ -10,15 +10,20 @@
     "preview": {
         "font_size": 17,
         "font_family": "Calibri",
+        "margin": 1.0,
+        "problem_spacing": 1.3,
+        "problem_spacing_unit": "em",
         "math_font_family": "Cambria Math",
         "math_font_size": 16,
         "zoom_level": 80,
-        "margin": 1.0
+        "left_margin_offset_pixels": -50
     },
     "export": {
         "left_margin": 1.0,
         "right_margin": 1.0,
         "top_margin": 1.0,
+        "problem_spacing": 1.3,
+        "problem_spacing_unit": "em",
         "bottom_margin": 1.0
     },
     "appearance": {
