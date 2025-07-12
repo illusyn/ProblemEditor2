@@ -75,7 +75,9 @@ class MathTextEdit(QTextEdit):
         QShortcut(QKeySequence("Ctrl+Shift+S"), self, self.insert_sqrt_dollars)
         QShortcut(QKeySequence("Ctrl+P"), self, self.insert_problem_section)
         QShortcut(QKeySequence("Ctrl+Alt+T"), self, self.insert_text_section)  # Changed from Ctrl+T
-        QShortcut(QKeySequence("Ctrl+Shift+N"), self, self.insert_vspace)
+        QShortcut(QKeySequence("Ctrl+Shift+N"), self, self.insert_line_break_with_space)
+        QShortcut(QKeySequence("Ctrl+N"), self, self.insert_line_break)
+        QShortcut(QKeySequence("Ctrl+M"), self, self.wrap_in_mbox)
         # New triangle shortcuts
         QShortcut(QKeySequence("Ctrl+T"), self, self.insert_triangle)
         QShortcut(QKeySequence("Ctrl+Shift+T"), self, self.insert_triangle_dollars)
@@ -107,6 +109,7 @@ class MathTextEdit(QTextEdit):
             menu.addAction("Paste LaTeX as Equation", self.paste_latex)
             menu.addAction("Wrap Math", self.wrap_math_selection)
             menu.addAction("Escape $ Signs", self.escape_dollar_signs)
+            menu.addAction("No Hyphenation (\\mbox)", self.wrap_in_mbox)
             menu.addAction("Overline Selection", self.overline_selection)
             menu.addAction("Overline Selection (with $)", self.overline_selection_dollars)
             menu.addAction("Wide Hat Selection", self.widehat_selection)
@@ -193,7 +196,10 @@ class MathTextEdit(QTextEdit):
             # Include single letter words like 'a' and 'I'
             common_words = {'a', 'i', 'is', 'the', 'of', 'and', 'or', 'if', 'then', 'where', 
                            'find', 'calculate', 'solve', 'given', 'what', 'how',
-                           'with', 'has', 'have', 'be', 'are', 'was', 'were'}
+                           'with', 'has', 'have', 'be', 'are', 'was', 'were',
+                           'square', 'cubic', 'per', 'by', 'times', 'equals',
+                           'feet', 'inches', 'meters', 'centimeters', 'kilometers',
+                           'pounds', 'kilograms', 'grams', 'ounces', 'tons'}
             if word.lower() in common_words:
                 return True
             if ENGLISH_WORDS and len(word) > 2:  # Skip single letters
@@ -249,9 +255,18 @@ class MathTextEdit(QTextEdit):
                 # Continue collecting while we have math-like content
                 while j < len(parts):
                     if parts[j].isspace():
-                        # Include space in math expression
-                        math_expr.append(parts[j])
-                        j += 1
+                        # Check if the next non-space part is an English word
+                        next_non_space_idx = j + 1
+                        while next_non_space_idx < len(parts) and parts[next_non_space_idx].isspace():
+                            next_non_space_idx += 1
+                        
+                        if next_non_space_idx < len(parts) and parts[next_non_space_idx].isalpha() and is_english_word(parts[next_non_space_idx]):
+                            # Don't include this space in the math expression
+                            break
+                        else:
+                            # Include space in math expression
+                            math_expr.append(parts[j])
+                            j += 1
                     elif j < len(parts) and re.match(math_chars + '+', parts[j]):
                         # Check if it's a standalone English word
                         if parts[j].isalpha() and is_english_word(parts[j]):
@@ -265,11 +280,18 @@ class MathTextEdit(QTextEdit):
                 # Join the math expression and wrap it
                 math_text = ''.join(math_expr).strip()
                 
-                # Handle trailing punctuation
+                # Handle trailing punctuation, but be careful with backslashes
                 trailing_punct = ''
                 if math_text and math_text[-1] in ',.;:!?':
-                    trailing_punct = math_text[-1]
-                    math_text = math_text[:-1].strip()
+                    # Check if there's a backslash before the punctuation
+                    if len(math_text) > 1 and math_text[-2] == '\\':
+                        # Keep the backslash command with its punctuation inside the math
+                        # e.g., "\," should stay as is
+                        pass
+                    else:
+                        # Move punctuation outside the math delimiters
+                        trailing_punct = math_text[-1]
+                        math_text = math_text[:-1].strip()
                 
                 # Wrap the entire expression
                 if math_text:
@@ -340,8 +362,26 @@ class MathTextEdit(QTextEdit):
     def insert_text_section(self):
         self.insertPlainText("#text\n")
     
-    def insert_vspace(self):
-        self.insertPlainText(r"\vspace{2mm}")
+    def insert_line_break(self):
+        """Insert a simple line break (\\)"""
+        self.insertPlainText(r"\\")
+    
+    def insert_line_break_with_space(self):
+        """Insert a line break with 2mm spacing (\\[2mm])"""
+        self.insertPlainText(r"\\[2mm]")
+    
+    def wrap_in_mbox(self):
+        """Wrap selected text in \mbox{} to prevent hyphenation"""
+        cursor = self.textCursor()
+        if cursor.hasSelection():
+            selected_text = cursor.selectedText()
+            cursor.insertText(f"\\mbox{{{selected_text}}}")
+        else:
+            # If no selection, just insert \mbox{} and position cursor inside
+            cursor.insertText("\\mbox{}")
+            # Move cursor back 1 position to be inside the braces
+            cursor.movePosition(QTextCursor.Left, QTextCursor.MoveAnchor, 1)
+            self.setTextCursor(cursor)
     
     def insert_triangle(self):
         self.insertPlainText(r"\bigtriangleup")
