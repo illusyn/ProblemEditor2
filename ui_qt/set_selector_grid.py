@@ -21,8 +21,9 @@ class SetSelectorGridQt(QWidget):
     
     set_selected = pyqtSignal(int, bool)  # set_id, is_selected
     
-    def __init__(self):
+    def __init__(self, db_path=None):
         super().__init__()
+        self.db_path = db_path
         self.selected_sets = set()
         self.button_to_set_id = {}  # Map button to set_id for easier access
         self.init_ui()
@@ -45,7 +46,7 @@ class SetSelectorGridQt(QWidget):
         self.grid_layout.setSpacing(10)
         
         # Load sets from database
-        db = ProblemSetDB()
+        db = ProblemSetDB(self.db_path) if self.db_path else ProblemSetDB()
         sets = db.get_all_sets()
         db.close()
         
@@ -140,7 +141,7 @@ class SetSelectorGridQt(QWidget):
         self.button_to_set_id.clear()
         
         # Load sets from database
-        db = ProblemSetDB()
+        db = ProblemSetDB(self.db_path) if self.db_path else ProblemSetDB()
         sets = db.get_all_sets()
         db.close()
         
