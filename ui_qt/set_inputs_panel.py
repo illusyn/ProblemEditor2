@@ -2,8 +2,9 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QCheckBox, QLabel
 from db.problem_set_db import ProblemSetDB
 
 class SetInputsPanelQt(QWidget):
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, db_path=None):
         super().__init__(parent)
+        self.db_path = db_path
         self.layout = QVBoxLayout(self)
         self.setLayout(self.layout)
         self.checkboxes = {}
@@ -16,7 +17,7 @@ class SetInputsPanelQt(QWidget):
             cb.deleteLater()
         self.checkboxes.clear()
         # Fetch sets
-        db = ProblemSetDB()
+        db = ProblemSetDB(self.db_path) if self.db_path else ProblemSetDB()
         sets = db.get_all_sets()
         db.close()
         if not sets:
