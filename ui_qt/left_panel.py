@@ -119,6 +119,12 @@ class LeftPanel(QWidget):
 
     def set_earmark(self, value):
         self.query_panel.set_earmark(value)
+    
+    def get_selected_earmark_ids(self):
+        return self.query_panel.get_selected_earmark_ids()
+    
+    def set_selected_earmark_ids(self, earmark_ids):
+        self.query_panel.set_selected_earmark_ids(earmark_ids)
 
     def get_selected_type_ids(self):
         return self.query_panel.get_selected_type_ids()
