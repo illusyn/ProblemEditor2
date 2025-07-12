@@ -15,6 +15,19 @@ class PreviewPanel(QWidget):
     def __init__(self, parent=None, config_manager=None):
         super().__init__(parent)
         self.config_manager = config_manager
+        
+        # Initialize zoom level (default 100%)
+        self.zoom_level = 100
+        # Load saved zoom level from config
+        if config_manager:
+            self.zoom_level = config_manager.get_value("preview", "zoom_level", 100)
+        
+        # Initialize left margin offset (default 0 pixels)
+        # This is how much to shift content RIGHT (positive = more margin)
+        self.left_margin_offset = 0
+        if config_manager:
+            self.left_margin_offset = config_manager.get_value("preview", "left_margin_offset_pixels", 0)
+        
         layout = QVBoxLayout(self)
         
         # Create zoom control panel
@@ -59,6 +72,26 @@ class PreviewPanel(QWidget):
         # Add some spacing
         zoom_control_layout.addStretch()
         
+        # Add margin label and controls
+        zoom_control_layout.addSpacing(20)
+        margin_label = QLabel("Left Margin:")
+        margin_font = QFont(FONT_FAMILY)
+        margin_font.setPointSizeF(LABEL_FONT_SIZE)
+        margin_label.setFont(margin_font)
+        zoom_control_layout.addWidget(margin_label)
+        
+        # Margin spinbox
+        self.margin_spinbox = QSpinBox()
+        self.margin_spinbox.setRange(-50, 150)  # Allow negative to reduce margin
+        self.margin_spinbox.setSuffix(" px")
+        self.margin_spinbox.setValue(self.left_margin_offset)
+        self.margin_spinbox.setFixedWidth(80)
+        margin_spin_font = QFont(FONT_FAMILY)
+        margin_spin_font.setPointSizeF(LABEL_FONT_SIZE)
+        self.margin_spinbox.setFont(margin_spin_font)
+        self.margin_spinbox.valueChanged.connect(self.on_margin_changed)
+        zoom_control_layout.addWidget(self.margin_spinbox)
+        
         # Save as default button
         self.save_default_button = NeumorphicButton("Save as Default", font_size=LABEL_FONT_SIZE)
         self.save_default_button.setFixedWidth(150)
@@ -96,11 +129,7 @@ class PreviewPanel(QWidget):
         # Store reference to main window for image adjustment
         self.main_window = None
         
-        # Initialize zoom level (default 100%)
-        self.zoom_level = 100
-        # Load saved zoom level from config
-        if config_manager:
-            self.zoom_level = config_manager.get_value("preview", "zoom_level", 100)
+        # Update zoom label with loaded value
         self.update_zoom_label()
         
         # Track if settings have been modified
@@ -162,6 +191,13 @@ class PreviewPanel(QWidget):
                 pix.save(img_path)
                 pixmap = QPixmap(img_path)
                 
+                # Crop left margin for display only (visual adjustment)
+                # Get the left margin crop amount from config or use default
+                left_margin_crop = self.config_manager.get_value("preview", "left_margin_crop_pixels", 50) if self.config_manager else 50
+                if left_margin_crop > 0 and pixmap.width() > left_margin_crop:
+                    # Crop from the left side
+                    pixmap = pixmap.copy(left_margin_crop, 0, pixmap.width() - left_margin_crop, pixmap.height())
+                
                 # Update the label size and pixmap
                 self.preview_label.setPixmap(pixmap)
                 self.preview_label.resize(pixmap.size())
@@ -194,6 +230,27 @@ class PreviewPanel(QWidget):
                 img_path = self.current_preview.replace(".pdf", ".png")
                 pix.save(img_path)
                 pixmap = QPixmap(img_path)
+                
+                # Apply left margin offset for display
+                # Negative offset = crop from left (reduce margin)
+                # Positive offset = add padding on left (increase margin)
+                if self.left_margin_offset != 0:
+                    if self.left_margin_offset < 0:
+                        # Crop from left (reduce margin)
+                        crop_amount = abs(self.left_margin_offset)
+                        if pixmap.width() > crop_amount:
+                            pixmap = pixmap.copy(crop_amount, 0, pixmap.width() - crop_amount, pixmap.height())
+                    else:
+                        # Add padding on left (increase margin)
+                        from PyQt5.QtGui import QPainter
+                        new_width = pixmap.width() + self.left_margin_offset
+                        new_pixmap = QPixmap(new_width, pixmap.height())
+                        new_pixmap.fill(Qt.white)  # Fill with white background
+                        painter = QPainter(new_pixmap)
+                        painter.drawPixmap(self.left_margin_offset, 0, pixmap)
+                        painter.end()
+                        pixmap = new_pixmap
+                
                 # Update the label size and pixmap
                 self.preview_label.setPixmap(pixmap)
                 self.preview_label.resize(pixmap.size())
@@ -260,6 +317,26 @@ class PreviewPanel(QWidget):
                 pix.save(img_path)
                 pixmap = QPixmap(img_path)
                 
+                # Apply left margin offset for display
+                # Negative offset = crop from left (reduce margin)
+                # Positive offset = add padding on left (increase margin)
+                if self.left_margin_offset != 0:
+                    if self.left_margin_offset < 0:
+                        # Crop from left (reduce margin)
+                        crop_amount = abs(self.left_margin_offset)
+                        if pixmap.width() > crop_amount:
+                            pixmap = pixmap.copy(crop_amount, 0, pixmap.width() - crop_amount, pixmap.height())
+                    else:
+                        # Add padding on left (increase margin)
+                        from PyQt5.QtGui import QPainter
+                        new_width = pixmap.width() + self.left_margin_offset
+                        new_pixmap = QPixmap(new_width, pixmap.height())
+                        new_pixmap.fill(Qt.white)  # Fill with white background
+                        painter = QPainter(new_pixmap)
+                        painter.drawPixmap(self.left_margin_offset, 0, pixmap)
+                        painter.end()
+                        pixmap = new_pixmap
+                
                 # Update the label size and pixmap
                 self.preview_label.setPixmap(pixmap)
                 self.preview_label.resize(pixmap.size())
@@ -289,11 +366,20 @@ class PreviewPanel(QWidget):
         else:
             self.save_default_button.setText("Save as Default")
     
+    def on_margin_changed(self, value):
+        """Handle margin spinbox value change"""
+        self.left_margin_offset = value
+        self.refresh_preview()
+        self.settings_modified = True
+        self.update_save_button_state()
+    
     def save_zoom_as_default(self):
-        """Save current zoom level as default"""
+        """Save current zoom level and margin as default"""
         if self.config_manager:
             # Save zoom level to config
             self.config_manager.set_value("preview", "zoom_level", self.zoom_level)
+            # Save left margin offset to config
+            self.config_manager.set_value("preview", "left_margin_offset_pixels", self.left_margin_offset)
             
             # Save config to file
             if self.config_manager.save_config():
@@ -303,8 +389,8 @@ class PreviewPanel(QWidget):
                 # Show confirmation using QMessageBox
                 from PyQt5.QtWidgets import QMessageBox
                 QMessageBox.information(self, "Settings Saved", 
-                    f"Zoom level saved as default: {self.zoom_level}%")
+                    f"Preview settings saved:\nZoom: {self.zoom_level}%\nLeft margin: {self.left_margin_offset}px")
             else:
                 from PyQt5.QtWidgets import QMessageBox
                 QMessageBox.warning(self, "Save Failed", 
-                    "Failed to save zoom level as default.") 
+                    "Failed to save preview settings as default.") 
