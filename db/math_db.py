@@ -138,6 +138,25 @@ class MathProblemDB:
             )
         ''')
         
+        # Earmark types table
+        self.cur.execute('''
+            CREATE TABLE IF NOT EXISTS earmark_types (
+                earmark_id INTEGER PRIMARY KEY,
+                name TEXT NOT NULL UNIQUE
+            )
+        ''')
+        
+        # Problem-earmarks join table
+        self.cur.execute('''
+            CREATE TABLE IF NOT EXISTS problem_earmarks (
+                problem_id INTEGER NOT NULL,
+                earmark_id INTEGER NOT NULL,
+                PRIMARY KEY (problem_id, earmark_id),
+                FOREIGN KEY (problem_id) REFERENCES problems(problem_id) ON DELETE CASCADE,
+                FOREIGN KEY (earmark_id) REFERENCES earmark_types(earmark_id) ON DELETE CASCADE
+            )
+        ''')
+        
         # Create indices for faster querying
         self.cur.execute('''
             CREATE INDEX IF NOT EXISTS idx_problem_images_problem_id 
@@ -155,6 +174,28 @@ class MathProblemDB:
         ''')
         
         self.conn.commit()
+        
+        # Populate earmark types if they don't exist
+        self._populate_earmark_types()
+    
+    def _populate_earmark_types(self):
+        """Populate the earmark_types table with default values if empty"""
+        self.cur.execute("SELECT COUNT(*) FROM earmark_types")
+        count = self.cur.fetchone()[0]
+        
+        if count == 0:
+            print("[DEBUG] Populating earmark_types table with defaults")
+            earmark_types = [
+                (1, 'A'),
+                (2, 'B'), 
+                (3, 'C')
+            ]
+            for earmark_id, name in earmark_types:
+                self.cur.execute(
+                    "INSERT OR IGNORE INTO earmark_types (earmark_id, name) VALUES (?, ?)",
+                    (earmark_id, name)
+                )
+            self.conn.commit()
     
     def add_problem(self, content, solution=None, has_latex_solution=0, 
                    answer=None, notes=None, categories=None):
@@ -392,7 +433,7 @@ class MathProblemDB:
         try:
             # First get the problems
             query = """
-                SELECT DISTINCT p.problem_id, p.content, p.answer, p.creation_date, p.last_modified
+                SELECT DISTINCT p.problem_id, p.content, p.answer, p.notes, p.creation_date, p.last_modified
                 FROM problems p
             """
             
@@ -434,8 +475,9 @@ class MathProblemDB:
                     "problem_id": problem_id,
                     "content": row[1],
                     "answer": row[2],
-                    "creation_date": row[3],
-                    "last_modified": row[4],
+                    "notes": row[3],
+                    "creation_date": row[4],
+                    "last_modified": row[5],
                     "categories": []
                 }
                 
@@ -471,9 +513,11 @@ class MathProblemDB:
                     JOIN problem_earmarks pe ON e.earmark_id = pe.earmark_id
                     WHERE pe.problem_id = ?
                 """, (problem_id,))
+                earmark_rows = self.cur.fetchall()
+                print(f"[DEBUG] get_problems_list: Found {len(earmark_rows)} earmarks for problem_id={problem_id}: {earmark_rows}")
                 problem["earmarks"] = [
                     {"earmark_id": e[0], "name": e[1]}
-                    for e in self.cur.fetchall()
+                    for e in earmark_rows
                 ]
                 
                 problems.append(problem)
@@ -1004,7 +1048,7 @@ class MathProblemDB:
         if ordered:
             print(f"-------------------ordered={ordered}")
             self.cur.execute('''
-                SELECT p.problem_id, p.content, p.answer, p.creation_date, p.last_modified
+                SELECT p.problem_id, p.content, p.answer, p.notes, p.creation_date, p.last_modified
                 FROM problems p
                 JOIN problem_set_member m ON p.problem_id = m.problem_id
                 WHERE m.set_id = ?
@@ -1012,7 +1056,7 @@ class MathProblemDB:
             ''', (set_id,))
         else:
             self.cur.execute('''
-                SELECT p.problem_id, p.content, p.answer, p.creation_date, p.last_modified
+                SELECT p.problem_id, p.content, p.answer, p.notes, p.creation_date, p.last_modified
                 FROM problems p
                 JOIN problem_set_member m ON p.problem_id = m.problem_id
                 WHERE m.set_id = ?
@@ -1026,8 +1070,9 @@ class MathProblemDB:
                 "problem_id": problem_id,
                 "content": row[1],
                 "answer": row[2],
-                "creation_date": row[3],
-                "last_modified": row[4],
+                "notes": row[3],
+                "creation_date": row[4],
+                "last_modified": row[5],
                 "categories": []
             }
             # Get categories for this problem
@@ -1051,6 +1096,17 @@ class MathProblemDB:
             problem["types"] = [
                 {"type_id": t[0], "name": t[1]}
                 for t in self.cur.fetchall()
+            ]
+            # Get earmarks for this problem
+            self.cur.execute("""
+                SELECT e.earmark_id, e.name
+                FROM earmark_types e
+                JOIN problem_earmarks pe ON e.earmark_id = pe.earmark_id
+                WHERE pe.problem_id = ?
+            """, (problem_id,))
+            problem["earmarks"] = [
+                {"earmark_id": e[0], "name": e[1]}
+                for e in self.cur.fetchall()
             ]
             problems.append(problem)
         print(f"[DEBUG] Returning {len(problems)} problems from list_problems_in_set: {[p['problem_id'] for p in problems]}")
@@ -1179,14 +1235,24 @@ class MathProblemDB:
             tuple: (success, message)
         """
         try:
+            print(f"[DEBUG] add_earmark_to_problem: Adding earmark_id={earmark_id} to problem_id={problem_id}")
             self.cur.execute("""
                 INSERT OR IGNORE INTO problem_earmarks (problem_id, earmark_id)
                 VALUES (?, ?)
             """, (problem_id, earmark_id))
+            rows_affected = self.cur.rowcount
             self.conn.commit()
+            print(f"[DEBUG] add_earmark_to_problem: Rows affected = {rows_affected}")
+            
+            # Verify it was saved
+            self.cur.execute("SELECT * FROM problem_earmarks WHERE problem_id = ? AND earmark_id = ?", (problem_id, earmark_id))
+            result = self.cur.fetchone()
+            print(f"[DEBUG] add_earmark_to_problem: Verification query result = {result}")
+            
             return (True, "Earmark added successfully")
         except Exception as e:
             self.conn.rollback()
+            print(f"[DEBUG] add_earmark_to_problem: ERROR = {e}")
             return (False, str(e))
     
     def remove_earmark_from_problem(self, problem_id, earmark_id):
