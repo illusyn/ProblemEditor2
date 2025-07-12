@@ -5,9 +5,10 @@ from PyQt5.QtCore import pyqtSignal
 class SetPanelQt(QWidget):
     request_selected_problem_ids = pyqtSignal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, db_path=None):
         super().__init__(parent)
         print("[DEBUG] SetPanelQt created:", self)
+        self.db_path = db_path
         self.layout = QVBoxLayout(self)
         self.setLayout(self.layout)
         self.checkboxes = {}
@@ -33,7 +34,7 @@ class SetPanelQt(QWidget):
         if not name:
             QMessageBox.warning(self, "Create Set", "Set name cannot be empty.")
             return
-        db = ProblemSetDB()
+        db = ProblemSetDB(self.db_path) if self.db_path else ProblemSetDB()
         try:
             db.cur.execute("INSERT INTO problem_sets (name) VALUES (?)", (name,))
             db.conn.commit()
@@ -50,7 +51,7 @@ class SetPanelQt(QWidget):
             cb.deleteLater()
         self.checkboxes.clear()
         # Fetch sets
-        db = ProblemSetDB()
+        db = ProblemSetDB(self.db_path) if self.db_path else ProblemSetDB()
         sets = db.get_all_sets()
         db.close()
         print("[DEBUG] refresh_sets: sets from DB:", sets)
@@ -85,7 +86,7 @@ class SetPanelQt(QWidget):
         )
         if reply != QMessageBox.Yes:
             return
-        db = ProblemSetDB()
+        db = ProblemSetDB(self.db_path) if self.db_path else ProblemSetDB()
         for set_id in selected_ids:
             db.delete_set(set_id)
         db.close()
