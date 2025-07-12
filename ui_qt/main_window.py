@@ -129,9 +129,15 @@ class MainWindow(QMainWindow):
         self.editor_panel = EditorPanel(main_window=self)
         # Pass the delete_current_problem method to the editor panel
         self.editor_panel.delete_problem_callback = self.delete_current_problem
-        editor_layout.addWidget(self.editor_panel, stretch=2)
+        # Set minimum widths: reduce editor by 48px (0.5 inch), increase preview by 48px
+        # Assuming a typical starting width, we'll use different stretch factors
+        # Editor gets less stretch (narrower), preview gets more stretch (wider)
+        # Also set preferred widths to guide the initial layout
+        self.editor_panel.setMinimumWidth(350)  # Ensure reasonable minimum
+        editor_layout.addWidget(self.editor_panel, stretch=3)
         self.preview_panel = PreviewPanel(config_manager=self.config_manager)
-        editor_layout.addWidget(self.preview_panel, stretch=2)
+        self.preview_panel.setMinimumWidth(450)  # Wider minimum for preview
+        editor_layout.addWidget(self.preview_panel, stretch=4)
         self.preview_panel.set_main_window(self)
         self.current_results = []
         self.current_result_index = -1
@@ -206,9 +212,32 @@ class MainWindow(QMainWindow):
                 # Try to export from database using the unescaped filename
                 success, result = self.image_manager.image_db.export_to_file(actual_filename, image_path)
                 if not success:
-                    QMessageBox.critical(self, "Image Error", f"Could not extract image '{filename}' from database: {result}")
-                    self.status_bar.showMessage(f"Image missing: {filename}")
-                    return  # Abort preview if any image is missing
+                    # Create a placeholder image for missing images
+                    print(f"[DEBUG] Creating placeholder for missing image: {filename}")
+                    from PIL import Image, ImageDraw, ImageFont
+                    # Create a placeholder image
+                    placeholder = Image.new('RGB', (400, 200), color='lightgray')
+                    draw = ImageDraw.Draw(placeholder)
+                    # Add text
+                    text = f"Missing Image:\n{filename}"
+                    try:
+                        # Try to use a basic font
+                        font = ImageFont.load_default()
+                    except:
+                        font = None
+                    # Calculate text position
+                    if font:
+                        bbox = draw.textbbox((0, 0), text, font=font)
+                        text_width = bbox[2] - bbox[0]
+                        text_height = bbox[3] - bbox[1]
+                    else:
+                        text_width, text_height = 200, 40  # Rough estimate
+                    x = (400 - text_width) // 2
+                    y = (200 - text_height) // 2
+                    draw.text((x, y), text, fill='darkgray', font=font)
+                    # Save placeholder
+                    placeholder.save(image_path, 'PNG')
+                    self.status_bar.showMessage(f"Using placeholder for missing image: {filename}")
         # --- Proceed with preview ---
         self.preview_panel.update_preview(text)
         self.status_bar.showMessage("Preview updated")
@@ -218,7 +247,8 @@ class MainWindow(QMainWindow):
         print(f"^^^^^^^^^^^^^^^^[DEBUG] MainWindow.on_query: selected_set_ids = {selected_set_ids}")
         selected_set_id = selected_set_ids[0] if selected_set_ids else None
         problem_id = self.left_panel.get_problem_id().strip()
-        earmark_filter = self.left_panel.get_earmark()
+        selected_earmark_ids = self.left_panel.get_selected_earmark_ids()
+        print(f"[DEBUG] on_query: selected_earmark_ids = {selected_earmark_ids}")
         if selected_set_id:
             problems = self.problem_db.list_problems_in_set(selected_set_id)
         else:
@@ -243,12 +273,14 @@ class MainWindow(QMainWindow):
             problem_cat_names = {c["name"] for c in p.get('categories', [])}
             if selected_cats and not selected_cats.issubset(problem_cat_names):
                 continue
-            # TODO: Implement earmark filtering with many-to-many relationship
-            # if earmark_filter and not p.get('earmark', 0):
-            #     continue
+            # Filter by earmarks with many-to-many relationship
+            if selected_earmark_ids:
+                problem_earmark_ids = {e["earmark_id"] for e in p.get('earmarks', [])}
+                if not any(eid in problem_earmark_ids for eid in selected_earmark_ids):
+                    continue
             results.append(p)
         # Always order results by problem_id ascending
-        if not (problem_id or search_text or selected_cats or earmark_filter):
+        if not (problem_id or search_text or selected_cats or selected_earmark_ids):
             self.current_results = sorted(problems, key=lambda p: int(p.get('problem_id', 0)))
             self.current_result_index = 0
             if self.current_results:
@@ -264,6 +296,8 @@ class MainWindow(QMainWindow):
             self.load_problem_into_ui(self.current_results[0])
 
     def load_problem_into_ui(self, problem):
+        print(f"[DEBUG] load_problem_into_ui: problem keys = {problem.keys()}")
+        print(f"[DEBUG] load_problem_into_ui: earmarks = {problem.get('earmarks', [])}")
         self.editor_panel.text_edit.setPlainText(problem.get("content", ""))
         self.left_panel.set_problem_id(str(problem.get("problem_id", "")))
         self.left_panel.set_answer(problem.get("answer", ""))
@@ -280,7 +314,7 @@ class MainWindow(QMainWindow):
                 btn.setStyleSheet("")
                 self.left_panel.category_panel.selected.discard(cat["category_id"])
         # Load problem types
-        problem_id = problem.get("id", None)
+        problem_id = problem.get("problem_id", None)
         if problem_id:
             db = MathProblemDB(self.problem_db.db_path)
             success, types = db.get_types_for_problem(problem_id)
@@ -291,8 +325,32 @@ class MainWindow(QMainWindow):
             db.close()
         else:
             self.left_panel.set_selected_type_ids([])
-        # TODO: Load earmark from many-to-many relationship
-        # self.left_panel.set_earmark(problem.get("earmark", 0))
+        
+        # Load earmarks from many-to-many relationship
+        if problem_id:
+            # Check if problem already has earmarks loaded
+            if "earmarks" in problem:
+                # Use earmarks from problem data (already loaded)
+                earmark_ids = [e["earmark_id"] for e in problem.get("earmarks", [])]
+                print(f"[DEBUG] load_problem_into_ui: Loading earmarks from problem data: {earmark_ids}")
+                self.left_panel.set_selected_earmark_ids(earmark_ids)
+            else:
+                # Load earmarks from database
+                print(f"[DEBUG] load_problem_into_ui: Earmarks not in problem data, loading from DB for problem_id={problem_id}")
+                db = MathProblemDB(self.problem_db.db_path)
+                success, earmarks = db.get_earmarks_for_problem(problem_id)
+                if success:
+                    earmark_ids = [e["earmark_id"] for e in earmarks]
+                    print(f"[DEBUG] load_problem_into_ui: Loaded earmarks from DB: {earmark_ids}")
+                    self.left_panel.set_selected_earmark_ids(earmark_ids)
+                else:
+                    print(f"[DEBUG] load_problem_into_ui: Failed to load earmarks from DB")
+                    self.left_panel.set_selected_earmark_ids([])
+                db.close()
+        else:
+            print(f"[DEBUG] load_problem_into_ui: No problem_id, clearing earmarks")
+            self.left_panel.set_selected_earmark_ids([])
+        
         self.update_preview()
 
     def show_next_problem(self):
@@ -533,8 +591,8 @@ class MainWindow(QMainWindow):
         answer = self.left_panel.get_answer().strip()
         notes = self.left_panel.get_notes().strip()
         categories = [cat["name"] for cat in self.left_panel.category_panel.get_selected_categories()]
-        # TODO: Handle earmark with many-to-many relationship
-        # earmark = 1 if self.left_panel.get_earmark() else 0
+        selected_earmark_ids = self.left_panel.get_selected_earmark_ids()
+        print(f"[DEBUG] save_current_problem: selected_earmark_ids = {selected_earmark_ids}")
         selected_type_ids = self.left_panel.get_selected_type_ids()
         # Map type IDs to type names for saving
         type_id_to_name = {t['type_id']: t['name'] for t in self.left_panel.problem_type_panel.types}
@@ -561,6 +619,10 @@ class MainWindow(QMainWindow):
                 db.cur.execute("DELETE FROM problem_problem_types WHERE problem_id=?", (problem_id,))
                 for type_name in selected_type_names:
                     db.add_problem_to_type(int(problem_id), type_name)
+                # Update earmarks
+                db.cur.execute("DELETE FROM problem_earmarks WHERE problem_id=?", (problem_id,))
+                for earmark_id in selected_earmark_ids:
+                    db.add_earmark_to_problem(int(problem_id), earmark_id)
                 # Update image mapping
                 update_problem_image_map(int(problem_id), content, db)
                 db.conn.commit()
@@ -578,6 +640,9 @@ class MainWindow(QMainWindow):
                     return
                 for type_name in selected_type_names:
                     db.add_problem_to_type(int(new_id), type_name)
+                # Add earmarks
+                for earmark_id in selected_earmark_ids:
+                    db.add_earmark_to_problem(int(new_id), earmark_id)
                 # Update image mapping
                 update_problem_image_map(int(new_id), content, db)
                 db.conn.commit()
@@ -608,7 +673,7 @@ class MainWindow(QMainWindow):
             QMessageBox.warning(self, "Add to Set", "Please select problems and sets.")
             return
         from db.problem_set_db import ProblemSetDB
-        db = ProblemSetDB()
+        db = ProblemSetDB(self.problems_db_path)
         added = 0
         already = 0
         for set_id in selected_sets:
@@ -654,7 +719,7 @@ class MainWindow(QMainWindow):
                     return
         
         from db.problem_set_db import ProblemSetDB
-        db = ProblemSetDB()
+        db = ProblemSetDB(self.problems_db_path)
         added = 0
         already = 0
         
