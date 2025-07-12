@@ -108,7 +108,10 @@ class ProblemManager(QWidget):
         right_layout.addLayout(export_buttons_layout)
         
         # Problem display panel
-        self.problem_display_panel = ProblemDisplayPanel(images_db_path=self.images_db_path)
+        self.problem_display_panel = ProblemDisplayPanel(
+            images_db_path=self.images_db_path,
+            problems_db_path=self.db_path
+        )
         right_layout.addWidget(self.problem_display_panel)
         content_layout.addWidget(right_panel, stretch=3)
         main_layout.addLayout(content_layout)
@@ -376,7 +379,7 @@ class ProblemManager(QWidget):
         
         # Get set name from the database
         from db.problem_set_db import ProblemSetDB
-        set_db = ProblemSetDB()
+        set_db = ProblemSetDB(self.db_path) if self.db_path else ProblemSetDB()
         sets = set_db.get_all_sets()
         set_db.close()
         
