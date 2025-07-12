@@ -8,11 +8,12 @@ import json
 from ui_qt.style_config import CATEGORY_BTN_SELECTED_COLOR
 
 class ProblemCellWidget(QWidget):
-    def __init__(self, problem, font_size, parent=None, images_db_path=None):
+    def __init__(self, problem, font_size, parent=None, images_db_path=None, problems_db_path=None):
         super().__init__(parent)
         self.problem = problem
         self.selected = False
         self.images_db_path = images_db_path
+        self.problems_db_path = problems_db_path
         main_layout = QHBoxLayout(self)
         main_layout.setSpacing(12)
         self.setLayout(main_layout)
@@ -85,7 +86,8 @@ class ProblemCellWidget(QWidget):
         print(f"\n[DEBUG] ProblemCellWidget: Checking images for problem_id={problem_id}")
         
         if problem_id is not None:
-            db = MathProblemDB()
+            print(f"[DEBUG] ProblemCellWidget using problems_db_path: {self.problems_db_path}")
+            db = MathProblemDB(self.problems_db_path)
             try:
                 # Ensure temp/images directory exists
                 temp_images_dir = os.path.join('temp', 'images')
@@ -100,9 +102,16 @@ class ProblemCellWidget(QWidget):
                 # Check if problem_image_map table exists
                 if 'problem_image_map' in tables:
                     # Query the problem_image_map table
+                    print(f"[DEBUG] Querying problem_image_map for problem_id={problem_id}")
+                    print(f"[DEBUG] Using database: {db.db_path}")
                     db.cur.execute("SELECT image_name FROM problem_image_map WHERE problem_id=?", (problem_id,))
                     image_names = [row[0] for row in db.cur.fetchall()]
                     print(f"[DEBUG] Images from problem_image_map: {image_names}")
+                    
+                    # Double-check by counting all entries
+                    db.cur.execute("SELECT COUNT(*) FROM problem_image_map")
+                    total_count = db.cur.fetchone()[0]
+                    print(f"[DEBUG] Total entries in problem_image_map: {total_count}")
                 else:
                     print(f"[DEBUG] problem_image_map table not found!")
                     image_names = []
@@ -133,6 +142,23 @@ class ProblemCellWidget(QWidget):
                         success, msg = image_manager.image_db.export_to_file(image_name, image_path)
                         if not success:
                             print(f"[DEBUG] Failed to export image {image_name}: {msg}")
+                            # Show placeholder for missing image
+                            placeholder_label = QLabel(f"[Image: {image_name}\nNot available]")
+                            placeholder_label.setAlignment(Qt.AlignCenter)
+                            placeholder_label.setStyleSheet("""
+                                QLabel {
+                                    border: 2px dashed #999;
+                                    border-radius: 4px;
+                                    padding: 10px;
+                                    background-color: #f0f0f0;
+                                    color: #666;
+                                    font-style: italic;
+                                    min-width: 100px;
+                                    min-height: 100px;
+                                }
+                            """)
+                            images_vbox.addWidget(placeholder_label)
+                            image_count += 1
                             continue
                         
                         print(f"[DEBUG] Successfully exported to: {image_path}")
@@ -206,11 +232,12 @@ class ProblemDisplayPanel(QWidget):
     CONFIG_PATH = "user_settings.json"
     selection_changed = pyqtSignal(list)
 
-    def __init__(self, parent=None, images_db_path=None):
+    def __init__(self, parent=None, images_db_path=None, problems_db_path=None):
         print("ProblemDisplayPanel init:0")
         super().__init__(parent)
         print("ProblemDisplayPanel init")
         self.images_db_path = images_db_path
+        self.problems_db_path = problems_db_path
         self.outer_layout = QVBoxLayout(self)
         self.setLayout(self.outer_layout)
 
@@ -261,7 +288,8 @@ class ProblemDisplayPanel(QWidget):
             col = idx % cols
             cell = ProblemCellWidget(problem, self.current_font_size, 
                                    parent=self.scroll_content, 
-                                   images_db_path=self.images_db_path)
+                                   images_db_path=self.images_db_path,
+                                   problems_db_path=self.problems_db_path)
             self.grid.addWidget(cell, row, col)
             self.problem_cells.append(cell)
         self.update_all_content_fonts()
