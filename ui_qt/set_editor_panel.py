@@ -56,8 +56,9 @@ class SetEditorPanelQt(QWidget):
     # Try different signal signatures to see if one works better
     add_selected_problems_to_set = pyqtSignal(list, int)  # selected_problems, selected_set_id
     
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, db_path=None):
         super().__init__(parent)
+        self.db_path = db_path
         # --- Directly use main layout for all contents (no QFrame border) ---
         main_layout = QVBoxLayout(self)
         main_layout.setContentsMargins(8, 8, 8, 8)
@@ -144,7 +145,7 @@ class SetEditorPanelQt(QWidget):
         main_layout.addLayout(button_row)
 
         # --- Set grid: full width below top row ---
-        self.set_selector_grid = SetSelectorGridQt()
+        self.set_selector_grid = SetSelectorGridQt(self.db_path)
         # Set height for 5 rows to match the main set selector
         self.set_selector_grid.setMinimumHeight(250)
         main_layout.addWidget(self.set_selector_grid, stretch=1)
@@ -192,7 +193,7 @@ class SetEditorPanelQt(QWidget):
             """)
             warning_box.exec_()
             return
-        db = ProblemSetDB()
+        db = ProblemSetDB(self.db_path) if self.db_path else ProblemSetDB()
         try:
             db.cur.execute("INSERT INTO problem_sets (name) VALUES (?)", (name,))
             db.conn.commit()
@@ -296,7 +297,7 @@ class SetEditorPanelQt(QWidget):
             return
         
         try:
-            db = ProblemSetDB()
+            db = ProblemSetDB(self.db_path) if self.db_path else ProblemSetDB()
             print(f"[DEBUG] About to delete set_id: {selected_id}")
             db.delete_set(selected_id)
             db.close()
@@ -349,7 +350,7 @@ class SetEditorPanelQt(QWidget):
             set_name = self.name_edit.text().strip()
             if set_name:
                 # Create the new set first
-                db = ProblemSetDB()
+                db = ProblemSetDB(self.db_path) if self.db_path else ProblemSetDB()
                 try:
                     db.cur.execute("INSERT INTO problem_sets (name) VALUES (?)", (set_name,))
                     db.conn.commit()
