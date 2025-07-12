@@ -73,7 +73,9 @@ class KeyboardShortcutsDialog(QDialog):
             ("Section Markers", [
                 ("Ctrl+P", "Insert problem section: #problem"),
                 ("Ctrl+Alt+T", "Insert text section: #text"),
-                ("Ctrl+Shift+N", "Insert vertical space: \\\\[2mm]"),
+                ("Ctrl+N", "Insert line break: \\\\"),
+                ("Ctrl+Shift+N", "Insert line break with spacing: \\\\[2mm]"),
+                ("Ctrl+M", "Prevent hyphenation: \\mbox{selection}"),
             ]),
             ("Problem Selection", [
                 ("Ctrl+Click", "Toggle selection of individual problems"),
