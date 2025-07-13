@@ -34,12 +34,20 @@ class QueryPanel(QWidget):
         self._create_query_controls(layout)
 
         # --- Query Inputs Panel (contains ALL input fields) ---
-        self.query_inputs_panel = QueryInputsPanel(laptop_mode=self.laptop_mode, db_path=self.db_path)
+        self.query_inputs_panel = QueryInputsPanel(
+            laptop_mode=self.laptop_mode, 
+            db_path=self.db_path,
+            show_set_editor_button=not self.show_preview_and_nav_buttons
+        )
         layout.addWidget(self.query_inputs_panel)
 
-        # --- Edit Selected Problems Panel ---
-        self.edit_selected_panel = EditSelectedProblemsPanel(query_inputs_panel=self.query_inputs_panel)
-        layout.addWidget(self.edit_selected_panel)
+        # --- Edit Selected Problems Panel (only show in Problem Manager context) ---
+        # show_preview_and_nav_buttons is False in Problem Manager, True in Math Editor
+        if not self.show_preview_and_nav_buttons:
+            self.edit_selected_panel = EditSelectedProblemsPanel(query_inputs_panel=self.query_inputs_panel)
+            layout.addWidget(self.edit_selected_panel)
+        else:
+            self.edit_selected_panel = None
 
         # Debug prints for child size hints
         print("[DEBUG] QueryInputsPanel minimumSizeHint:", self.query_inputs_panel.minimumSizeHint())
@@ -52,10 +60,11 @@ class QueryPanel(QWidget):
         self.query_button.clicked.connect(self.query_clicked.emit)
         self.reset_button.clicked.connect(self._on_reset_clicked)
         
-        # Connect edit panel signals
-        self.edit_selected_panel.apply_attributes.connect(self.apply_attributes_to_selected.emit)
-        self.edit_selected_panel.clear_attributes.connect(self.clear_attributes_from_selected.emit)
-        self.edit_selected_panel.delete_selected.connect(self.delete_selected_problems.emit)
+        # Connect edit panel signals (if it exists)
+        if self.edit_selected_panel:
+            self.edit_selected_panel.apply_attributes.connect(self.apply_attributes_to_selected.emit)
+            self.edit_selected_panel.clear_attributes.connect(self.clear_attributes_from_selected.emit)
+            self.edit_selected_panel.delete_selected.connect(self.delete_selected_problems.emit)
 
     def _create_query_controls(self, main_layout):
         query_grid = QGridLayout()

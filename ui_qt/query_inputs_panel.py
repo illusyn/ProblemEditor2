@@ -85,11 +85,12 @@ class QueryInputsPanel(QWidget):
     - Advanced inputs: Problem types, earmark, categories, notes
     """
     
-    def __init__(self, parent=None, laptop_mode=False, db_path=None):
+    def __init__(self, parent=None, laptop_mode=False, db_path=None, show_set_editor_button=True):
         super().__init__(parent)
         self.setStyleSheet('background: transparent;')
         self.laptop_mode = laptop_mode
         self.db_path = db_path
+        self.show_set_editor_button = show_set_editor_button
         self._selected_set_id = None
         # --- Wrap all contents in a QFrame with border ---
         self.outer_frame = QFrame()
@@ -189,9 +190,24 @@ class QueryInputsPanel(QWidget):
         main_layout.addWidget(domains_widget)
         
         # --- Set Selector and Set Editor Section (QStackedWidget) ---
-        # self.set_selector_groupbox = QGroupBox("")
-        # self.set_selector_groupbox.setStyleSheet("QGroupBox { border: 6px solid green; border-radius: 12px; background: transparent; } QGroupBox::title { color: transparent; }")
+        # Create a frame with visible border for debugging
+        set_selector_frame = QFrame()
+        set_selector_frame.setFrameShape(QFrame.Box)
+        set_selector_frame.setLineWidth(2)
+        set_selector_frame.setStyleSheet("""
+            QFrame {
+                border: 1px solid #d0d0d3;
+                border-radius: 4px;
+                background-color: transparent;
+            }
+        """)
+        set_selector_frame.setMaximumHeight(400)  # Constrain the frame height
+        set_selector_frame.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
+        set_frame_layout = QVBoxLayout(set_selector_frame)
+        set_frame_layout.setContentsMargins(5, 5, 5, 5)
+        
         set_selector_widget = QWidget()
+        set_selector_widget.setStyleSheet("background-color: transparent;")
         set_selector_layout = QVBoxLayout(set_selector_widget)
         set_selector_layout.setContentsMargins(0, 0, 0, 0)
         set_selector_layout.setSpacing(0)
@@ -200,13 +216,15 @@ class QueryInputsPanel(QWidget):
         set_font.setPointSizeF(SECTION_LABEL_FONT_SIZE)
         set_font.setWeight(QFont.Bold)
         set_selector_label.setFont(set_font)
-        set_selector_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; padding-top: 4px; padding-bottom: 4px; margin-top: 0px; margin-bottom: 0px; background: {WINDOW_BG_COLOR};")
-        set_selector_label.setMinimumHeight(30)
+        set_selector_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR}; padding: 2px; margin: 0px; background: {WINDOW_BG_COLOR};")
+        set_selector_label.setFixedHeight(20)  # Much tighter height
         set_selector_label.setAlignment(Qt.AlignCenter)
         set_selector_layout.addWidget(set_selector_label)
         self.set_selector_grid = SetSelectorGridQt(self.db_path)
         # Set height for 5 rows: 5 rows * 40px height + 4 gaps * 10px spacing + some padding
         self.set_selector_grid.setMinimumHeight(250)
+        self.set_selector_grid.setMaximumHeight(250)
+        self.set_selector_grid.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         set_selector_layout.addWidget(self.set_selector_grid)
         # self.set_selector_groupbox.setLayout(set_selector_layout)
 
@@ -220,32 +238,43 @@ class QueryInputsPanel(QWidget):
         self.set_stack = QStackedWidget()
         self.set_stack.addWidget(set_selector_widget)  # index 0
         self.set_stack.addWidget(self.set_editor_panel)       # index 1
+        self.set_stack.setMaximumHeight(350)  # Limit the height of the stacked widget
+        self.set_stack.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Maximum)
 
-        # Toggle button
-        self.toggle_set_editor_btn = QPushButton("Open Set Editor")
-        self.toggle_set_editor_btn.clicked.connect(self.toggle_set_editor_view)
-        main_layout.addWidget(self.toggle_set_editor_btn)
-        main_layout.addWidget(self.set_stack)
+        # Toggle button (only show in Problem Manager)
+        if self.show_set_editor_button:
+            self.toggle_set_editor_btn = QPushButton("Open Set Editor")
+            self.toggle_set_editor_btn.clicked.connect(self.toggle_set_editor_view)
+            set_frame_layout.addWidget(self.toggle_set_editor_btn)
+        else:
+            self.toggle_set_editor_btn = None
+        
+        # Add stack to the frame
+        set_frame_layout.addWidget(self.set_stack)
+        
+        # Add the frame to the main layout
+        main_layout.addWidget(set_selector_frame)
 
         self.set_selector_grid.set_selected.connect(self.on_set_selected)
     
     def _create_basic_inputs(self, main_layout):
-        """Create the basic input fields (Problem ID, Search Text, Answer)"""
+        """Create the basic input fields (Problem ID, Search Text)"""
         input_row = QHBoxLayout()
         
         # Create input fields
         self.problem_id_entry = self._create_neumorphic_entry()
         self.search_text_entry = self._create_neumorphic_entry()
+        # Create answer_entry as a dummy for compatibility
         self.answer_entry = self._create_neumorphic_entry()
+        self.answer_entry.setVisible(False)
         
         # Set field widths
         self.problem_id_entry.setFixedWidth(PROB_ID_ENTRY_WIDTH)
         self.search_text_entry.setFixedWidth(SEARCH_TEXT_ENTRY_WIDTH)
-        self.answer_entry.setFixedWidth(ANSWER_ENTRY_WIDTH)
         
         # Create labeled columns
-        labels = ["Prob ID", "Search Text", "Answer"]
-        entries = [self.problem_id_entry, self.search_text_entry, self.answer_entry]
+        labels = ["Prob ID", "Search Text"]
+        entries = [self.problem_id_entry, self.search_text_entry]
         
         for label, entry in zip(labels, entries):
             col = QVBoxLayout()
@@ -338,14 +367,12 @@ class QueryInputsPanel(QWidget):
         """Reset all input fields to their default state"""
         self.problem_id_entry.setText("")
         self.search_text_entry.setText("")
-        self.answer_entry.setText("")
+        # Don't reset answer_entry since it's now in the parent panel
         for cb in self.earmark_checkboxes.values():
             cb.setChecked(False)
         self.problem_type_panel.set_selected_type_ids([])
         self.clear_category_selection()
         self.set_selector_grid.clear_selection()
-        if hasattr(self, 'notes_edit'):
-            self.notes_edit.setText("")
     
     def build_query_criteria(self):
         """Build query criteria from current input values"""
@@ -459,6 +486,8 @@ class QueryInputsPanel(QWidget):
         self._selected_set_id = set_id
 
     def toggle_set_editor_view(self):
+        if not self.toggle_set_editor_btn:
+            return
         if self.set_stack.currentIndex() == 0:
             self.set_stack.setCurrentIndex(1)
             self.toggle_set_editor_btn.setText("Back to Set Selector")
