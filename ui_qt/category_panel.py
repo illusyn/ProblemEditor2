@@ -69,16 +69,17 @@ class NeumorphicToolButton(QToolButton):
             painter.setFont(paint_font)
             
             # Apply shadow effect only for small fonts (14pt and below)
-            if self.font_size <= 14:
-                # Draw text shadow for bolder effect
-                shadow_color = QColor(NEUMORPH_TEXT_COLOR)
-                shadow_color.setAlpha(80)  # Semi-transparent shadow
-                
-                # Draw multiple shadow layers for thicker effect
-                shadow_offsets = [(1, 0), (0, 1), (-1, 0), (0, -1)]  # Create outline effect
-                for dx, dy in shadow_offsets:
-                    painter.setPen(shadow_color)
-                    painter.drawText(rect.translated(dx, dy), Qt.AlignCenter, self.text())
+            # DISABLED: Turning off outline effect to see how it looks
+            # if self.font_size <= 14:
+            #     # Draw text shadow for bolder effect
+            #     shadow_color = QColor(NEUMORPH_TEXT_COLOR)
+            #     shadow_color.setAlpha(80)  # Semi-transparent shadow
+            #     
+            #     # Draw multiple shadow layers for thicker effect
+            #     shadow_offsets = [(1, 0), (0, 1), (-1, 0), (0, -1)]  # Create outline effect
+            #     for dx, dy in shadow_offsets:
+            #         painter.setPen(shadow_color)
+            #         painter.drawText(rect.translated(dx, dy), Qt.AlignCenter, self.text())
             
             # Draw main text on top
             painter.setPen(QColor(NEUMORPH_TEXT_COLOR))
@@ -102,7 +103,7 @@ class CategoryPanelQt(QWidget):
         for idx, cat in enumerate(self.categories):
             btn = NeumorphicToolButton(cat["name"], font_size=BUTTON_FONT_SIZE)
             btn.clicked.connect(lambda checked, cid=cat["category_id"]: self.toggle_category(cid))
-            layout.addWidget(btn, idx // 2, idx % 2)
+            layout.addWidget(btn, idx // 3, idx % 3)  # Changed from 2 to 3 columns
             self.buttons[cat["category_id"]] = btn
 
     def toggle_category(self, category_id):
