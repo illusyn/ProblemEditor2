@@ -20,7 +20,7 @@ from ui_qt.neumorphic_components import NeumorphicButton
 from PyQt5.QtGui import QFont
 from ui_qt.problem_manager import ProblemManager
 from ui_qt.problem_display_panel import ProblemDisplayPanel
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 from managers.config_manager import ConfigManager
 from ui_qt.set_panel import SetPanelQt
 from db.db_config import DatabaseConfig
@@ -105,7 +105,7 @@ class MainWindow(QMainWindow):
         # --- Main Editor UI ---
         self.editor_container = QWidget(self)
         editor_layout = QHBoxLayout(self.editor_container)
-        self.left_panel = LeftPanel(laptop_mode=laptop_mode)
+        self.left_panel = LeftPanel(laptop_mode=laptop_mode, db_path=self.problems_db_path)
         if not laptop_mode:
             self.left_panel.setFixedWidth(LEFT_PANEL_WIDTH)
             print(f"================>>>[DEBUG] LEFT_PANEL_WIDTH: {LEFT_PANEL_WIDTH}")
@@ -160,6 +160,35 @@ class MainWindow(QMainWindow):
         """Get a new instance of the images database with the correct path."""
         from db.math_image_db import MathImageDB
         return MathImageDB(self.images_db_path)
+    
+    def show_timed_message(self, title, message, timeout=5000):
+        """Show a message box that automatically closes after timeout milliseconds."""
+        msg_box = QMessageBox(self)
+        msg_box.setWindowTitle(title)
+        msg_box.setText(message)
+        msg_box.setIcon(QMessageBox.Information)
+        
+        # Apply consistent styling
+        msg_box.setStyleSheet(f"""
+            QMessageBox {{
+                background-color: {WINDOW_BG_COLOR};
+                font-family: {FONT_FAMILY};
+                font-size: {LABEL_FONT_SIZE}px;
+            }}
+            QMessageBox QPushButton {{
+                min-width: 80px;
+                min-height: 30px;
+                font-family: {FONT_FAMILY};
+                font-size: {BUTTON_FONT_SIZE}px;
+            }}
+        """)
+        
+        # Create timer to close the message box
+        timer = QTimer()
+        timer.timeout.connect(msg_box.close)
+        timer.start(timeout)
+        
+        msg_box.exec_()
     
     def _connect_set_editor_signal(self):
         """Connect the set editor panel signal - called after UI is constructed"""
@@ -240,7 +269,6 @@ class MainWindow(QMainWindow):
                     self.status_bar.showMessage(f"Using placeholder for missing image: {filename}")
         # --- Proceed with preview ---
         self.preview_panel.update_preview(text)
-        self.status_bar.showMessage("Preview updated")
 
     def on_query(self):
         selected_set_ids = self.left_panel.query_panel.query_inputs_panel.get_selected_set_ids()
@@ -626,7 +654,7 @@ class MainWindow(QMainWindow):
                 # Update image mapping
                 update_problem_image_map(int(problem_id), content, db)
                 db.conn.commit()
-                QMessageBox.information(self, "Save Problem", "Problem updated successfully.")
+                self.show_timed_message("Save Problem", "Problem updated successfully.", 5000)
             else:
                 # Add new problem
                 success, new_id = db.add_problem(
@@ -647,7 +675,7 @@ class MainWindow(QMainWindow):
                 update_problem_image_map(int(new_id), content, db)
                 db.conn.commit()
                 self.left_panel.set_problem_id(str(new_id))
-                QMessageBox.information(self, "Save Problem", f"New problem added with ID {new_id}.")
+                self.show_timed_message("Save Problem", f"New problem added with ID {new_id}.", 5000)
         except Exception as e:
             db.conn.rollback()
             QMessageBox.critical(self, "Save Problem", f"Failed to save problem: {e}")
