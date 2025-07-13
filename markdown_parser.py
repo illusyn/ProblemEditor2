@@ -992,6 +992,11 @@ class MarkdownParser:
 
     % Set margins
     """ + margin_settings + r"""
+    
+    % Better page breaking settings
+    \widowpenalty=10000
+    \clubpenalty=10000
+    \raggedbottom
 
     % Set paragraph indentation to zero
     \setlength{\parindent}{0pt}
