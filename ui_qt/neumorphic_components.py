@@ -82,16 +82,17 @@ class NeumorphicButton(QPushButton):
             painter.setFont(font)
             
             # Apply shadow effect only for small fonts (14pt and below)
-            if self.font_size <= 14:
-                # Draw text shadow for bolder effect
-                shadow_color = QColor(self.font_color)
-                shadow_color.setAlpha(80)  # Semi-transparent shadow
-                
-                # Draw multiple shadow layers for thicker effect
-                shadow_offsets = [(1, 0), (0, 1), (-1, 0), (0, -1)]  # Create outline effect
-                for dx, dy in shadow_offsets:
-                    painter.setPen(shadow_color)
-                    painter.drawText(rect.translated(dx, dy), Qt.AlignCenter, self.text())
+            # DISABLED: Turning off outline effect to see how it looks
+            # if self.font_size <= 14:
+            #     # Draw text shadow for bolder effect
+            #     shadow_color = QColor(self.font_color)
+            #     shadow_color.setAlpha(80)  # Semi-transparent shadow
+            #     
+            #     # Draw multiple shadow layers for thicker effect
+            #     shadow_offsets = [(1, 0), (0, 1), (-1, 0), (0, -1)]  # Create outline effect
+            #     for dx, dy in shadow_offsets:
+            #         painter.setPen(shadow_color)
+            #         painter.drawText(rect.translated(dx, dy), Qt.AlignCenter, self.text())
             
             # Draw main text on top
             painter.setPen(QColor(self.font_color))
@@ -189,20 +190,20 @@ class NeumorphicTextEdit(QTextEdit):
             rect = self.rect().adjusted(SHADOW_RECT_ADJUST, SHADOW_RECT_ADJUST, 
                                       -SHADOW_RECT_ADJUST, -SHADOW_RECT_ADJUST)
             
-            # Enhanced multi-layered blurred shadow (bottom-right)
+            # Enhanced sunken effect: shadow top-left, highlight bottom-right
             for offset, alpha in zip(SHADOW_OFFSETS, SHADOW_ALPHAS):
                 shadow = QColor(self.shadow_dark)
                 shadow.setAlpha(alpha)
                 painter.setBrush(QBrush(shadow))
                 painter.setPen(Qt.NoPen)
-                painter.drawRoundedRect(rect.translated(offset, offset), self.radius, self.radius)
+                painter.drawRoundedRect(rect.translated(-offset, -offset), self.radius, self.radius)
             
-            # Enhanced multi-layered highlight (top-left)
+            # Enhanced multi-layered highlight (bottom-right)
             for offset, alpha in zip(HIGHLIGHT_OFFSETS, HIGHLIGHT_ALPHAS):
                 highlight = QColor(self.shadow_light)
                 highlight.setAlpha(alpha)
                 painter.setBrush(QBrush(highlight))
-                painter.drawRoundedRect(rect.translated(-offset, -offset), self.radius, self.radius)
+                painter.drawRoundedRect(rect.translated(offset, offset), self.radius, self.radius)
             
             # Solid background (no gradient)
             painter.setBrush(QBrush(QColor(self.bg_color)))
