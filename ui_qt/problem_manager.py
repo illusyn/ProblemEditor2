@@ -395,7 +395,7 @@ class ProblemManager(QWidget):
             return
         
         # Create and show the dialog
-        dialog = ExportSetDialog(self, set_id=set_id, set_name=set_name)
+        dialog = ExportSetDialog(self, set_id=set_id, set_name=set_name, db_path=self.db_path)
         dialog.export_completed.connect(self.on_export_completed)
         dialog.exec_()
     
