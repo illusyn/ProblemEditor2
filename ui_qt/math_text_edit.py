@@ -184,6 +184,14 @@ class MathTextEdit(QTextEdit):
         if text.startswith('$') and text.endswith('$'):
             return text
             
+        # Special case: Handle currency amounts like $3000
+        if text.startswith('$') and len(text) > 1:
+            # Check if the rest is numeric (possibly with commas and decimal)
+            rest = text[1:]
+            if rest.replace(',', '').replace('.', '').isdigit():
+                # It's a currency amount - escape the dollar sign and wrap the entire thing in math mode
+                return f'\\${text}$'
+            
         # Special case: if the entire selection is just a single letter, always wrap it
         if len(text) == 1 and text.isalpha():
             return f'${text}$'
