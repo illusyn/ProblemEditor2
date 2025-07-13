@@ -6,23 +6,24 @@ leaving only the control buttons in the left panel.
 """
 
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QSizePolicy
+    QWidget, QVBoxLayout, QHBoxLayout, QGridLayout, QSizePolicy, QLabel, QScrollArea
 )
 from PyQt5.QtGui import QFont, QColor
 from PyQt5.QtCore import Qt
 from ui_qt.query_inputs_panel import QueryInputsPanel
-from ui_qt.neumorphic_components import NeumorphicButton
+from ui_qt.neumorphic_components import NeumorphicButton, NeumorphicEntry, NeumorphicTextEdit
 from ui_qt.style_config import (
     FONT_FAMILY, CONTROL_BTN_FONT_SIZE, WINDOW_BG_COLOR, 
     BUTTON_BORDER_RADIUS, BUTTON_BG_COLOR, BUTTON_FONT_COLOR, CONTROL_BTN_WIDTH, 
-    PADDING, SPACING, BUTTON_TEXT_PADDING
+    PADDING, SPACING, BUTTON_TEXT_PADDING, LABEL_FONT_SIZE, NEUMORPH_TEXT_COLOR,
+    ENTRY_MIN_HEIGHT, NOTES_FONT_SIZE, ENTRY_FONT_SIZE
 )
 from ui_qt.query_panel import QueryPanel
 
 class LeftPanel(QWidget):
-    def __init__(self, parent=None, laptop_mode=False):
+    def __init__(self, parent=None, laptop_mode=False, db_path=None):
         super().__init__(parent)
-        print(f"[DEBUG] LeftPanel: Initializing with laptop_mode={laptop_mode}")
+        print(f"[DEBUG] LeftPanel: Initializing with laptop_mode={laptop_mode}, db_path={db_path}")
         
         # Set panel width based on mode
         if laptop_mode:
@@ -33,8 +34,9 @@ class LeftPanel(QWidget):
         
         self.setStyleSheet(f"background-color: {WINDOW_BG_COLOR};")
         
-        # Store laptop mode for potential future use
+        # Store laptop mode and db_path for potential future use
         self.laptop_mode = laptop_mode
+        self.db_path = db_path
         
         # Ensure UI is initialized and buttons are created
         self._init_ui()
@@ -50,9 +52,15 @@ class LeftPanel(QWidget):
         self._create_top_row(main_layout)
         main_layout.addSpacing(4)  # Reduce space between top row and query controls
         # --- QueryPanel (contains query controls and inputs) ---
-        self.query_panel = QueryPanel(laptop_mode=self.laptop_mode)
+        self.query_panel = QueryPanel(laptop_mode=self.laptop_mode, db_path=self.db_path)
         main_layout.addWidget(self.query_panel)
+        
+        # --- Notes and Answer fields at the bottom ---
+        self._create_notes_answer_section(main_layout)
+        
+        # Add stretch at the end to push everything up
         main_layout.addStretch(1)
+        
         # Wire up problem_display_panel for set panel add-to-set button
         parent_widget = self.parent()
         if parent_widget is not None and hasattr(parent_widget, 'problem_display_panel'):
@@ -80,6 +88,47 @@ class LeftPanel(QWidget):
         top_row.addWidget(self.preview_button)
         main_layout.addLayout(top_row)
 
+    def _create_notes_answer_section(self, main_layout):
+        """Create the Notes and Answer entry fields at the bottom of the left panel"""
+        # Add some spacing before this section
+        main_layout.addSpacing(10)
+        
+        # Answer field
+        answer_label = QLabel("Answer:")
+        answer_font = QFont(FONT_FAMILY)
+        answer_font.setPointSizeF(LABEL_FONT_SIZE)
+        answer_font.setWeight(QFont.Bold)
+        answer_label.setFont(answer_font)
+        answer_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR};")
+        main_layout.addWidget(answer_label)
+        
+        self._answer_entry = NeumorphicEntry()
+        self._answer_entry.setMinimumHeight(ENTRY_MIN_HEIGHT)
+        answer_font = QFont(FONT_FAMILY)
+        answer_font.setPointSizeF(ENTRY_FONT_SIZE)
+        self._answer_entry.setFont(answer_font)
+        main_layout.addWidget(self._answer_entry)
+        
+        # Add spacing between Answer and Notes
+        main_layout.addSpacing(8)
+        
+        # Notes field
+        notes_label = QLabel("Notes:")
+        notes_font = QFont(FONT_FAMILY)
+        notes_font.setPointSizeF(LABEL_FONT_SIZE)
+        notes_font.setWeight(QFont.Bold)
+        notes_label.setFont(notes_font)
+        notes_label.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR};")
+        main_layout.addWidget(notes_label)
+        
+        self._notes_text = NeumorphicTextEdit()
+        self._notes_text.setMinimumHeight(60)
+        self._notes_text.setMaximumHeight(120)
+        notes_text_font = QFont(FONT_FAMILY)
+        notes_text_font.setPointSizeF(NOTES_FONT_SIZE)
+        self._notes_text.setFont(notes_text_font)
+        main_layout.addWidget(self._notes_text)
+
     def create_neumorphic_button(self, text, parent=None):
         """Create a neumorphic button with standard styling"""
         print(f"-------------CONTROL_BTN_FONT_SIZE={CONTROL_BTN_FONT_SIZE}")
@@ -97,10 +146,10 @@ class LeftPanel(QWidget):
         self.query_panel.set_problem_id(value)
 
     def get_answer(self):
-        return self.query_panel.get_answer()
+        return self._answer_entry.text()
 
     def set_answer(self, value):
-        self.query_panel.set_answer(value)
+        self._answer_entry.setText(str(value))
 
     def get_search_text(self):
         return self.query_panel.get_search_text()
@@ -109,10 +158,10 @@ class LeftPanel(QWidget):
         self.query_panel.set_search_text(value)
 
     def get_notes(self):
-        return self.query_panel.get_notes()
+        return self._notes_text.toPlainText()
 
     def set_notes(self, text):
-        self.query_panel.set_notes(text)
+        self._notes_text.setPlainText(text)
 
     def get_earmark(self):
         return self.query_panel.get_earmark()
@@ -149,7 +198,7 @@ class LeftPanel(QWidget):
 
     @property
     def notes_text(self):
-        return self.query_panel.notes_text
+        return self._notes_text
     
     @property
     def problem_id_entry(self):
@@ -161,10 +210,12 @@ class LeftPanel(QWidget):
     
     @property
     def answer_entry(self):
-        return self.query_panel.answer_entry
+        return self._answer_entry
 
     def reset_fields(self):
         self.query_panel.reset_fields()
+        self._answer_entry.setText("")
+        self._notes_text.setPlainText("")
 
     def build_full_query_criteria(self):
         return self.query_panel.build_full_query_criteria()
