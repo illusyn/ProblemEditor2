@@ -74,10 +74,11 @@ class ExportSetDialog(QDialog):
     # Signals
     export_completed = pyqtSignal(str)  # Emits the output file path
     
-    def __init__(self, parent=None, set_id=None, set_name=None):
+    def __init__(self, parent=None, set_id=None, set_name=None, db_path=None):
         super().__init__(parent)
         self.set_id = set_id
         self.set_name = set_name or "Unnamed Set"
+        self.db_path = db_path
         self.setWindowTitle("Export Set to LaTeX")
         self.setModal(True)
         self.setStyleSheet(f"background-color: {WINDOW_BG_COLOR};")
@@ -139,7 +140,15 @@ class ExportSetDialog(QDialog):
         self.include_answers_checkbox.setFont(checkbox_font)
         self.include_answers_checkbox.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR};")
         self.include_answers_checkbox.setChecked(False)  # Default to unchecked
+        self.include_answers_checkbox.stateChanged.connect(self._on_answers_checkbox_changed)
         layout.addWidget(self.include_answers_checkbox)
+        
+        # Include metadata checkbox
+        self.include_metadata_checkbox = QCheckBox("Include Metadata (ID, Earmarks, Types, Categories)")
+        self.include_metadata_checkbox.setFont(checkbox_font)
+        self.include_metadata_checkbox.setStyleSheet(f"color: {NEUMORPH_TEXT_COLOR};")
+        self.include_metadata_checkbox.setChecked(False)  # Default to unchecked
+        layout.addWidget(self.include_metadata_checkbox)
         
         # Problem spacing row - DISABLED: Spacing is now configured globally
         # in the config file under export.problem_spacing
@@ -251,6 +260,30 @@ class ExportSetDialog(QDialog):
         if file_path:
             self.output_file_entry.setText(file_path)
     
+    def _on_answers_checkbox_changed(self, state):
+        """Update filename when answers checkbox is toggled"""
+        current_path = self.output_file_entry.text()
+        if not current_path:
+            return
+        
+        # Split the path into directory, basename, and extension
+        dir_path = os.path.dirname(current_path)
+        filename = os.path.basename(current_path)
+        name, ext = os.path.splitext(filename)
+        
+        # Remove existing "_with_answers" suffix if present
+        if name.endswith("_with_answers"):
+            name = name[:-len("_with_answers")]
+        
+        # Add suffix if checkbox is checked
+        if self.include_answers_checkbox.isChecked():
+            name = name + "_with_answers"
+        
+        # Reconstruct the path
+        new_filename = name + ext
+        new_path = os.path.join(dir_path, new_filename) if dir_path else new_filename
+        self.output_file_entry.setText(new_path)
+    
     def _on_export_clicked(self):
         """Handle export button click"""
         if not self.set_id:
@@ -283,13 +316,14 @@ class ExportSetDialog(QDialog):
         title_text = self.title_entry.text() if include_title else None
         number_problems = self.number_problems_checkbox.isChecked()
         include_answers = self.include_answers_checkbox.isChecked()
+        include_metadata = self.include_metadata_checkbox.isChecked()
         
         # Spacing is now handled by the ProblemCommand configuration
         spacing_cm = 0.5  # This parameter is kept for backward compatibility but not used
         
         try:
             # Export the set
-            self._export_set(output_path, images_dir, title_text, number_problems, include_answers, spacing_cm)
+            self._export_set(output_path, images_dir, title_text, number_problems, include_answers, include_metadata, spacing_cm)
             
             # Show success message
             show_styled_message(self, "Export Complete", f"Successfully exported set '{self.set_name}' to:\n{output_path}", "info")
@@ -301,10 +335,10 @@ class ExportSetDialog(QDialog):
         except Exception as e:
             show_styled_message(self, "Export Error", f"Failed to export set:\n{str(e)}", "error")
     
-    def _export_set(self, output_path, images_dir, title_text, number_problems, include_answers, spacing_cm=0.5):
+    def _export_set(self, output_path, images_dir, title_text, number_problems, include_answers, include_metadata, spacing_cm=0.5):
         """Export the problem set to LaTeX file"""
         # Get problems in the set
-        db = MathProblemDB()
+        db = MathProblemDB(self.db_path)
         problems = db.list_problems_in_set(self.set_id)
         
         if not isinstance(problems, list):
@@ -371,34 +405,70 @@ class ExportSetDialog(QDialog):
             latex = re.sub(r'(\\includegraphics.*?\{)(.*?)(\})', fix_image_underscores, latex)
             latex = re.sub(r'(\\label\{)(.*?)(\})', fix_image_underscores, latex)
             
-            # Add filbreak to suggest good page break point before problem
+            # Add spacing between problems (except before the first one)
             if idx > 0:
-                all_problems_latex += "\\filbreak\n"
+                all_problems_latex += "\\vspace{0.5in}\n"
             
-            if number_problems:
-                # Use parbox approach for proper alignment
-                problem_num = idx + 1
-                all_problems_latex += "\\noindent\\begin{minipage}{\\textwidth}\n"
-                all_problems_latex += "\\noindent\\parbox[t]{2.5em}{\\textbf{" + str(problem_num) + ".}}"
-                all_problems_latex += "\\parbox[t]{\\dimexpr\\textwidth-2.5em\\relax}{"
-                all_problems_latex += latex
-                all_problems_latex += "}\n"
-                all_problems_latex += "\\end{minipage}\n"
+            # Add problem number and content together
+            problem_num = idx + 1
+            
+            # Don't use minipage - it prevents natural page breaks
+            all_problems_latex += "\\noindent "
+            
+            # Strip any leading vspace commands from the latex content
+            latex_stripped = latex.strip()
+            
+            # Handle the common pattern: \vspace{...}\n\fontsize{...}{...}\selectfont content
+            fontsize_match = re.match(r'^\\vspace\{[^}]*\}\s*\n?(\\\\fontsize\{[^}]*\}\{[^}]*\}\\\\selectfont\s*)', latex_stripped)
+            
+            if fontsize_match:
+                # Extract the fontsize command
+                fontsize_cmd = fontsize_match.group(1)
+                # Remove both vspace and fontsize from the beginning
+                content_after_fontsize = latex_stripped[fontsize_match.end():]
+                # Build the latex with fontsize applied to both number and content
+                if number_problems:
+                    all_problems_latex += fontsize_cmd + "\\makebox[0pt][r]{" + str(problem_num) + ".\\hspace{2em}}" + content_after_fontsize + "\n"
+                else:
+                    all_problems_latex += fontsize_cmd + content_after_fontsize + "\n"
+            elif latex_stripped.startswith("\\vspace"):
+                # Just a vspace without fontsize - remove it
+                latex_stripped = re.sub(r'^\\vspace\{[^}]*\}\s*\n?', '', latex_stripped)
+                if number_problems:
+                    all_problems_latex += "\\makebox[0pt][r]{" + str(problem_num) + ".\\hspace{2em}}" + latex_stripped + "\n"
+                else:
+                    all_problems_latex += latex_stripped + "\n"
             else:
-                # Wrap entire problem in minipage to prevent page breaks
-                all_problems_latex += "\\noindent\\begin{minipage}{\\textwidth}\n"
-                all_problems_latex += latex + "\n"
-                all_problems_latex += "\\end{minipage}\n"
+                # No leading vspace
+                if number_problems:
+                    all_problems_latex += "\\makebox[0pt][r]{" + str(problem_num) + ".\\hspace{2em}}" + latex_stripped + "\n"
+                else:
+                    all_problems_latex += latex_stripped + "\n"
             
             # Add answer if requested
-            if include_answers and prob.get('answer', '').strip():
-                answer = prob['answer'].strip()
-                all_problems_latex += "\\vspace{0.2cm}\n"
-                all_problems_latex += "{\\color{red}\\footnotesize\\linespread{0.8}\\selectfont\n"
-                all_problems_latex += "\\textbf{Answer:} "
-                # Process answer - handle potential math content
-                all_problems_latex += self._process_answer(answer) + "\\par\n"
-                all_problems_latex += "}\n"
+            if include_answers:
+                answer = prob.get('answer', '').strip()
+                if answer:
+                    all_problems_latex += "\\vspace{0.2cm}\n"
+                    all_problems_latex += "{\\color{red!70!black}\n"
+                    all_problems_latex += "\\textbf{Answer:} "
+                    # Check if answer contains math mode delimiters
+                    if '$' in answer or '\\[' in answer or '\\(' in answer:
+                        # Answer contains math - use it as is
+                        all_problems_latex += answer
+                    else:
+                        # Answer is plain text - wrap in math mode
+                        all_problems_latex += "$" + self._latex_escape(answer) + "$"
+                    all_problems_latex += "}\n"
+            
+            # Add metadata if requested
+            if include_metadata:
+                metadata_block = self._build_metadata_block(prob, include_answer=False)  # Don't include answer in metadata
+                if metadata_block:
+                    all_problems_latex += "\\vspace{0.2cm}\n"
+                    all_problems_latex += "{\\color{blue!70!black}\\footnotesize\\linespread{0.8}\\selectfont\n"
+                    all_problems_latex += metadata_block
+                    all_problems_latex += "}\n"
             
             # Note: Spacing between problems is now handled by the ProblemCommand itself
             # The spacing_cm from the dialog is ignored in favor of the configured spacing
@@ -446,7 +516,7 @@ class ExportSetDialog(QDialog):
         images = prob_data.get('images', [])
         
         if images:
-            db = MathProblemDB()
+            db = MathProblemDB(self.db_path)
             try:
                 for img in images:
                     image_id = img['image_id']
@@ -482,3 +552,43 @@ class ExportSetDialog(QDialog):
                         print(f"Warning: Image {image_name} referenced in problem {problem_id} not found in database")
             finally:
                 image_db.close()
+    
+    def _build_metadata_block(self, prob, include_answer=True):
+        """Build metadata block for a problem"""
+        metadata_lines = []
+        
+        # Problem ID
+        metadata_lines.append(r'\textbf{ID:} ' + str(prob['problem_id']))
+        
+        # Answer (only if include_answer is True)
+        if include_answer:
+            answer = prob.get('answer', '').strip()
+            if answer:
+                metadata_lines.append(r'\textbf{Answer:} ' + self._process_answer(answer))
+        
+        # Earmarks
+        earmarks = prob.get('earmarks', [])
+        if earmarks:
+            earmark_names = ', '.join([e['name'] for e in earmarks])
+            metadata_lines.append(r'\textbf{Earmarks:} ' + self._latex_escape(earmark_names))
+        
+        # Problem types
+        types = prob.get('types', [])
+        if types:
+            type_names = ', '.join([self._latex_escape(t['name']) for t in types])
+            metadata_lines.append(r'\textbf{Types:} ' + type_names)
+        
+        # Categories
+        categories = prob.get('categories', [])
+        if categories:
+            cat_names = ', '.join([self._latex_escape(cat['name']) for cat in categories])
+            metadata_lines.append(r'\textbf{Categories:} ' + cat_names)
+        
+        # Join with line breaks
+        if metadata_lines:
+            return r'\\'.join(metadata_lines) + r'\\'
+        return ''
+    
+    def _latex_escape(self, text):
+        """Escape special LaTeX characters"""
+        return text.replace('_', r'\_')
